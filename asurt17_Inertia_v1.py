@@ -200,8 +200,9 @@ d=kds(bs,js,ac,'dyn_1s',time)
 
 system_forces=reactions(d[0],d[1],d[2],bs,js,ac,fs,'dyn_1s')
 lamdas=system_forces[4]
-joints_reactions=1e-6*system_forces[5]
+joints_reactions=1e-6*system_forces[5][1:]
 joints_reactions.plot(y='ch_sh_uni_Fy')
+joints_reactions.plot(y='wc_rev_Fz')
 
 
 
