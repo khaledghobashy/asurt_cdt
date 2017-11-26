@@ -72,8 +72,23 @@ class tsda(object):
         return Qi,Qj
     
     
+class force(object):
+    def __init__(self,name,force,bodyi,Pi):
+        self.name=name
+        self.bodyi=bodyi
+        self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
+        self.F=force
         
+    def equation(self,q):
+        qi=q[self.bodyi.dic.index]
+        betai=qi[3:]
+        Ai=ep2dcm(betai)
+        F=self.F
+        M=2*G(betai).T.dot(vec2skew(self.u_i).dot(Ai.T.dot(F)))
+        Qi=np.bmat([[F],[M]])
+        return Qi
+
         
         
 
-
+        

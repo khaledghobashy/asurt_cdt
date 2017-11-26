@@ -8,7 +8,7 @@ Created on Tue Nov  7 13:32:37 2017
 from base import grf, vector, point, ep2dcm, rot2ep
 from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
 from constraints import spherical, revolute, universal, cylindrical, rotational_drive, absolute_locating
-from force_elements import tsda
+from force_elements import tsda, force
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
@@ -121,7 +121,10 @@ wheel  = rigid('wheel',mass,Jcm,cm,I)
 # Defining system forces
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
-spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-2*1e6)
+spring_damper=tsda('f1',seat1,d1,seat2,d2,k=70*1e6,lf=140,c=-2*1e6)
+nl=(160)*9.81*1e6
+force_vector=np.array([[nl*0.85],[nl*0.85],[nl]])
+vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
 
 
 ###############################################################################
@@ -168,7 +171,7 @@ joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
               tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub]
 
 actuators = [vertical_travel,wheel_drive]
-forces    = [spring_damper]
+forces    = [spring_damper,vf]
 
 js=pd.Series(joints_list,index=[i.name for i in joints_list])
 bs=pd.Series(bodies_list,index=[i.name for i in bodies_list])
@@ -224,11 +227,40 @@ def ssm(t,y,Cq_rec,Qt,lagr):
     
 topology_writer(bs,js,ac,fs,'dyn_2')
 
-dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,ssm,'dyn_2',0.3,0.005)
+dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,ssm,'dyn_2',0.5,0.005)
 pos,vel,acc,react=dynamic1
-xaxis=np.arange(0,0.3,0.005)
+xaxis=np.arange(0,0.5,0.005)
+
+plt.figure('WheelCenter Position')
+plt.plot(xaxis,pos['wheel.z'][1:],label=r'$wc_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
+
 plt.figure('WheelHub Verical Reaction Force')
-plt.plot(xaxis,1e-6*react['wc_rev_Fz'],label=r'$wc_{Fz}$')
+plt.plot(xaxis[1:],-1e-6*react['wc_rev_Fz'][1:],label=r'$wc_{Fz}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
+plt.grid()
+plt.show()
+
+plt.figure('UCA Mount Reaction')
+plt.plot(xaxis[1:],1e-6*react['ucaf_rev_Fx'][1:],label=r'$F_{x}$')
+plt.plot(xaxis[1:],1e-6*react['ucaf_rev_Fy'][1:],label=r'$F_{y}$')
+#plt.plot(xaxis[1:],1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
+plt.grid()
+plt.show()
+
+plt.figure('Shock Mount Reaction')
+#plt.plot(xaxis,1e-6*react['ch_sh_uni_Fx'],label=r'$F_{x}$')
+plt.plot(xaxis[1:],-1e-6*react['ch_sh_uni_Fy'][1:],label=r'$F_{y}$')
+#plt.plot(xaxis,1e-6*react['ch_sh_uni_Fz'],label=r'$F_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')

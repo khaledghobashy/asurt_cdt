@@ -169,6 +169,7 @@ def Qa(forces,q,qdot):
 	 Qi,Qj=forces['f1'].equation(q,qdot) 
 	 Qa_s['d1']=Qi
 	 Qa_s['d2']=Qj
+	 Qa_s['wheel']=forces['vertical_force'].equation(q) 
 	 system=sparse.bmat(Qa_s.values.reshape((10,1)),format='csc') 
 	 return system.A 
 

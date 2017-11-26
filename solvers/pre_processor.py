@@ -6,6 +6,7 @@ Created on Wed Nov  1 07:58:27 2017
 """
 
 from bodies import mount
+from force_elements import force
 from constraints import absolute_locating
 import numpy as np
 
@@ -171,9 +172,12 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     file.write("def Qa(forces,q,qdot): \n")
 
     for f in forces:
-        file.write("\t Qi,Qj=forces['%s'].equation(q,qdot) \n" %f.name)
-        file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
-        file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
+        if isinstance(f,force):
+            file.write("\t Qa_s['%s']=forces['%s'].equation(q) \n" %(f.bodyi.name,f.name))
+        else:
+            file.write("\t Qi,Qj=forces['%s'].equation(q,qdot) \n" %f.name)
+            file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
+            file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
 
     file.write("\t system=sparse.bmat(Qa_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
     file.write("\t return system.A \n")
