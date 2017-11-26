@@ -12,7 +12,7 @@ from force_elements import tsda
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
-from solvers import kds, check_jacobian_dense, reactions
+from solvers import kds, check_jacobian_dense, reactions, dds
 from newton_raphson import nr_kds
 import matplotlib.pyplot as plt
 
@@ -185,10 +185,10 @@ from dyn_1s import cq, eq
 #vertical_travel.pos=259
 #dd=nr_kds2(eq,cq,qn,bs,js,ac,debug=True)
 
-time=np.linspace(0,2*np.pi,50)
-wheel_drive.pos_array=np.ones((len(time),))
-vertical_travel.pos_array=254+30*np.sin(2*time)
-d=kds(bs,js,ac,'dyn_1s',time)
+#time=np.linspace(0,2*np.pi,50)
+#wheel_drive.pos_array=np.ones((len(time),))
+#vertical_travel.pos_array=254+30*np.sin(2*time)
+#d=kds(bs,js,ac,'dyn_1s',time)
 
 #coord3='wheel.y'
 #plt.figure(coord3)
@@ -198,11 +198,24 @@ d=kds(bs,js,ac,'dyn_1s',time)
 #plt.grid()
 #plt.show()
 
-system_forces=reactions(d[0],d[1],d[2],bs,js,ac,fs,'dyn_1s')
-lamdas=system_forces[4]
-joints_reactions=1e-6*system_forces[5][1:]
-joints_reactions.plot(y='ch_sh_uni_Fy')
-joints_reactions.plot(y='wc_rev_Fz')
+#system_forces=reactions(d[0],d[1],d[2],bs,js,ac,fs,'dyn_1s')
+#lamdas=system_forces[4]
+#joints_reactions=1e-6*system_forces[5][1:]
+#joints_reactions.plot(y='ch_sh_uni_Fy')
+#joints_reactions.plot(y='wc_rev_Fz')
+
+
+
+
+##############################################################################
+# Dynamic Analysis.
+##############################################################################
+q0=pd.concat([i.dic for i in bodies_list])
+
+
+
+
+
 
 
 

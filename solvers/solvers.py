@@ -167,3 +167,44 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
 
 
+def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time):
+    '''
+    Dynamically Driven Systems Solver
+    '''
+    # importing the system equatiions from the given .py file
+    eq_file=importlib.import_module(file)
+    Qa_f = eq_file.Qa
+    Qv_f = eq_file.Qv
+    Qg_f = eq_file.Qg
+    M_f  = eq_file.mass_matrix
+    Cq_f = eq_file.cq
+    accf = eq_file.acc_rhs
+    
+    M  = M_f(q0,bodies)
+    Cq = Cq_f(q0,bodies,joints,actuators)
+    Qa = Qa_f(forces,q0,qd0)
+    Qv = Qv_f(bodies,q0,qd0)
+    Qg = Qg_f(bodies)
+    Qt = Qa+Qv+Qg
+    ac = accf(q0,qd0,bodies,joints,actuators)
+    
+    nb=len(bodies)
+    
+    coeff_matrix=sc.sparse.bmat([[M,Cq.T],[Cq,None]],format='csc')
+    b_vector=np.concatenate([Qt,ac])
+    
+    x=sc.sparse.linalg.spsolve(coeff_matrix,b_vector)
+    
+    return x
+    
+
+
+
+
+
+
+
+
+
+
+
