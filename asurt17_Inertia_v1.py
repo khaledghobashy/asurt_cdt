@@ -217,27 +217,35 @@ qdd0 = pd.concat([i.qdd0() for i in bodies_list])
 wheel_drive.pos=0
 ac=pd.Series([wheel_drive],index=[wheel_drive.name])
 
+def ssm(t,y,Cq_rec,Qt,lagr):
+        wz,wzd=y
+        dydt=[wzd, (1/13377.41)*(Qt[65]-(Cq_rec.T.dot(lagr))[65])]
+        return dydt
+    
 topology_writer(bs,js,ac,fs,'dyn_2')
 
-dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',0.3,0.005)
-springdamper=dynamic1[4]
+dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,ssm,'dyn_2',0.3,0.005)
+pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,0.3,0.005)
-plt.figure('springForce')
-plt.plot(xaxis,1e-6*springdamper['forceS'][1:])
+plt.figure('WheelHub Verical Reaction Force')
+plt.plot(xaxis,1e-6*react['wc_rev_Fz'],label=r'$wc_{Fz}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
 plt.grid()
 plt.show()
-plt.figure('Damper Force')
-plt.plot(xaxis,1e-6*springdamper['forceD'][1:])
-plt.grid()
-plt.show()
-plt.figure('spring deff')
-plt.plot(xaxis,springdamper['deff'][1:])
-plt.grid()
-plt.show()
-plt.figure('vel')
-plt.plot(xaxis,springdamper['vel'][1:])
-plt.grid()
-plt.show()
+#plt.figure('Damper Force')
+#plt.plot(xaxis,1e-6*springdamper['forceD'][1:])
+#plt.grid()
+#plt.show()
+#plt.figure('spring deff')
+#plt.plot(xaxis,springdamper['deff'][1:])
+#plt.grid()
+#plt.show()
+#plt.figure('vel')
+#plt.plot(xaxis,springdamper['vel'][1:])
+#plt.grid()
+#plt.show()
 
 
 

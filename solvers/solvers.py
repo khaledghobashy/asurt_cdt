@@ -45,6 +45,20 @@ def check_jacobian_dense(sparse_jac):
 #    ill_index=sc.argmin(abs(pivots))
     
     return pivots, ill_pvs, ill_ind, permR
+
+def coordinates_mapper(q):
+    n=len(q)
+    return pd.Series(q.index,index=np.arange(0,n,1))
+
+def extract_ind(sparse_jac,q):
+    mat=sparse_jac.A
+    rows,cols=mat.shape
+    permR=sc.linalg.lu(mat.T)[0]
+    ind_clos=permR[:,rows:]
+    maped=coordinates_mapper(q)
+    ind_coord=[maped[np.argmax(ind_clos[:,i])] for i in range(cols-rows) ]
+    
+    return ind_coord
     
 
 def kds(bodies,joints,actuators,topology_file,time_array):
@@ -169,7 +183,7 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
 
 
-def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
+def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
     '''
     Dynamically Driven Systems Solver
     '''
@@ -183,7 +197,8 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     accf = eq_file.acc_rhs
     eq_f = eq_file.eq
     velf = eq_file.vel_rhs
-    
+    JR_f = eq_file.JR
+
     nb=len(bodies)
 
     # assigning initial conditions to the system NE equations
@@ -207,6 +222,10 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     
     lamdas_indices=np.concatenate([i.index for i in np.concatenate([joints,bodies,actuators])])
     lamda_df=pd.DataFrame(columns=lamdas_indices)
+    
+    reactions_index=np.concatenate([i.reaction_index for i in joints])
+    JR_df=pd.DataFrame(columns=reactions_index)
+
 
     # assembling the coefficient matrix and the rhs vector and solving for
     # system accelerations and lagrange multipliers
@@ -220,39 +239,45 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     acceleration_df.loc[0]=qdd0n
     lamda_df.loc[0]=lamda0
     
-    def state_space_repr(t,y,Cq_rec,Qt,lagr):
-        wz,wzd=y
-        dydt=[wzd, (1/13377.41)*(Qt[65]-(Cq_rec.T.dot(lagr))[65])]
-        return dydt
-#    test=state_space_repr(1,[1,1],Cq,Qt,lamda0)
-    r=ode(state_space_repr).set_integrator('dop853')
+    # evaluating the tsda force attributes to debug
+    spring=forces[0]
+    spring_df=pd.DataFrame(columns=['deff','vel','forceS','forceD'])
+    spring_df.loc[0]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
+
+    # Setting up the integrator function and the initial conditions
+    r=ode(ssm).set_integrator('dop853')
     wz0  = q0['wheel.z']
     wzd0 = qd0['wheel.z']
     r.set_initial_value([wz0,wzd0]).set_f_params(Cq,Qt,lamda0)
     
+    # Setting up the time array to be used in integration steps and starting
+    # the integration
     t=np.arange(0,sim_time,stepsize)
-    spring=forces[0]
-    spring_df=pd.DataFrame(columns=['deff','vel','forceS','forceD'])
-    spring_df.loc[0]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
     for i,dt in enumerate(t):
         print('time_step: '+str(i))
         
         r.integrate(dt)
         print(r.y)
         
+        # creating the guess vector for the vector q as the values of the 
+        # previous step and the value of newly evaluated independent coordinate
         guess=position_df.loc[i]
         guess['wheel.z']=r.y[0]
+        
+        # Evaluating the dependent vector q using newton raphson
         dependent=nr_dds(eq_f,Cq_f,guess,bodies,joints,actuators)
         position_df.loc[i+1]=dependent[0]
         Cq_new=dependent[1]
+        # Calculating the system velocities
         vrhs=velf(actuators)
         vrhs=np.concatenate([vrhs,np.array([[r.y[1]]])])
         velocity_df.loc[i+1]=sc.sparse.linalg.spsolve(Cq_new,vrhs)
-                
+        
+        
         q=position_df.loc[i+1]
         qd=velocity_df.loc[i+1]
 
-        # assigning initial conditions to the system NE equations
+        # Evaluating the new coeff matrix bloks of the system NE equations
         M  = M_f(q,bodies)
         Qa = Qa_f(forces,q,qd)
         Qv = Qv_f(bodies,q,qd)
@@ -260,9 +285,9 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         Qt = (Qa+Qv+Qg).reshape((7*nb,))
         ac = accf(q,qd,bodies,joints,actuators)
 
-
         coeff_matrix=sc.sparse.bmat([[M,Cq.T],[Cq,None]],format='csc')
         b_vector=np.concatenate([Qt,ac])
+        # Evaluating the acceleration and lagrange mult. vector
         x=sc.sparse.linalg.spsolve(coeff_matrix,b_vector)
         
         # updating the dataframes with the evaluated results
@@ -271,16 +296,18 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         acceleration_df.loc[i+1]=qdd
         lamda_df.loc[i+1]=lamda
         spring_df.loc[i+1]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
+        reaction=JR_f(joints,q,lamda_df.loc[i])
+        JR_df.loc[i]=reaction.values.reshape((len(reaction,)))
 
-        
+        # Setting the ssm input parameters
         r.set_f_params(Cq_new[:69,:],Qt,lamda)
     
     
-    return position_df,velocity_df,acceleration_df, lamda_df, spring_df
+    return position_df,velocity_df,acceleration_df,JR_df
     
 
 
-
+    
 
 
 
