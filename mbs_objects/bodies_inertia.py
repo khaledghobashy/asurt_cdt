@@ -39,6 +39,27 @@ class rigid(object):
                      index=[n+'x',n+'y',n+'z',n+'e0',n+'e1',n+'e2',n+'e3'])
         return qi
     
+    def qd0(self,values=0):
+        n  = self.name+'.'
+        indices=[n+'x',n+'y',n+'z',n+'e0',n+'e1',n+'e2',n+'e3']
+        if values==0:
+            vel=pd.Series(np.zeros((7,)),index=indices)
+        else:
+            vel=pd.Series(values,index=indices)
+        return vel
+    
+    def qdd0(self,values=0):
+        n  = self.name+'.'
+        indices=[n+'x',n+'y',n+'z',n+'e0',n+'e1',n+'e2',n+'e3']
+        if values==0:
+            acc=pd.Series(np.zeros((7,)),index=indices)
+            acc[n+'z']=9.81*1e3
+        else:
+            acc=pd.Series(values,index=indices)
+        return acc
+        
+        
+    
     @property
     def index(self):
         name=self.name

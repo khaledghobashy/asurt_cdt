@@ -191,7 +191,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time):
     nb=len(bodies)
     
     coeff_matrix=sc.sparse.bmat([[M,Cq.T],[Cq,None]],format='csc')
-    b_vector=np.concatenate([Qt,ac])
+    b_vector=np.concatenate([Qt.reshape((70,)),ac])
     
     x=sc.sparse.linalg.spsolve(coeff_matrix,b_vector)
     

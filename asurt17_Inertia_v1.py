@@ -210,7 +210,16 @@ from dyn_1s import cq, eq
 ##############################################################################
 # Dynamic Analysis.
 ##############################################################################
-q0=pd.concat([i.dic for i in bodies_list])
+q0   = pd.concat([i.dic    for i in bodies_list])
+qd0  = pd.concat([i.qd0()  for i in bodies_list])
+qdd0 = pd.concat([i.qdd0() for i in bodies_list])
+
+wheel_drive.pos=0
+ac=pd.Series([wheel_drive],index=[wheel_drive.name])
+
+topology_writer(bs,js,ac,fs,'dyn_2')
+
+dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',10)
 
 
 
