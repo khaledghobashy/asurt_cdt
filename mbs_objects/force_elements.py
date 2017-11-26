@@ -54,6 +54,7 @@ class tsda(object):
         
         rij_dot=Ri_dot+Bip.dot(bid)-Rj_dot-Bjp.dot(bjd)
         velocity=nij.T.dot(rij_dot)
+        self.velocity=velocity
         
         self.springforce=self.k*defflection
         self.damperforce=self.c*velocity

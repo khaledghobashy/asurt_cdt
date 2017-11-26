@@ -121,7 +121,7 @@ wheel  = rigid('wheel',mass,Jcm,cm,I)
 # Defining system forces
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
-spring_damper=tsda('f1',seat1,d1,seat2,d2,k=82*1e6,lf=140,c=7.5*1e6)
+spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-2*1e6)
 
 
 ###############################################################################
@@ -219,9 +219,25 @@ ac=pd.Series([wheel_drive],index=[wheel_drive.name])
 
 topology_writer(bs,js,ac,fs,'dyn_2')
 
-dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',10)
-
-
+dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',0.3,0.005)
+springdamper=dynamic1[4]
+xaxis=np.arange(0,0.3,0.005)
+plt.figure('springForce')
+plt.plot(xaxis,1e-6*springdamper['forceS'][1:])
+plt.grid()
+plt.show()
+plt.figure('Damper Force')
+plt.plot(xaxis,1e-6*springdamper['forceD'][1:])
+plt.grid()
+plt.show()
+plt.figure('spring deff')
+plt.plot(xaxis,springdamper['deff'][1:])
+plt.grid()
+plt.show()
+plt.figure('vel')
+plt.plot(xaxis,springdamper['vel'][1:])
+plt.grid()
+plt.show()
 
 
 
