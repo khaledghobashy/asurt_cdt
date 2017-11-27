@@ -67,12 +67,17 @@ def assign_initial_conditions(q0,qd0,qind):
     qd_initial = list(qd0[qind])
     return q_initial+qd_initial
 
-def state_space_creator():
+def state_space_creator(indeces):
     
-    def ssm(t,y,Cq_rec,Qt,lagr):
-        wz,wzd=y
-        dydt=[wzd, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
+    def ssm(t,y,mass_matrix,Cq_rec,Qt,lagr):
+        masses=mass_matrix.A[indeces,indeces]
+        v=list(y[len(y)/2:])
+        vdot=(1/masses)*(Qt[indeces]-(Cq_rec.T.dot(lagr))[indeces])
+        vdot=list(vdot)
+        dydt=v+vdot
         return dydt
+    
+    return ssm
     
 
 def kds(bodies,joints,actuators,topology_file,time_array):
@@ -226,10 +231,10 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
     
     # Initiating coordinate partitioning
     qind=extract_ind(Cq,q0)
-    qstr=qind[0][0]
+    qstr=qind[0]
     Ids=qind[1]
     qind_index=coordinates_mapper(q0)[1][qstr]
-    print('Independent Coordinate is: %s with index: %s \n'%(qstr,qind_index))
+    print('Independent Coordinates are: %s with indices: %s \n'%(qstr,qind_index))
     
     
     # creating dataframes to hold the simulation results at each timestep
@@ -268,8 +273,8 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
 
     # Setting up the integrator function and the initial conditions
     r=ode(ssm).set_integrator('dop853')
-    y0=assign_initial_conditions(q0,qd0,[qstr])
-    r.set_initial_value(y0).set_f_params(Cq,Qt,lamda0)
+    y0=assign_initial_conditions(q0,qd0,qstr)
+    r.set_initial_value(y0).set_f_params(M,Cq,Qt,lamda0)
     
     # Setting up the time array to be used in integration steps and starting
     # the integration
@@ -321,7 +326,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         JR_df.loc[i]=reaction.values.reshape((len(reaction,)))
 
         # Setting the ssm input parameters
-        r.set_f_params(Cq_new[:76,:],Qt,lamda)
+        r.set_f_params(M,Cq_new[:M.shape[0]-1,:],Qt,lamda)
     
     
     return position_df,velocity_df,acceleration_df,JR_df

@@ -13,7 +13,7 @@ from force_elements import tsda, force
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
-from solvers import kds, check_jacobian_dense, reactions, dds
+from solvers import kds, check_jacobian_dense, reactions, dds, state_space_creator
 from newton_raphson import nr_kds
 import matplotlib.pyplot as plt
 
@@ -235,10 +235,12 @@ vertical_travel.pos=254
 actuators = [vertical_travel,wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
 
-def ssm(t,y,Cq_rec,Qt,lagr):
-        wz,wzd=y
-        dydt=[wzd, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
-        return dydt
+#def ssm(t,y,Cq_rec,Qt,lagr):
+#        v=y[len(y)/2:]
+#        dydt=[v, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
+#        return dydt
+
+ssm=state_space_creator([51])
     
 topology_writer(bs,js,ac,fs,'dyn_2')
 

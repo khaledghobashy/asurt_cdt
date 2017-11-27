@@ -14,7 +14,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     columns =[i.name for i in bodies ]
     rows    =[i.name for i in joints ]+columns+[i.name for i in actuators]
     joints_eq_ind=np.concatenate([i.reaction_index for i in joints])
-    
+    n=7*len(bodies)
     file=open(file_name+'.py','w')
     file.flush()
     
@@ -146,7 +146,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
         file.write("\t Qg_s['%s']=bodies['%s'].gravity()\n"%(b.name,b.name))
 
     file.write("\t system=sparse.bmat(Qg_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
-    file.write("\t return system.A \n")
+    file.write("\t return system.A.reshape((%s,)) \n" %n)
 
     file.write("\n")
     file.write("\n")
@@ -160,7 +160,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
         file.write("\t Qv_s['%s']=bodies['%s'].centrifugal(q,qdot)\n"%(b.name,b.name))
 
     file.write("\t system=sparse.bmat(Qv_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
-    file.write("\t return system.A \n")
+    file.write("\t return system.A.reshape((%s,)) \n" %n)
 
     file.write("\n")
     file.write("\n")
@@ -180,7 +180,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
             file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
 
     file.write("\t system=sparse.bmat(Qa_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
-    file.write("\t return system.A \n")
+    file.write("\t return system.A.reshape((%s,)) \n" %n)
 
     file.write("\n")
     file.write("\n")
