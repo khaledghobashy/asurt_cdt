@@ -129,8 +129,8 @@ wheel  = rigid('wheel',mass,Jcm,cm,I)
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
 spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-7.5*1e6)
-nl=0*(160)*9.81*1e6
-force_vector=np.array([[nl*0.85],[nl*0.85],[nl]])
+nl=(160)*9.81*1e6
+force_vector=np.array([[nl*1],[nl*1],[nl]])
 vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
 
 
@@ -232,7 +232,7 @@ qdd0 = pd.concat([i.qdd0() for i in bodies_list])
 vertical_travel=absolute_locating(wheel,'z')
 wheel_drive.pos=0
 vertical_travel.pos=254
-actuators = [vertical_travel,wheel_drive]
+actuators = [wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
 
 #def ssm(t,y,Cq_rec,Qt,lagr):
@@ -244,7 +244,7 @@ ssm=state_space_creator([51])
     
 topology_writer(bs,js,ac,fs,'dyn_2')
 
-dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,ssm,'dyn_2',0.5,0.005)
+dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',0.5,0.005)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,0.5,0.005)
 

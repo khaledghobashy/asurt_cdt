@@ -202,7 +202,7 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
 
 
-def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
+def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     '''
     Dynamically Driven Systems Solver
     '''
@@ -233,7 +233,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
     qind=extract_ind(Cq,q0)
     qstr=qind[0]
     Ids=qind[1]
-    qind_index=coordinates_mapper(q0)[1][qstr]
+    qind_index=list(coordinates_mapper(q0)[1][qstr])
     print('Independent Coordinates are: %s with indices: %s \n'%(qstr,qind_index))
     
     
@@ -272,6 +272,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
     spring_df.loc[0]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
 
     # Setting up the integrator function and the initial conditions
+    ssm=state_space_creator(qind_index)
     r=ode(ssm).set_integrator('dop853')
     y0=assign_initial_conditions(q0,qd0,qstr)
     r.set_initial_value(y0).set_f_params(M,Cq,Qt,lamda0)
@@ -288,7 +289,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         # creating the guess vector for the vector q as the values of the 
         # previous step and the value of newly evaluated independent coordinate
         guess=position_df.loc[i]
-        guess[qstr]=r.y[0]
+        guess[qstr]=r.y[:len(r.y)//2]
         
         # Evaluating the dependent vector q using newton raphson
         dependent=nr_dds(eq_f,Cq_f,guess,bodies,joints,actuators,Ids)
@@ -296,7 +297,8 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         Cq_new=dependent[1]
         # Calculating the system velocities
         vrhs=velf(actuators)
-        vrhs=np.concatenate([vrhs,np.array([[r.y[1]]])])
+        vind=np.array(r.y[len(r.y)//2:]).reshape((len(r.y)//2,1))
+        vrhs=np.concatenate([vrhs,vind])
         velocity_df.loc[i+1]=sc.sparse.linalg.spsolve(Cq_new,vrhs)
         
         
@@ -326,7 +328,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         JR_df.loc[i]=reaction.values.reshape((len(reaction,)))
 
         # Setting the ssm input parameters
-        r.set_f_params(M,Cq_new[:M.shape[0]-1,:],Qt,lamda)
+        r.set_f_params(M,Cq_new[:M.shape[0]-len(qind_index),:],Qt,lamda)
     
     
     return position_df,velocity_df,acceleration_df,JR_df

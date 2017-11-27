@@ -3,7 +3,7 @@ import pandas as pd
 from scipy import sparse 
 
 
-jac_df=pd.DataFrame([11 *[None]],columns=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wheel.z_actuator', 'wc_rev_actuator'])
+jac_df=pd.DataFrame([11 *[None]],columns=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def cq(q,bodies,joints,actuators): 
 	 jac_df.loc['ucaf_rev','uca']=joints['ucaf_rev'].jacobian_i(q)
 	 jac_df.loc['ucaf_rev','chassis']=joints['ucaf_rev'].jacobian_j(q)
@@ -44,14 +44,13 @@ def cq(q,bodies,joints,actuators):
 	 jac_df.loc['d2','d2']=bodies['d2'].unity_jacobian(q)
 	 jac_df.loc['rocker','rocker']=bodies['rocker'].unity_jacobian(q)
 	 jac_df.loc['wheel','wheel']=bodies['wheel'].unity_jacobian(q)
-	 jac_df.loc['wheel.z_actuator','wheel']=actuators['wheel.z_actuator'].jacobian()
 	 jac_df.loc['wc_rev_actuator','wheel']=actuators['wc_rev_actuator'].jacobian_i(q)
 	 jac_df.loc['wc_rev_actuator','upright']=actuators['wc_rev_actuator'].jacobian_j(q)
 	 jac=sparse.bmat(jac_df,format='csc') 
 	 return jac 
 
 
-eq_s=pd.Series([27 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wheel.z_actuator', 'wc_rev_actuator'])
+eq_s=pd.Series([26 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def eq(q,bodies,joints,actuators): 
 	 eq_s['ucaf_rev']=joints['ucaf_rev'].equations(q)
 	 eq_s['lcaf_rev']=joints['lcaf_rev'].equations(q)
@@ -78,19 +77,17 @@ def eq(q,bodies,joints,actuators):
 	 eq_s['d2']=bodies['d2'].unity_equation(q)
 	 eq_s['rocker']=bodies['rocker'].unity_equation(q)
 	 eq_s['wheel']=bodies['wheel'].unity_equation(q)
-	 eq_s['wheel.z_actuator']=actuators['wheel.z_actuator'].equations(q)
 	 eq_s['wc_rev_actuator']=actuators['wc_rev_actuator'].equations(q)
-	 system=sparse.bmat(eq_s.values.reshape((27,1)),format='csc') 
-	 return system.A.reshape((76,)) 
+	 system=sparse.bmat(eq_s.values.reshape((26,1)),format='csc') 
+	 return system.A.reshape((75,)) 
 
 
-vel_rhs_s=pd.Series([27 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wheel.z_actuator', 'wc_rev_actuator'])
+vel_rhs_s=pd.Series([26 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def vel_rhs(actuators): 
 	 vrhs=np.zeros((74,1))
-	 vrhs=np.concatenate([vrhs,actuators['wheel.z_actuator'].vel_rhs()]) 
 	 vrhs=np.concatenate([vrhs,actuators['wc_rev_actuator'].vel_rhs()]) 
 	 return vrhs 
-acc_rhs_s=pd.Series([27 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wheel.z_actuator', 'wc_rev_actuator'])
+acc_rhs_s=pd.Series([26 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def acc_rhs(q,qdot,bodies,joints,actuators): 
 	 acc_rhs_s['ucaf_rev']=joints['ucaf_rev'].acc_rhs(q,qdot)
 	 acc_rhs_s['lcaf_rev']=joints['lcaf_rev'].acc_rhs(q,qdot)
@@ -117,10 +114,9 @@ def acc_rhs(q,qdot,bodies,joints,actuators):
 	 acc_rhs_s['d2']=bodies['d2'].acc_rhs(qdot)
 	 acc_rhs_s['rocker']=bodies['rocker'].acc_rhs(qdot)
 	 acc_rhs_s['wheel']=bodies['wheel'].acc_rhs(qdot)
-	 acc_rhs_s['wheel.z_actuator']=actuators['wheel.z_actuator'].acc_rhs(q,qdot)
 	 acc_rhs_s['wc_rev_actuator']=actuators['wc_rev_actuator'].acc_rhs(q,qdot)
-	 system=sparse.bmat(acc_rhs_s.values.reshape((27,1)),format='csc') 
-	 return system.A.reshape((76,)) 
+	 system=sparse.bmat(acc_rhs_s.values.reshape((26,1)),format='csc') 
+	 return system.A.reshape((75,)) 
 
 
 mass_matrix_df=pd.DataFrame([11 *[None]],columns=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'],index=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'])

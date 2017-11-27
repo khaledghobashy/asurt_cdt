@@ -101,7 +101,7 @@ def nr_dds(eq,jac,guess,bodies,joints,actuators,Ids,debug=False):
         if itr!=0 and itr%5==0:
 #            print('Recalculating Jacobian')
                 A=jac(q,bodies,joints,actuators)
-                Acon=sparse.bmat([[A],[Ids]],format='csc')
+                Acon=sparse.bmat([[A],[Ids.T]],format='csc')
 
         b=-1*eq(q,bodies,joints,actuators)
         bcon=np.concatenate([b,Ieq])
