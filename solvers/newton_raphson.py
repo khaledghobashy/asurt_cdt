@@ -60,7 +60,7 @@ def nr_kds(eq,jac,guess,bodies,joints,actuators,debug=False):
     else:
         return q,A,itr
 
-def nr_dds(eq,jac,guess,bodies,joints,actuators,debug=False):
+def nr_dds(eq,jac,guess,bodies,joints,actuators,Ids,debug=False):
     '''
     eq    : system equations as a callable function of (q,joints,bodies)
     jac   : system jacobian as a callable function of (q,joints,bodies)
@@ -71,10 +71,11 @@ def nr_dds(eq,jac,guess,bodies,joints,actuators,debug=False):
     n=7*len(bodies)
     Id=np.zeros((1,n))
     Id[0,9]=1
-    Ieq=np.array([0])
+    nqind=Ids.shape[1]
+    Ieq=np.zeros((nqind,))
     
     A=jac(q,bodies,joints,actuators)
-    Acon=sparse.bmat([[A],[Id]],format='csc')
+    Acon=sparse.bmat([[A],[Ids.T]],format='csc')
     b=-1*eq(q,bodies,joints,actuators)
     bcon=np.concatenate([b,Ieq])
     delta_q=sparse.linalg.spsolve(Acon,bcon)
@@ -100,7 +101,7 @@ def nr_dds(eq,jac,guess,bodies,joints,actuators,debug=False):
         if itr!=0 and itr%5==0:
 #            print('Recalculating Jacobian')
                 A=jac(q,bodies,joints,actuators)
-                Acon=sparse.bmat([[A],[Id]],format='csc')
+                Acon=sparse.bmat([[A],[Ids]],format='csc')
 
         b=-1*eq(q,bodies,joints,actuators)
         bcon=np.concatenate([b,Ieq])

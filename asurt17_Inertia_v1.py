@@ -128,7 +128,7 @@ wheel  = rigid('wheel',mass,Jcm,cm,I)
 # Defining system forces
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
-spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-2*1e6)
+spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-7.5*1e6)
 nl=0*(160)*9.81*1e6
 force_vector=np.array([[nl*0.85],[nl*0.85],[nl]])
 vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
@@ -237,7 +237,7 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
 
 def ssm(t,y,Cq_rec,Qt,lagr):
         wz,wzd=y
-        dydt=[wzd, (1/80000)*(Qt[9]-(Cq_rec.T.dot(lagr))[9])]
+        dydt=[wzd, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
         return dydt
     
 topology_writer(bs,js,ac,fs,'dyn_2')

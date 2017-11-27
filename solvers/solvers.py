@@ -22,12 +22,12 @@ def progress_bar(steps,i):
     sys.stdout.write("[%-25s] %d%% of %s steps." % ('='*length,percentage, steps))
     sys.stdout.flush()
 
-def check_jacobian(sparse_jac):
+def check_jacobian_sparse(sparse_jac):
     factorized=sc.sparse.linalg.splu(sparse_jac.tocsc())
     upper=factorized.U
-    lower=factorized.L
-    permC=factorized.perm_c
-    permR=factorized.perm_r
+#    lower=factorized.L
+#    permC=factorized.perm_c
+#    permR=factorized.perm_r
     
     pivots=upper.diagonal()
     ill_pv=min(abs(pivots))
@@ -48,17 +48,31 @@ def check_jacobian_dense(sparse_jac):
 
 def coordinates_mapper(q):
     n=len(q)
-    return pd.Series(q.index,index=np.arange(0,n,1))
+    int2str=pd.Series(q.index,index=np.arange(0,n,1))
+    str2int=pd.Series(np.arange(0,n,1),index=q.index)
+    return int2str, str2int
 
 def extract_ind(sparse_jac,q):
     mat=sparse_jac.A
     rows,cols=mat.shape
     permR=sc.linalg.lu(mat.T)[0]
-    ind_clos=permR[:,rows:]
-    maped=coordinates_mapper(q)
-    ind_coord=[maped[np.argmax(ind_clos[:,i])] for i in range(cols-rows) ]
+    ind_cols=permR[:,rows:]
+    maped=coordinates_mapper(q)[0]
+    ind_coord=[maped[np.argmax(ind_cols[:,i])] for i in range(cols-rows) ]
     
-    return ind_coord
+    return ind_coord, ind_cols
+
+def assign_initial_conditions(q0,qd0,qind):
+    q_initial  = list(q0[qind])
+    qd_initial = list(qd0[qind])
+    return q_initial+qd_initial
+
+def state_space_creator():
+    
+    def ssm(t,y,Cq_rec,Qt,lagr):
+        wz,wzd=y
+        dydt=[wzd, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
+        return dydt
     
 
 def kds(bodies,joints,actuators,topology_file,time_array):
@@ -210,6 +224,14 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
     Qt = (Qa+Qv+Qg).reshape((7*nb,))
     ac = accf(q0,qd0,bodies,joints,actuators)
     
+    # Initiating coordinate partitioning
+    qind=extract_ind(Cq,q0)
+    qstr=qind[0][0]
+    Ids=qind[1]
+    qind_index=coordinates_mapper(q0)[1][qstr]
+    print('Independent Coordinate is: %s with index: %s \n'%(qstr,qind_index))
+    
+    
     # creating dataframes to hold the simulation results at each timestep
     # with initial conditions at t0
     position_df=pd.DataFrame(columns=q0.index)
@@ -246,9 +268,8 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
 
     # Setting up the integrator function and the initial conditions
     r=ode(ssm).set_integrator('dop853')
-    wz0  = q0['chassis.z']
-    wzd0 = qd0['chassis.z']
-    r.set_initial_value([wz0,wzd0]).set_f_params(Cq,Qt,lamda0)
+    y0=assign_initial_conditions(q0,qd0,[qstr])
+    r.set_initial_value(y0).set_f_params(Cq,Qt,lamda0)
     
     # Setting up the time array to be used in integration steps and starting
     # the integration
@@ -262,10 +283,10 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         # creating the guess vector for the vector q as the values of the 
         # previous step and the value of newly evaluated independent coordinate
         guess=position_df.loc[i]
-        guess['chassis.z']=r.y[0]
+        guess[qstr]=r.y[0]
         
         # Evaluating the dependent vector q using newton raphson
-        dependent=nr_dds(eq_f,Cq_f,guess,bodies,joints,actuators)
+        dependent=nr_dds(eq_f,Cq_f,guess,bodies,joints,actuators,Ids)
         position_df.loc[i+1]=dependent[0]
         Cq_new=dependent[1]
         # Calculating the system velocities
