@@ -7,7 +7,8 @@ Created on Tue Nov  7 13:32:37 2017
 
 from base import grf, vector, point, ep2dcm, rot2ep
 from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
-from constraints import spherical, revolute, universal, cylindrical, rotational_drive, absolute_locating
+from constraints import spherical, revolute, universal, \
+cylindrical, rotational_drive, absolute_locating,translational
 from force_elements import tsda, force
 from pre_processor import topology_writer
 import pandas as pd
@@ -19,6 +20,7 @@ import matplotlib.pyplot as plt
 ###############################################################################
 # Defining System HardPoints.
 ###############################################################################
+origin = point('origin', [0,0,0])
 bcp    = point('bcp',    [6.63, -280, 574])
 bc_pr  = point('bc_pr',  [6.63, -347, 595])
 bc_sh  = point('bc_sh',  [6.63, -262, 631])
@@ -40,13 +42,18 @@ d_m    = point.mid_point(ch_sh,bc_sh,'d_m')
 # Defining System Bodies and their inertia properties.
 ###############################################################################
 I=np.eye(3)
+cm=vector([0,0,0])
+dcm=I
+J=I
+mass=1
+ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 #Chassis
 ########
-ch_cm=vector([0,0,0])
+ch_cm=vector([0,0,320])
 ch_dcm=I
 ch_J=I
-ch_mass=1
-chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm,typ='mount')
+ch_mass=80*1e3
+chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 uca_cm=vector([-32.44,-389.51,331.31])
 Jcm=np.array([[ 1297540.37,-897778.79 ,-254075.80],
@@ -121,8 +128,8 @@ wheel  = rigid('wheel',mass,Jcm,cm,I)
 # Defining system forces
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
-spring_damper=tsda('f1',seat1,d1,seat2,d2,k=70*1e6,lf=140,c=-2*1e6)
-nl=(160)*9.81*1e6
+spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-2*1e6)
+nl=0*(160)*9.81*1e6
 force_vector=np.array([[nl*0.85],[nl*0.85],[nl]])
 vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
 
@@ -154,6 +161,8 @@ tie_ch      = universal(tri,chassis,tie,vector([0,1,0]),ax3)
 wheel_drive = rotational_drive(wheel_hub)
 
 vertical_travel=absolute_locating(wheel,'z')
+wheel_lock =absolute_locating(wheel,'z')
+ch_ground   = translational(origin,ground,chassis,vector([0,0,1])) 
 ###############################################################################
 
 
@@ -165,12 +174,12 @@ vertical_travel=absolute_locating(wheel,'z')
 
 points      =[bcp,bc_sh,bc_pr,ch_sh,ucaf,ucar,ucao,lcaf,lcar,lcao,tri,tro,uca_pr,cp,wc,d_m]
 
-bodies_list =[chassis,uca,lca,upright,push,tie,d1,d2,rocker,wheel]
+bodies_list =[ground,chassis,uca,lca,upright,push,tie,d1,d2,rocker,wheel]
 
 joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
-              tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub]
+              tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub,ch_ground]
 
-actuators = [vertical_travel,wheel_drive]
+actuators = [vertical_travel,wheel_drive,wheel_lock]
 forces    = [spring_damper,vf]
 
 js=pd.Series(joints_list,index=[i.name for i in joints_list])
@@ -181,26 +190,29 @@ fs=pd.Series(forces     ,index=[i.name for i in forces])
 ##############################################################################
 # Generating system file.
 ##############################################################################
-topology_writer(bs,js,ac,fs,'dyn_1s')
-qn=pd.concat([i.dic for i in bodies_list])
-
-from dyn_1s import cq, eq
-#vertical_travel.pos=259
-#dd=nr_kds2(eq,cq,qn,bs,js,ac,debug=True)
-
+#topology_writer(bs,js,ac,fs,'dyn_1s')
+#qn=pd.concat([i.dic for i in bodies_list])
+#
+##from dyn_1s import cq, eq
+##vertical_travel.pos=322
+##wheel_drive.pos=0
+##wheel_lock.pos=254
+##dd=nr_kds(eq,cq,qn,bs,js,ac,debug=True)
+#
 #time=np.linspace(0,2*np.pi,50)
-#wheel_drive.pos_array=np.ones((len(time),))
-#vertical_travel.pos_array=254+30*np.sin(2*time)
+#wheel_drive.pos_array=np.zeros((len(time),))
+#wheel_lock.pos_array=254+np.zeros((len(time),))
+#vertical_travel.pos_array=320+30*np.sin(2*time)
 #d=kds(bs,js,ac,'dyn_1s',time)
-
+#
 #coord3='wheel.y'
 #plt.figure(coord3)
 #plt.plot(time,d[0][coord3][1:])
-#plt.plot(d[0]['wheel.z'][1:]-254,d[0][coord3][1:])
+#plt.plot(d[0]['chassis.z'][1:]-254,d[0][coord3][1:])
 #plt.plot(time,d[1][coord3][1:])
 #plt.grid()
 #plt.show()
-
+#
 #system_forces=reactions(d[0],d[1],d[2],bs,js,ac,fs,'dyn_1s')
 #lamdas=system_forces[4]
 #joints_reactions=1e-6*system_forces[5][1:]
@@ -217,12 +229,15 @@ q0   = pd.concat([i.dic    for i in bodies_list])
 qd0  = pd.concat([i.qd0()  for i in bodies_list])
 qdd0 = pd.concat([i.qdd0() for i in bodies_list])
 
+vertical_travel=absolute_locating(wheel,'z')
 wheel_drive.pos=0
-ac=pd.Series([wheel_drive],index=[wheel_drive.name])
+vertical_travel.pos=254
+actuators = [vertical_travel,wheel_drive]
+ac=pd.Series(actuators,index=[i.name for i in actuators])
 
 def ssm(t,y,Cq_rec,Qt,lagr):
         wz,wzd=y
-        dydt=[wzd, (1/13377.41)*(Qt[65]-(Cq_rec.T.dot(lagr))[65])]
+        dydt=[wzd, (1/80000)*(Qt[9]-(Cq_rec.T.dot(lagr))[9])]
         return dydt
     
 topology_writer(bs,js,ac,fs,'dyn_2')
@@ -233,6 +248,14 @@ xaxis=np.arange(0,0.5,0.005)
 
 plt.figure('WheelCenter Position')
 plt.plot(xaxis,pos['wheel.z'][1:],label=r'$wc_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
+
+plt.figure('Chassis CG Vertical Position')
+plt.plot(xaxis,pos['chassis.z'][1:],label=r'$chassis_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')

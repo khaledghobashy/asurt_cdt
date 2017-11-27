@@ -30,9 +30,9 @@ def nr_kds(eq,jac,guess,bodies,joints,actuators,debug=False):
     
     itr=0
     while np.linalg.norm(delta_q)>1e-5:
-#        print('iteration: %s'%(itr))
-#        print('correction norm = %s'%(np.linalg.norm(delta_q)))
-#        print('equations  norm = %s \n'%(np.linalg.norm(b)))
+        print('iteration: %s'%(itr))
+        print('correction norm = %s'%(np.linalg.norm(delta_q)))
+        print('equations  norm = %s \n'%(np.linalg.norm(b)))
 
         if debug:
             eqdf.loc[itr]=-1*b
@@ -42,7 +42,7 @@ def nr_kds(eq,jac,guess,bodies,joints,actuators,debug=False):
         q=q+delta_q
         
         if itr!=0 and itr%5==0:
-#            print('Recalculating Jacobian')
+            print('Recalculating Jacobian')
             A=jac(q,bodies,joints,actuators)
         b=-1*eq(q,bodies,joints,actuators)
         delta_q=sparse.linalg.spsolve(A,b)
@@ -70,7 +70,7 @@ def nr_dds(eq,jac,guess,bodies,joints,actuators,debug=False):
     
     n=7*len(bodies)
     Id=np.zeros((1,n))
-    Id[0,65]=1
+    Id[0,9]=1
     Ieq=np.array([0])
     
     A=jac(q,bodies,joints,actuators)

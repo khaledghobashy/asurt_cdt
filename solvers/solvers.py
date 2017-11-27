@@ -246,8 +246,8 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
 
     # Setting up the integrator function and the initial conditions
     r=ode(ssm).set_integrator('dop853')
-    wz0  = q0['wheel.z']
-    wzd0 = qd0['wheel.z']
+    wz0  = q0['chassis.z']
+    wzd0 = qd0['chassis.z']
     r.set_initial_value([wz0,wzd0]).set_f_params(Cq,Qt,lamda0)
     
     # Setting up the time array to be used in integration steps and starting
@@ -262,7 +262,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         # creating the guess vector for the vector q as the values of the 
         # previous step and the value of newly evaluated independent coordinate
         guess=position_df.loc[i]
-        guess['wheel.z']=r.y[0]
+        guess['chassis.z']=r.y[0]
         
         # Evaluating the dependent vector q using newton raphson
         dependent=nr_dds(eq_f,Cq_f,guess,bodies,joints,actuators)
@@ -300,7 +300,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,ssm,file,sim_time,stepsize):
         JR_df.loc[i]=reaction.values.reshape((len(reaction,)))
 
         # Setting the ssm input parameters
-        r.set_f_params(Cq_new[:69,:],Qt,lamda)
+        r.set_f_params(Cq_new[:76,:],Qt,lamda)
     
     
     return position_df,velocity_df,acceleration_df,JR_df
