@@ -9,7 +9,7 @@ from base import grf, vector, point, ep2dcm, rot2ep
 from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
 from constraints import spherical, revolute, universal, \
 cylindrical, rotational_drive, absolute_locating,translational
-from force_elements import tsda, force
+from force_elements import tsda, force, tire_force
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
@@ -57,8 +57,8 @@ chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 uca_cm=vector([-32.44,-389.51,331.31])
 Jcm=np.array([[ 1297540.37,-897778.79 ,-254075.80],
-                  [-897778.79 , 3490235.80, 66317.52],
-                  [-254075.80 , 66317.52  , 4742845.78]])
+              [-897778.79 , 3490235.80, 66317.52],
+              [-254075.80 , 66317.52  , 4742845.78]])
 dcm,uca_J=principle_inertia(Jcm)
 uca_mass = 400
 uca      = rigid('uca',uca_mass,Jcm,uca_cm,I)
@@ -128,10 +128,11 @@ wheel  = rigid('wheel',mass,Jcm,cm,I)
 # Defining system forces
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
-spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-7.5*1e6)
+spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-8*1e6)
 nl=(160)*9.81*1e6
-force_vector=np.array([[nl*1],[nl*1],[nl]])
+force_vector=np.array([[nl*1],[nl*1],[0]])
 vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
+tf=tire_force('tvf',wheel,300*1e6,254,vector([0,600,0]))
 
 
 ###############################################################################
@@ -180,7 +181,7 @@ joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
               tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub,ch_ground]
 
 actuators = [vertical_travel,wheel_drive,wheel_lock]
-forces    = [spring_damper,vf]
+forces    = [spring_damper,tf]
 
 js=pd.Series(joints_list,index=[i.name for i in joints_list])
 bs=pd.Series(bodies_list,index=[i.name for i in bodies_list])
@@ -240,13 +241,12 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
 #        dydt=[v, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
 #        return dydt
 
-ssm=state_space_creator([51])
     
 topology_writer(bs,js,ac,fs,'dyn_2')
 
-dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',0.5,0.005)
+dynamic1=dds(q0,qd0,qdd0,bs,js,ac,fs,'dyn_2',1,1/150)
 pos,vel,acc,react=dynamic1
-xaxis=np.arange(0,0.5,0.005)
+xaxis=np.arange(0,1,1/150)
 
 plt.figure('WheelCenter Position')
 plt.plot(xaxis,pos['wheel.z'][1:],label=r'$wc_{z}$')
@@ -265,7 +265,7 @@ plt.grid()
 plt.show()
 
 plt.figure('WheelHub Verical Reaction Force')
-plt.plot(xaxis[1:],-1e-6*react['wc_rev_Fz'][1:],label=r'$wc_{Fz}$')
+plt.plot(xaxis,-1e-6*react['wc_rev_Fz'],label=r'$wc_{Fz}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')

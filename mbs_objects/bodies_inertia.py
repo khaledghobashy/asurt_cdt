@@ -53,7 +53,7 @@ class rigid(object):
         indices=[n+'x',n+'y',n+'z',n+'e0',n+'e1',n+'e2',n+'e3']
         if values==0:
             acc=pd.Series(np.zeros((7,)),index=indices)
-            acc[n+'z']=9.81*1e3
+            acc[n+'z']=-9.81*1e3*0
         else:
             acc=pd.Series(values,index=indices)
         return acc

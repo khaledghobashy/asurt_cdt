@@ -71,7 +71,7 @@ def state_space_creator(indeces):
     
     def ssm(t,y,mass_matrix,Cq_rec,Qt,lagr):
         masses=mass_matrix.A[indeces,indeces]
-        v=list(y[len(y)/2:])
+        v=list(y[len(y)//2:])
         vdot=(1/masses)*(Qt[indeces]-(Cq_rec.T.dot(lagr))[indeces])
         vdot=list(vdot)
         dydt=v+vdot
@@ -267,9 +267,9 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     lamda_df.loc[0]=lamda0
     
     # evaluating the tsda force attributes to debug
-    spring=forces[0]
-    spring_df=pd.DataFrame(columns=['deff','vel','forceS','forceD'])
-    spring_df.loc[0]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
+#    spring=forces[0]
+#    spring_df=pd.DataFrame(columns=['deff','vel','forceS','forceD'])
+#    spring_df.loc[0]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
 
     # Setting up the integrator function and the initial conditions
     ssm=state_space_creator(qind_index)
@@ -323,7 +323,7 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         lamda = x[7*nb:] # the rest of elements in the x vector
         acceleration_df.loc[i+1]=qdd
         lamda_df.loc[i+1]=lamda
-        spring_df.loc[i+1]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
+#        spring_df.loc[i+1]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
         reaction=JR_f(joints,q,lamda_df.loc[i])
         JR_df.loc[i]=reaction.values.reshape((len(reaction,)))
 

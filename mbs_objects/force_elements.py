@@ -73,11 +73,11 @@ class tsda(object):
     
     
 class force(object):
-    def __init__(self,name,force,bodyi,Pi):
+    def __init__(self,name,value,bodyi,Pi):
         self.name=name
         self.bodyi=bodyi
         self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
-        self.F=force
+        self.F=value
         
     def equation(self,q):
         qi=q[self.bodyi.dic.index]
@@ -88,7 +88,40 @@ class force(object):
         Qi=np.bmat([[F],[M]])
         return Qi
 
+class moment(object):
+    def __init__(self,name,value,bodyi,Pi):
+        self.name=name
+        self.bodyi=bodyi
+        self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
+        self.M=value
         
+    def equation(self,q):
+        qi=q[self.bodyi.dic.index]
+        betai=qi[3:]
+        Z=np.zeros((3,1))
+        M=2*G(betai).T.dot(self.M)
+        Qi=np.bmat([[Z],[M]])
+        return Qi        
         
-
+class tire_force(object):
+    def __init__(self,name,bodyi,k,r,Pi):
+        self.name=name
+        self.bodyi=bodyi
+        self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
+        self.k=k
+        self.r=r
+        
+    def equation(self,q):
+        qi=q[self.bodyi.dic.index]
+        betai=qi[3:]
+        Ai=ep2dcm(betai)
+        rw=qi[self.bodyi.name+'.z']
+        x=max([0,self.r-rw])
+        F=np.array([[0,0,self.k*x]]).T
+        Z=np.zeros((4,1))
+        M=2*G(betai).T.dot(vec2skew(self.u_i).dot(Ai.T.dot(F)))
+        Qi=np.bmat([[F],[Z]])
+        return Qi
+        
+    
         
