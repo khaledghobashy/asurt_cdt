@@ -6,6 +6,7 @@ Created on Wed Nov  1 07:58:27 2017
 """
 
 from bodies import mount
+from force_elements import tsda
 from constraints import absolute_locating
 import numpy as np
 
@@ -13,7 +14,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     columns =[i.name for i in bodies ]
     rows    =[i.name for i in joints ]+columns+[i.name for i in actuators]
     joints_eq_ind=np.concatenate([i.reaction_index for i in joints])
-    
+    n=7*len(bodies)
     file=open(file_name+'.py','w')
     file.flush()
     
@@ -145,7 +146,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
         file.write("\t Qg_s['%s']=bodies['%s'].gravity()\n"%(b.name,b.name))
 
     file.write("\t system=sparse.bmat(Qg_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
-    file.write("\t return system.A \n")
+    file.write("\t return system.A.reshape((%s,)) \n" %n)
 
     file.write("\n")
     file.write("\n")
@@ -159,7 +160,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
         file.write("\t Qv_s['%s']=bodies['%s'].centrifugal(q,qdot)\n"%(b.name,b.name))
 
     file.write("\t system=sparse.bmat(Qv_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
-    file.write("\t return system.A \n")
+    file.write("\t return system.A.reshape((%s,)) \n" %n)
 
     file.write("\n")
     file.write("\n")
@@ -171,12 +172,16 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     file.write("def Qa(forces,q,qdot): \n")
 
     for f in forces:
-        file.write("\t Qi,Qj=forces['%s'].equation(q,qdot) \n" %f.name)
-        file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
-        file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
+        if isinstance(f,tsda):
+            file.write("\t Qi,Qj=forces['%s'].equation(q,qdot) \n" %f.name)
+            file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
+            file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
+        else:
+            file.write("\t Qa_s['%s']=forces['%s'].equation(q) \n" %(f.bodyi.name,f.name))
+            
 
     file.write("\t system=sparse.bmat(Qa_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
-    file.write("\t return system.A \n")
+    file.write("\t return system.A.reshape((%s,)) \n" %n)
 
     file.write("\n")
     file.write("\n")

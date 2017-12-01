@@ -6,63 +6,78 @@ Created on Sun Nov  5 18:28:57 2017
 """
 
 
-from base import point, vector, ep2dcm,rot2ep
-import numpy as np
-import pandas as pd
-from bodies import body, mount
-from constraints import revolute, spherical, universal, sph_sph, absolute_locating, rotational_drive
+from base import grf, vector, point, ep2dcm, rot2ep
+from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
+from constraints import spherical, revolute, universal, \
+cylindrical, rotational_drive, absolute_locating,translational
+from force_elements import tsda, force, moment
 from pre_processor import topology_writer
-from geometries import cylinder
+import pandas as pd
+import numpy as np
+from solvers import kds, check_jacobian_dense, reactions, dds, state_space_creator
+from newton_raphson import nr_kds
 import matplotlib.pyplot as plt
-from solvers import kds
-from newton_raphson import nr_kds2
 
 
 
 A=point('A',[0,0,0])
-B=point('B',[0,0,2])
-C=point('C',[7.5,8.5,6.5])
-D=point('D',[4,8.5,0])
+B=point('B',[0,0,20])
+C=point('C',[75,85,65])
+D=point('D',[40,85,0])
 
-ground=mount('ground')
-l1=body('l1',orientation=ep2dcm(rot2ep(45,[1,1,0])))
-l2=body('l2',orientation=ep2dcm([0.8794,-0.29098,-0.274,-0.2591]))
-l3=body('l3',orientation=ep2dcm([0.60687,-0.36245,0.36247,-0.60684]))
+##############################################################################
+I=np.eye(3)
+cm=vector([0,0,0])
+dcm=I
+J=I
+mass=1
+ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
+##############################################################################
+l1_g  = circular_cylinder(A,B,15)
+cm    = l1_g.cm
+dcm   = l1_g.C
+J     = l1_g.J
+mass  = l1_g.mass
+l1    = rigid('l1',mass,J,cm,dcm)
+##############################################################################
+l2_g  = circular_cylinder(B,C,15)
+cm    = l2_g.cm
+dcm   = l2_g.C
+J     = l2_g.J
+mass  = l2_g.mass 
+l2    = rigid('l2',mass,J,cm,dcm)
+##############################################################################
+l3_g  = circular_cylinder(C,D,15)
+cm    = l3_g.cm
+dcm   = l3_g.C
+J     = l3_g.J
+mass  = l3_g.mass 
+l3    = rigid('l3',mass,J,cm,dcm)
+##############################################################################
 
-
-l1g = cylinder(A,B,l1)
-l2g = cylinder(B,C,l2)
-l3g = cylinder(C,D,l3)
 
 a_rev=revolute(A,ground,l1,vector([1,0,0]))
 d_rev=revolute(D,l3,ground,vector([0,1,0]))
-b_sph=spherical(B,l1,l2)
-c_uni=universal(C,l2,l3,B-C,C-D)
+b_uni=universal(B,l1,l2,A-B,B-C)
+c_sph=spherical(C,l2,l3)
 
-motor = absolute_locating(l1,'y')
-
-
-joints=pd.Series([a_rev,d_rev,b_sph,c_uni],index=[i.name for i in [a_rev,d_rev,b_sph,c_uni]])
-bodies=pd.Series([ground,l1,l2,l3],index=[i.name for i in [ground,l1,l2,l3]])
-actuators=pd.Series([motor],index=[motor.name])
-
-topology_writer(bodies,joints,actuators,'fbooc')
-from fbooc import eq, cq
-
-time=np.linspace(0,4*np.pi,180)
-#motor.set_vel(50*np.ones(len(time,)),time)
-motor.set_pos(1*np.sin(1.5*time),time)
-q_initial=pd.concat([i.dic for i in bodies])
+moment_vector=np.array([[-10*1e9],[0],[0]])
+vf=moment('vertical_force',moment_vector,l1,vector([0,0,0]))
 
 
-fbar=kds(bodies,joints,actuators,'fbooc',time)
-#motor.pos=90
-#bugs=nr_kds2(eq,cq,q_initial,bodies,joints,actuators,debug=True)
+joints= pd.Series([a_rev,d_rev,b_uni,c_sph],index=[i.name for i in [a_rev,d_rev,b_uni,c_sph]])
+bodies= pd.Series([ground,l1,l2,l3],index=[i.name for i in [ground,l1,l2,l3]])
+fc    = pd.Series([vf],index=[i.name for i in [vf]])
+q_0   = pd.concat([i.dic for i in bodies])
+qd_0  = pd.concat([i.qd0()  for i in bodies])
+qdd_0 = pd.concat([i.qdd0() for i in bodies])
 
-plt.figure('s-v-a')
-plt.plot(np.rad2deg(time),fbar[0]['l3.z'][1:])
-plt.plot(np.rad2deg(time),fbar[0]['l1.z'][1:])
-plt.plot(np.rad2deg(time),fbar[0]['l2.z'][1:])
-plt.plot(np.rad2deg(time),fbar[1]['l3.z'][1:])
-plt.grid()
-plt.show()
+fc=[]
+topology_writer(bodies,joints,[],fc,'fbar_dyn')
+
+dynamic1_fbar=dds(q_0,qd_0,qdd_0,bodies,joints,[],fc,'fbar_dyn',1,1/50)
+posf,velf,accf,reactf=dynamic1_fbar
+
+
+
+

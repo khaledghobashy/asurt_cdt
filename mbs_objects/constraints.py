@@ -81,11 +81,13 @@ class joint(object):
         loc=self.loc
         return {name+'x':loc.x,name+'y':loc.y,name+'z':loc.z}
         
-    def joint_pos(self,R,rod_param):
-        R=vector(R)
-        tm=ep2dcm(rod_param)
-        pos=R.a+tm.dot(self.u_i)
-        return vector(pos)
+    def joint_pos(self,q):
+        qi=q[self.i_body.dic.index]
+        Ri=vector(qi[0:3]).a
+        Ai=ep2dcm(qi[3:])
+        ui=self.u_i
+        r_p=Ri+Ai.dot(ui)
+        return r_p
     
     
     def reactions(self,q,lamda):
@@ -371,6 +373,181 @@ class cylindrical(joint):
         right = cylindrical(loc_r,ibody_r,jbody_r,ax_r)
         
         return pd.Series([left,right],index=['l','r'])
+
+
+
+class translational(joint):
+    def __init__(self,location,i_body,j_body,axis):
+        super().__init__(location,i_body,j_body,axis)
+        self.type='translational joint'
+        self.name=self.name+'_trans'
+        self.nc=5
+        self.p2=vector(location)+10*vector(axis).unit
+        self.u_j=j_body.dcm.T.dot(self.p2-j_body.R)
+        
+
+
+    def equations(self,q):
+        
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        Ri=vector(qi[0:3]).a
+        Rj=vector(qj[0:3]).a
+        
+        Ai=ep2dcm(qi[3:])
+        Aj=ep2dcm(qj[3:])
+        
+        v1=self.vii
+        v2=self.vij
+        v3=self.vjk
+        v4=self.vjj
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+
+        
+        eq1=np.linalg.multi_dot([v1.T,Ai.T,Aj,v3])
+        eq2=np.linalg.multi_dot([v2.T,Ai.T,Aj,v3])
+        eq3=np.linalg.multi_dot([v1.T,Ai.T,rij])
+        eq4=np.linalg.multi_dot([v2.T,Ai.T,rij])
+        eq5=np.linalg.multi_dot([v1.T,Ai.T,Aj,v4])
+        
+        
+        c=[eq1,eq2,eq3,eq4,eq5]
+        return np.array([c]).reshape((5,1))
+    
+    
+    def jacobian_i(self,q):
+        
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        betai=qi[3:]
+        betaj=qj[3:]
+        
+        Ri=vector(qi[0:3]).a
+        Rj=vector(qj[0:3]).a
+        
+        Ai=ep2dcm(betai)
+        Aj=ep2dcm(betaj)
+        
+        v1=Ai.dot(self.vii)
+        v2=Ai.dot(self.vij)
+        v3=Aj.dot(self.vjk)
+        v4=Aj.dot(self.vjj)
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+        
+        Hiv1=B(betai,self.vii)
+        Hiv2=B(betai,self.vij)
+        Hiup=B(betai,self.u_i)
+        
+        Z=sparse.csr_matrix([[0,0,0]])
+        
+        jac=sparse.bmat([[Z,v3.T.dot(Hiv1)],
+                         [Z,v3.T.dot(Hiv2)],
+                         [v1.T,rij.T.dot(Hiv1)+v1.T.dot(Hiup)],
+                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)],
+                         [Z,v4.T.dot(Hiv1)]],format='csr')
+        
+        return jac
+    
+    def jacobian_j(self,q):
+        
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        betai=qi[3:]
+        betaj=qj[3:]
+        
+        Ai=ep2dcm(betai)
+        
+        v1=Ai.dot(self.vii)
+        v2=Ai.dot(self.vij)
+        
+        Hjv3=B(betaj,self.vjk)
+        Hjv4=B(betaj,self.vjj)
+        Hjup=B(betaj,self.u_j)
+        
+        Z=sparse.csr_matrix([[0,0,0]])
+        
+        jac=sparse.bmat([[  Z,   v1.T.dot(Hjv3)],
+                         [  Z,   v2.T.dot(Hjv3)],
+                         [-v1.T, -v1.T.dot(Hjup)],
+                         [-v2.T, -v2.T.dot(Hjup)],
+                         [  Z,   v1.T.dot(Hjv4)]],format='csr')
+        
+        return jac
+    
+    
+    def acc_rhs(self,q,qdot):
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        qi_dot=qdot[self.i_body.dic.index]
+        qj_dot=qdot[self.j_body.dic.index]
+        
+        Ri=qi[0:3].values.reshape((3,1))
+        Rj=qj[0:3].values.reshape((3,1))
+        betai=qi[3:]
+        betaj=qj[3:]
+        Ai=ep2dcm(betai)
+        Aj=ep2dcm(betaj)
+
+        Ri_dot=qi_dot[0:3].values.reshape((3,1))
+        Rj_dot=qj_dot[0:3].values.reshape((3,1))
+        betai_dot=qi_dot[3:]
+        betaj_dot=qj_dot[3:]
+        
+        bid=betai_dot.values.reshape((4,1))
+        bjd=betaj_dot.values.reshape((4,1))
+        
+        v1=self.vii
+        v2=self.vij
+        v3=self.vjk
+        v4=self.vjj
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
+
+        
+        Biv1=B(betai,v1)
+        Biv2=B(betai,v2)
+        Bjv3=B(betaj,v3)
+        Bjv4=B(betaj,v4)
+        Bip=B(betai,self.u_i)
+        Bjp=B(betaj,self.u_j)
+
+
+        Hiv1=B(betai_dot,v1)
+        Hiv2=B(betai_dot,v2)
+        Hjv3=B(betaj_dot,v3)
+        Hjv4=B(betaj_dot,v4)
+        Hip =B(betai_dot,self.u_i)
+        Hjp =B(betaj_dot,self.u_j)
+
+        
+        rij_dot=Ri_dot+Bip.dot(bid)-Rj_dot-Bjp.dot(bjd)
+        
+        rhs1=acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v3,Aj,Bjv3,Hjv3,bjd)
+        rhs2=acc_dp1_rhs(v2,Ai,Biv2,Hiv2,bid,v3,Aj,Bjv3,Hjv3,bjd)
+        rhs3=acc_dp2_rhs(v1,Ai,Biv1,Hiv1,bid,rij,Hip,Hjp,bjd,rij_dot)
+        rhs4=acc_dp2_rhs(v2,Ai,Biv2,Hiv2,bid,rij,Hip,Hjp,bjd,rij_dot)
+        rhs5=acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v4,Aj,Bjv4,Hjv4,bjd)
+        
+        return np.concatenate([rhs1,rhs2,rhs3,rhs4,rhs5])
+    
+
+    
+    def mir(location,i_body,j_body,axis):
+        
+        loc_l, loc_r = location
+        ibody_l, ibody_r = i_body
+        jbody_l, jbody_r = j_body
+        
+        ax_l, ax_r = axis
+        
+        left  = cylindrical(loc_l,ibody_l,jbody_l,ax_l)
+        right = cylindrical(loc_r,ibody_r,jbody_r,ax_r)
+        
+        return pd.Series([left,right],index=['l','r'])
+
 
 
 class revolute(joint):

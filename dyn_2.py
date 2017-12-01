@@ -3,7 +3,7 @@ import pandas as pd
 from scipy import sparse 
 
 
-jac_df=pd.DataFrame([11 *[None]],columns=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'chassis.z_actuator', 'wc_rev_actuator', 'wheel.z_actuator'])
+jac_df=pd.DataFrame([11 *[None]],columns=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def cq(q,bodies,joints,actuators): 
 	 jac_df.loc['ucaf_rev','uca']=joints['ucaf_rev'].jacobian_i(q)
 	 jac_df.loc['ucaf_rev','chassis']=joints['ucaf_rev'].jacobian_j(q)
@@ -44,15 +44,13 @@ def cq(q,bodies,joints,actuators):
 	 jac_df.loc['d2','d2']=bodies['d2'].unity_jacobian(q)
 	 jac_df.loc['rocker','rocker']=bodies['rocker'].unity_jacobian(q)
 	 jac_df.loc['wheel','wheel']=bodies['wheel'].unity_jacobian(q)
-	 jac_df.loc['chassis.z_actuator','chassis']=actuators['chassis.z_actuator'].jacobian()
 	 jac_df.loc['wc_rev_actuator','wheel']=actuators['wc_rev_actuator'].jacobian_i(q)
 	 jac_df.loc['wc_rev_actuator','upright']=actuators['wc_rev_actuator'].jacobian_j(q)
-	 jac_df.loc['wheel.z_actuator','wheel']=actuators['wheel.z_actuator'].jacobian()
 	 jac=sparse.bmat(jac_df,format='csc') 
 	 return jac 
 
 
-eq_s=pd.Series([28 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'chassis.z_actuator', 'wc_rev_actuator', 'wheel.z_actuator'])
+eq_s=pd.Series([26 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def eq(q,bodies,joints,actuators): 
 	 eq_s['ucaf_rev']=joints['ucaf_rev'].equations(q)
 	 eq_s['lcaf_rev']=joints['lcaf_rev'].equations(q)
@@ -79,21 +77,17 @@ def eq(q,bodies,joints,actuators):
 	 eq_s['d2']=bodies['d2'].unity_equation(q)
 	 eq_s['rocker']=bodies['rocker'].unity_equation(q)
 	 eq_s['wheel']=bodies['wheel'].unity_equation(q)
-	 eq_s['chassis.z_actuator']=actuators['chassis.z_actuator'].equations(q)
 	 eq_s['wc_rev_actuator']=actuators['wc_rev_actuator'].equations(q)
-	 eq_s['wheel.z_actuator']=actuators['wheel.z_actuator'].equations(q)
-	 system=sparse.bmat(eq_s.values.reshape((28,1)),format='csc') 
-	 return system.A.reshape((77,)) 
+	 system=sparse.bmat(eq_s.values.reshape((26,1)),format='csc') 
+	 return system.A.reshape((75,)) 
 
 
-vel_rhs_s=pd.Series([28 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'chassis.z_actuator', 'wc_rev_actuator', 'wheel.z_actuator'])
+vel_rhs_s=pd.Series([26 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def vel_rhs(actuators): 
 	 vrhs=np.zeros((74,1))
-	 vrhs=np.concatenate([vrhs,actuators['chassis.z_actuator'].vel_rhs()]) 
 	 vrhs=np.concatenate([vrhs,actuators['wc_rev_actuator'].vel_rhs()]) 
-	 vrhs=np.concatenate([vrhs,actuators['wheel.z_actuator'].vel_rhs()]) 
 	 return vrhs 
-acc_rhs_s=pd.Series([28 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'chassis.z_actuator', 'wc_rev_actuator', 'wheel.z_actuator'])
+acc_rhs_s=pd.Series([26 *[None]],index=['ucaf_rev', 'lcaf_rev', 'bcp_rev', 'ucao_sph', 'lcao_sph', 'uca_pr_sph', 'tro_sph', 'ch_sh_uni', 'bc_sh_uni', 'tri_uni', 'bc_pr_uni', 'd_m_cyl', 'wc_rev', 'origin_trans', 'ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel', 'wc_rev_actuator'])
 def acc_rhs(q,qdot,bodies,joints,actuators): 
 	 acc_rhs_s['ucaf_rev']=joints['ucaf_rev'].acc_rhs(q,qdot)
 	 acc_rhs_s['lcaf_rev']=joints['lcaf_rev'].acc_rhs(q,qdot)
@@ -120,11 +114,9 @@ def acc_rhs(q,qdot,bodies,joints,actuators):
 	 acc_rhs_s['d2']=bodies['d2'].acc_rhs(qdot)
 	 acc_rhs_s['rocker']=bodies['rocker'].acc_rhs(qdot)
 	 acc_rhs_s['wheel']=bodies['wheel'].acc_rhs(qdot)
-	 acc_rhs_s['chassis.z_actuator']=actuators['chassis.z_actuator'].acc_rhs(q,qdot)
 	 acc_rhs_s['wc_rev_actuator']=actuators['wc_rev_actuator'].acc_rhs(q,qdot)
-	 acc_rhs_s['wheel.z_actuator']=actuators['wheel.z_actuator'].acc_rhs(q,qdot)
-	 system=sparse.bmat(acc_rhs_s.values.reshape((28,1)),format='csc') 
-	 return system.A.reshape((77,)) 
+	 system=sparse.bmat(acc_rhs_s.values.reshape((26,1)),format='csc') 
+	 return system.A.reshape((75,)) 
 
 
 mass_matrix_df=pd.DataFrame([11 *[None]],columns=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'],index=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'])
@@ -158,7 +150,7 @@ def Qg(bodies):
 	 Qg_s['rocker']=bodies['rocker'].gravity()
 	 Qg_s['wheel']=bodies['wheel'].gravity()
 	 system=sparse.bmat(Qg_s.values.reshape((11,1)),format='csc') 
-	 return system.A 
+	 return system.A.reshape((77,)) 
 
 
 Qv_s=pd.Series([11 *np.zeros((7,1))],index=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'])
@@ -175,7 +167,7 @@ def Qv(bodies,q,qdot):
 	 Qv_s['rocker']=bodies['rocker'].centrifugal(q,qdot)
 	 Qv_s['wheel']=bodies['wheel'].centrifugal(q,qdot)
 	 system=sparse.bmat(Qv_s.values.reshape((11,1)),format='csc') 
-	 return system.A 
+	 return system.A.reshape((77,)) 
 
 
 Qa_s=pd.Series([11 *np.zeros((7,1))],index=['ground', 'chassis', 'uca', 'lca', 'upright', 'push', 'tie', 'd1', 'd2', 'rocker', 'wheel'])
@@ -183,9 +175,9 @@ def Qa(forces,q,qdot):
 	 Qi,Qj=forces['f1'].equation(q,qdot) 
 	 Qa_s['d1']=Qi
 	 Qa_s['d2']=Qj
-	 Qa_s['wheel']=forces['vertical_force'].equation(q) 
+	 Qa_s['wheel']=forces['tvf'].equation(q) 
 	 system=sparse.bmat(Qa_s.values.reshape((11,1)),format='csc') 
-	 return system.A 
+	 return system.A.reshape((77,)) 
 
 
 JR_s=pd.Series([np.zeros((84,1))],index=['ucaf_rev_Fx', 'ucaf_rev_Fy', 'ucaf_rev_Fz', 'ucaf_rev_Mx', 'ucaf_rev_My', 'ucaf_rev_Mz', 'lcaf_rev_Fx', 'lcaf_rev_Fy', 'lcaf_rev_Fz', 'lcaf_rev_Mx', 'lcaf_rev_My', 'lcaf_rev_Mz', 'bcp_rev_Fx', 'bcp_rev_Fy', 'bcp_rev_Fz', 'bcp_rev_Mx', 'bcp_rev_My', 'bcp_rev_Mz', 'ucao_sph_Fx', 'ucao_sph_Fy', 'ucao_sph_Fz', 'ucao_sph_Mx', 'ucao_sph_My', 'ucao_sph_Mz', 'lcao_sph_Fx', 'lcao_sph_Fy', 'lcao_sph_Fz', 'lcao_sph_Mx', 'lcao_sph_My', 'lcao_sph_Mz', 'uca_pr_sph_Fx', 'uca_pr_sph_Fy', 'uca_pr_sph_Fz', 'uca_pr_sph_Mx', 'uca_pr_sph_My', 'uca_pr_sph_Mz', 'tro_sph_Fx', 'tro_sph_Fy', 'tro_sph_Fz', 'tro_sph_Mx', 'tro_sph_My', 'tro_sph_Mz', 'ch_sh_uni_Fx', 'ch_sh_uni_Fy', 'ch_sh_uni_Fz', 'ch_sh_uni_Mx', 'ch_sh_uni_My', 'ch_sh_uni_Mz', 'bc_sh_uni_Fx', 'bc_sh_uni_Fy', 'bc_sh_uni_Fz', 'bc_sh_uni_Mx', 'bc_sh_uni_My', 'bc_sh_uni_Mz', 'tri_uni_Fx', 'tri_uni_Fy', 'tri_uni_Fz', 'tri_uni_Mx', 'tri_uni_My', 'tri_uni_Mz', 'bc_pr_uni_Fx', 'bc_pr_uni_Fy', 'bc_pr_uni_Fz', 'bc_pr_uni_Mx', 'bc_pr_uni_My', 'bc_pr_uni_Mz', 'd_m_cyl_Fx', 'd_m_cyl_Fy', 'd_m_cyl_Fz', 'd_m_cyl_Mx', 'd_m_cyl_My', 'd_m_cyl_Mz', 'wc_rev_Fx', 'wc_rev_Fy', 'wc_rev_Fz', 'wc_rev_Mx', 'wc_rev_My', 'wc_rev_Mz', 'origin_trans_Fx', 'origin_trans_Fy', 'origin_trans_Fz', 'origin_trans_Mx', 'origin_trans_My', 'origin_trans_Mz'])
