@@ -202,7 +202,7 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
 
 
-def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
+def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     '''
     Dynamically Driven Systems Solver
     '''
@@ -265,6 +265,9 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     lamda0 = x[7*nb:] # the rest of elements in the x vector
     acceleration_df.loc[0]=qdd0n
     lamda_df.loc[0]=lamda0
+    reaction=JR_f(joints,q0,lamda_df.loc[0])
+    JR_df.loc[0]=reaction.values.reshape((len(reaction,)))
+
     
     # evaluating the tsda force attributes to debug
 #    spring=forces[0]
@@ -324,8 +327,8 @@ def dds(q0,qd0,qdd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         acceleration_df.loc[i+1]=qdd
         lamda_df.loc[i+1]=lamda
 #        spring_df.loc[i+1]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
-        reaction=JR_f(joints,q,lamda_df.loc[i])
-        JR_df.loc[i]=reaction.values.reshape((len(reaction,)))
+        reaction=JR_f(joints,q,lamda_df.loc[i+1])
+        JR_df.loc[i+1]=reaction.values.reshape((len(reaction,)))
 
         # Setting the ssm input parameters
         r.set_f_params(M,Cq_new[:M.shape[0]-len(qind_index),:],Qt,lamda)
