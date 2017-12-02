@@ -59,17 +59,17 @@ uca_cm=vector([-32.44,-389.51,331.31])
 Jcm=np.array([[ 1297540.37,-897778.79 ,-254075.80],
               [-897778.79 , 3490235.80, 66317.52],
               [-254075.80 , 66317.52  , 4742845.78]])
-dcm,uca_J=principle_inertia(Jcm)
+dcm,J=principle_inertia(Jcm)
 uca_mass = 400
-uca      = rigid('uca',uca_mass,Jcm,uca_cm,I)
+uca      = rigid('uca',uca_mass,J,uca_cm,dcm)
 ########################################################################
 lca_cm=vector([-36.65,-394.37,172.47])
 Jcm=np.array([[1571314.37,-839834.01,207103.82],
 	               [-839834.01,3706559.61,39301.75],
 	               [207103.82,39301.75,5235433.3]])
-dcm,lca_J=principle_inertia(Jcm)
+dcm,J=principle_inertia(Jcm)
 lca_mass = 423
-lca      = rigid('lca',lca_mass,Jcm,lca_cm,I)
+lca      = rigid('lca',lca_mass,J,lca_cm,dcm)
 ########################################################################
 cm=vector([-5.21,-530.71,239.46])
 Jcm=np.array([[6809559.26,-70112.53, 723753.00],
@@ -77,7 +77,7 @@ Jcm=np.array([[6809559.26,-70112.53, 723753.00],
               [723753.00,-111547.75,1658347.31]])
 dcm,J=principle_inertia(Jcm)
 mass = 1329.83 
-upright  = rigid('upright',mass,Jcm,cm,I)
+upright  = rigid('upright',mass,J,cm,dcm)
 ########################################################################
 cm=vector([-0.02,-306.13,589.79])
 Jcm=np.array([[254875.61,-52.57, 77.36],
@@ -85,7 +85,7 @@ Jcm=np.array([[254875.61,-52.57, 77.36],
               [77.36,16178.36,193317.90]])
 dcm,J=principle_inertia(Jcm)
 mass = 188.68  
-rocker   = rigid('rocker',mass,Jcm,cm,I)
+rocker   = rigid('rocker',mass,J,cm,dcm)
 ########################################################################
 cm=vector([0,-391.40,472.12])
 Jcm=np.array([[1950892.69, -64.01      , 16.95    ],
@@ -93,7 +93,7 @@ Jcm=np.array([[1950892.69, -64.01      , 16.95    ],
               [16.95     ,  496026.64  ,143774.46 ]])
 dcm,J=principle_inertia(Jcm)
 mass = 243.02  
-push   = rigid('push',mass,Jcm,cm,I)
+push   = rigid('push',mass,J,cm,dcm)
 ########################################################################
 tie_g = thin_rod(tri,tro,250)
 cm    = tie_g.cm
@@ -122,7 +122,7 @@ Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [-40790.37   ,-28626.24    , 343951084.62 ]])
 dcm,J  = principle_inertia(Jcm)
 mass   = 13377.41  
-wheel  = rigid('wheel',mass,Jcm,cm,I)
+wheel  = rigid('wheel',mass,J,cm,dcm)
 ###############################################################################
 
 # Defining system forces

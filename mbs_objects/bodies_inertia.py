@@ -5,7 +5,7 @@ Created on Sat Nov 18 19:59:55 2017
 @author: khale
 """
 
-from base import dcm2ep, G, orient_along_axis
+from base import dcm2ep, G, orient_along_axis, vec2skew, vector
 import scipy as sc
 import pandas as pd
 import numpy as np
@@ -14,8 +14,10 @@ import numpy as np
 def principle_inertia(J):
     PJ,C=np.linalg.eig(J)
     J_Principle=sc.sparse.diags(PJ,shape=(3,3))
+    k=vec2skew(vector(C[:,0])).dot(vector(C[:,1]).a)
+    Cm=C.copy(); Cm[:,2]=k[:,0]
     # C matrix transform from the body frame to the global I frame
-    return C, J_Principle.A
+    return Cm, J_Principle.A
 
 class rigid(object):
     
