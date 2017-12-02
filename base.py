@@ -29,6 +29,13 @@ for i in path:
 def vec2skew(v):
     '''
     converting the vector v into a skew-symetric matrix form
+    =======================================================================
+    inputs  : 
+        v: vector object or ndarray of shape(3,1)
+    =======================================================================
+    outputs : 
+        vs: 3x3 ndarray representing the skew-symmetric form of the vector
+    =======================================================================
     '''
     vs=np.array([[0,-v[2,0],v[1,0]],
                  [v[2,0],0,-v[0,0]],
@@ -38,6 +45,13 @@ def vec2skew(v):
 def skew2vec(vs):
     '''
     converting the skew-symetric matrix  into a vector form
+    =======================================================================
+    inputs  : 
+        vs: 3x3 ndarray representing the skew-symmetric form of the vector
+    =======================================================================
+    outputs : 
+        v: ndarray of shape(3,1)
+    ======================================================================= 
     '''
     v1=vs[2,1]
     v2=vs[0,2]
@@ -46,6 +60,9 @@ def skew2vec(vs):
     v=np.array([[v1],[v2],[v3]])
     return v
 
+###############################################################################
+# These functions are not used in any computations as we adobted euler-
+# parameters to define orientation.
 ###############################################################################
 def rot_x(angle):
     mat=np.array([[1,0,0],
@@ -77,8 +94,6 @@ def rod2dcm(parameters):
     mat=np.eye(3)+(2/(1+mag**2))*(ys+(ys.dot(ys)))
     
     return mat
-    
-###############################################################################
 ###############################################################################
 def dcm2rod(mat):
     '''
@@ -92,7 +107,8 @@ def dcm2rod(mat):
     return y1,y2,y3
     
 ###############################################################################
-
+# End of unused functions
+###############################################################################
 
 
 ###############################################################################
@@ -564,11 +580,24 @@ def recursive_transformation(frame_n,frame_m,global_ref=grf):
             return recursive_transformation(frame_n.parent,frame_m).dot(frame_n.mat)
 
 ##############################################################################
-##############################################################################
+
+
+###############################################################################
+# The mostly used functions are below. These define most of the matrices derived
+# from euler-parameters unit quaternion.
+###############################################################################
 
 def rot2ep(theta,v):
     '''
-    evaluating the four euler parameters from euler-rodriguez theorm
+    evaluating euler parameters from euler-rodriguez theorem.
+    ===========================================================================
+    inputs  : 
+        theta : angle of rotation of the reference frame in degrees
+        v     : axis of rotation as a numerical object of length 3
+    ===========================================================================
+    outputs : 
+        p   : tuple containing the four parameters
+    ===========================================================================
     '''
     u=vector(v).unit
     e0=np.cos(np.deg2rad(theta)/2)
@@ -582,6 +611,14 @@ def rot2ep(theta,v):
 def ep2dcm2(p):
     '''
     evaluating the transformation matrix as a function of euler parameters
+    Note: The matrix is defined explicitly by defining the its elements.
+    ===========================================================================
+    inputs  : 
+        p   : set "any list-like object" containing the four parameters
+    ===========================================================================
+    outputs : 
+        A   : The transofrmation matrix 
+    ===========================================================================
     '''
     e0,e1,e2,e3=p
     A=2*np.array([[0.5*(e0**2+e1**2-e2**2-e3**2), (e1*e2)-(e0*e3)               , (e1*e3)+(e0*e2)], 
@@ -590,11 +627,32 @@ def ep2dcm2(p):
     return A
 
 def ep2dcm(p):
+    '''
+    evaluating the transformation matrix as a function of euler parameters
+    Note: The matrix is defined as a prodcut of the two special matrices 
+    of euler parameters, the E and G matrices. This function is faster.
+    ===========================================================================
+    inputs  : 
+        p   : set "any list-like object" containing the four parameters
+    ===========================================================================
+    outputs : 
+        A   : The transofrmation matrix 
+    ===========================================================================
+    '''
     return E(p).dot(G(p).T)
     
 def dcm2ep(dcm):
     ''' 
     extracting euler parameters from a transformation matrix
+    Note: this is not fully developed. The special case of e0=0 is not dealt 
+    with yet.
+    ===========================================================================
+    inputs  : 
+        A   : The transofrmation matrix
+    ===========================================================================
+    outputs : 
+        p   : set containing the four parameters
+    ===========================================================================
     '''
     e0=np.sqrt(1-(dcm.trace()-3)/-4)
     
@@ -615,6 +673,18 @@ def dcm2ep(dcm):
     return e0,e1,e2,e3
 
 def E(p):
+    ''' 
+    A property matrix of euler parameters. Mostly used to transform between the
+    cartesian angular velocity of body and the euler-parameters time derivative
+    in the global coordinate system.
+    ===========================================================================
+    inputs  : 
+        p   : set containing the four parameters
+    ===========================================================================
+    outputs : 
+        E   : 3x4 ndarray
+    ===========================================================================
+    '''
     e0,e1,e2,e3=p
     m=np.array([[-e1, e0,-e3, e2],
                 [-e2, e3, e0,-e1],
@@ -623,6 +693,18 @@ def E(p):
 
 def G(p):
     # Note: This is half the G_bar given in shabana's book
+    ''' 
+    A property matrix of euler parameters. Mostly used to transform between the
+    cartesian angular velocity of body and the euler-parameters time derivative
+    in the body coordinate system.
+    ===========================================================================
+    inputs  : 
+        p   : set containing the four parameters
+    ===========================================================================
+    outputs : 
+        G   : 3x4 ndarray
+    ===========================================================================
+    '''
     e0,e1,e2,e3=p
     m=np.array([[-e1, e0, e3,-e2],
                 [-e2,-e3, e0, e1],
@@ -631,6 +713,20 @@ def G(p):
 
 
 def B(p,a):
+    ''' 
+    This matrix represents the variation of the body orientation with respect
+    to the change in euler parameters. This can be thought as the jacobian of
+    the A.dot(a), where A is the transformation matrix in terms of euler 
+    parameters.
+    ===========================================================================
+    inputs  : 
+        p   : set containing the four parameters
+        a   : vector 
+    ===========================================================================
+    outputs : 
+        B   : 3x4 ndarray representing the jacobian of A.dot(a)
+    ===========================================================================
+    '''
     e0,e1,e2,e3=p
     e=np.array([[e1],[e2],[e3]])
     a=np.array(a).reshape((3,1))
@@ -643,6 +739,22 @@ def B(p,a):
     return m
 
 def B_exp(p,u):
+    ''' 
+    Same as the B(p,a) function, except this is defined explicitly using hand
+    calculations and checked by sympy symbolic jacobian function
+    IMPORTANT NOTE: The jacobian depeneds heavily on how matrix A is defined.
+    As the diagonal elements of A can be defined using several formulations 
+    using the normalization property of euler parameters :
+        e0**2+e1**2+e2**2+e3**2=1
+    ===========================================================================
+    inputs  : 
+        p   : set containing the four parameters
+        a   : vector 
+    ===========================================================================
+    outputs : 
+        B   : 3x4 ndarray representing the jacobian of A.dot(a)
+    ===========================================================================
+    '''
     e0,e1,e2,e3=p
     ux,uy,uz=vector(u).row
     
