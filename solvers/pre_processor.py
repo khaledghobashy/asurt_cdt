@@ -177,7 +177,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
             file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
             file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
         else:
-            file.write("\t Qa_s['%s']=forces['%s'].equation(q) \n" %(f.bodyi.name,f.name))
+            file.write("\t Qa_s['%s']=forces['%s'].equation(q,qdot) \n" %(f.bodyi.name,f.name))
             
 
     file.write("\t system=sparse.bmat(Qa_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))

@@ -79,7 +79,7 @@ class force(object):
         self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
         self.F=value
         
-    def equation(self,q):
+    def equation(self,q,v):
         qi=q[self.bodyi.dic.index]
         betai=qi[3:]
         Ai=ep2dcm(betai)
@@ -104,20 +104,24 @@ class moment(object):
         return Qi        
         
 class tire_force(object):
-    def __init__(self,name,bodyi,k,r,Pi):
+    def __init__(self,name,bodyi,k,c,r,Pi):
         self.name=name
         self.bodyi=bodyi
         self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
         self.k=k
+        self.c=c
         self.r=r
         
-    def equation(self,q):
+    def equation(self,q,qdot):
         qi=q[self.bodyi.dic.index]
         betai=qi[3:]
         Ai=ep2dcm(betai)
         rw=qi[self.bodyi.name+'.z']
+        rzdot=qdot[self.bodyi.name+'.z']
         x=max([0,self.r-rw])
-        F=np.array([[0,0,self.k*x]]).T
+        
+        
+        F=np.array([[0,0,self.k*x+self.c*rzdot]]).T
         Z=np.zeros((4,1))
         M=2*G(betai).T.dot(vec2skew(self.u_i).dot(Ai.T.dot(F)))
         Qi=np.bmat([[F],[Z]])

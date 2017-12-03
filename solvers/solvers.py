@@ -252,6 +252,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     
     reactions_index=np.concatenate([i.reaction_index for i in joints])
     JR_df=pd.DataFrame(columns=reactions_index)
+    
 
 
     # assembling the coefficient matrix and the rhs vector and solving for
@@ -285,7 +286,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     t=np.arange(0,sim_time,stepsize)
     for i,dt in enumerate(t):
         print('time_step: '+str(i))
-        
+
         r.integrate(dt)
         print(r.y)
         
@@ -307,7 +308,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         
         q=position_df.loc[i+1]
         qd=velocity_df.loc[i+1]
-
+        
         # Evaluating the new coeff matrix bloks of the system NE equations
         M  = M_f(q,bodies)
         Qa = Qa_f(forces,q,qd)
@@ -329,6 +330,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
 #        spring_df.loc[i+1]=[spring.defflection,spring.velocity,spring.springforce,spring.damperforce]
         reaction=JR_f(joints,q,lamda_df.loc[i+1])
         JR_df.loc[i+1]=reaction.values.reshape((len(reaction,)))
+        
 
         # Setting the ssm input parameters
         r.set_f_params(M,Cq_new[:M.shape[0]-len(qind_index),:],Qt,lamda)

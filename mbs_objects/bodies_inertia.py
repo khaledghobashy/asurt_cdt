@@ -5,24 +5,53 @@ Created on Sat Nov 18 19:59:55 2017
 @author: khale
 """
 
-from base import dcm2ep, G, orient_along_axis, vec2skew, vector
+from base import dcm2ep, G, orient_along_axis
 import scipy as sc
 import pandas as pd
 import numpy as np
 
 
 def principle_inertia(J):
+    '''
+    extracting the principle axes and the corresponding principle moment of
+    inertia values from the inertia tensor calculated at the body cm aligned
+    with the global frame.
+    The process is done by evaluating the eigen values and eigen vectors of the
+    J matrix.
+    ===========================================================================
+    inputs  : 
+        J   : Inertia tensor
+    ===========================================================================
+    outputs : 
+        C   : 3x3 ndarray representing the orientation of the body with the
+              three principle axes
+        Jp  : 3x3 diagonal ndarray storing the principle values in the diagonal
+    ===========================================================================
+    '''
     PJ,C=np.linalg.eig(J)
-    J_Principle=sc.sparse.diags(PJ,shape=(3,3))
-    k=vec2skew(vector(C[:,0])).dot(vector(C[:,1]).a)
-    Cm=C.copy(); Cm[:,2]=k[:,0]
-    # C matrix transform from the body frame to the global I frame
-    return Cm, J_Principle.A
+    J_Principle=np.diag(PJ)
+    C[:,2]*=-1
+    # C matrix transform from the body frame to the global frame
+    return C, J_Principle
 
 class rigid(object):
     
+    
     def __init__(self,name,mass,inertia_tensor,cm,dcm,typ='floating'):
-        
+        '''
+    A class representing the rigid body in space.
+    ===========================================================================
+    attributes  : 
+        name    : string object represent the body name
+        mass    : float representing the body mass in grams
+        J       : 3x3 ndarray representing the inertia tensor at cm in gm.mm^2
+        dcm     : 3x3 ndarray representing the body orientation where J is defined
+        typ     : string ('floating' or 'mount') to check type of body constraints
+
+        P       : tuple containing the evaluated euler-parameters from the dcm
+        nc      : integer representing the number of constraint equations
+    ===========================================================================
+        '''
         self.name=name
         self.mass=mass
         self.J=inertia_tensor
@@ -174,7 +203,7 @@ class circular_cylinder(object):
         Jxx=Jyy=(self.mass/12)*(3*do**2+3*di**2+self.l**2)
         Jzz=(self.mass/2)*(do**2+di**2)
         
-        self.J=sc.sparse.diags([Jxx,Jyy,Jzz]).A
+        self.J=np.diag([Jxx,Jyy,Jzz])
         self.C=orient_along_axis(self.axis)
       
         

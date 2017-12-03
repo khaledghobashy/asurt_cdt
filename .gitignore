@@ -99,3 +99,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+hyperloop_impact.py
+hyperloop_file.py

@@ -52,7 +52,7 @@ ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 ch_cm=vector([0,0,320])
 ch_dcm=I
 ch_J=I
-ch_mass=80*1e3
+ch_mass  = 80*1e3
 chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 uca_cm=vector([-32.44,-389.51,331.31])
@@ -119,7 +119,7 @@ d2    = rigid('d2',mass,J,cm,dcm)
 cm     = vector([0,-613.93,254.09])
 Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [29954.40    , 535366217.28 , -28626.24    ],
-              [-40790.37   ,-28626.24    , 343951084.62 ]])
+              [-40790.37   ,-28626.24    , 343951084.62  ]])
 dcm,J  = principle_inertia(Jcm)
 mass   = 13377.41  
 wheel  = rigid('wheel',mass,J,cm,dcm)
@@ -132,7 +132,7 @@ spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-8*1e6)
 nl=(160)*9.81*1e6
 force_vector=np.array([[nl*1],[nl*1],[0]])
 vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
-tf=tire_force('tvf',wheel,300*1e6,254,vector([0,600,0]))
+tf=tire_force('tvf',wheel,300*1e6,-1*1e6,254,vector([0,600,0]))
 
 
 ###############################################################################
@@ -254,6 +254,14 @@ xaxis=np.arange(0,0.25+0.25/100,0.25/100)
 
 plt.figure('WheelCenter Position')
 plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
+
+plt.figure('Half-track Change')
+plt.plot(xaxis,pos['wheel.y'],label=r'$wc_{y}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
