@@ -192,6 +192,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     file.write("def JR(joints,q,lamda): \n")
 
     for j in joints:
+#        file.write("\t print(joints['%s'].reactions(q,lamda))\n"%(j.name))
         file.write("\t JR_s[%s]=joints['%s'].reactions(q,lamda)\n"%(j.reaction_index,j.name))
 
 #    file.write("\t system=sparse.bmat(JR_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))

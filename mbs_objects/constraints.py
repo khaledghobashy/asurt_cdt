@@ -110,7 +110,7 @@ class joint(object):
 #        print('FTorque = %s'%vec2skew(ui).dot(F))
 #        print('JTorque = %s'%joint_torque)
                 
-        return (np.bmat([[F],[joint_torque]]).T)[0,0]
+        return (np.concatenate([[F],[joint_torque]]).reshape((6,)))
         
     
     @property
