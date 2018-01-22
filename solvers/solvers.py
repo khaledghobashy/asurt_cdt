@@ -289,6 +289,9 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
 
         r.integrate(dt)
         print(r.y)
+#        if not r.successful():
+#            print("BREAKING SOLVER")
+#            return position_df,velocity_df,acceleration_df,JR_df
         
         # creating the guess vector for the vector q as the values of the 
         # previous step and the value of newly evaluated independent coordinate

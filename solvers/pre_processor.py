@@ -177,7 +177,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
             file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
             file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
         else:
-            file.write("\t Qa_s['%s']=forces['%s'].equation(q,qdot) \n" %(f.bodyi.name,f.name))
+            file.write("\t Qa_s['%s']=forces['%s'].equation(q,qdot)\n" %(f.bodyi.name,f.name))
             
 
     file.write("\t system=sparse.bmat(Qa_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
@@ -188,10 +188,11 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     
     ######################################################################    
     # Assembling the joint reactions vector
-    file.write("JR_s=pd.Series([np.zeros((%s,1))],index=%s)\n"%(6*len(joints),list(joints_eq_ind)))
+    file.write("JR_s=pd.Series(np.zeros((%s)),index=%s)\n"%(6*len(joints),list(joints_eq_ind)))
     file.write("def JR(joints,q,lamda): \n")
 
     for j in joints:
+#        file.write("\t print(joints['%s'].reactions(q,lamda))\n"%(j.name))
         file.write("\t JR_s[%s]=joints['%s'].reactions(q,lamda)\n"%(j.reaction_index,j.name))
 
 #    file.write("\t system=sparse.bmat(JR_s.values.reshape((%s,1)),format='csc') \n"%(len(columns)))
@@ -202,9 +203,34 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     
     file.close()
     
+###############################################################################
+###############################################################################
+###############################################################################
 
-   
+def mirror(model,sym='l'):
+    
+    points=model['points']
+    points_right = points.copy()
+    points_left  = points.copy()
+    points_mir_mul=np.array(len(points)*[1,-1,1])
 
+    if sym not in 'rl':
+        raise ValueError('Un-authorized type')
+    elif sym=='r':
+        r='_rt'
+        points_right.index+=r
+        points_left*=points_mir_mul
+    elif sym=='l':
+        l='_lf'
+        points_left.index+=l
+        points_right*=points_mir_mul
+        
+    return points_right, points_left
+        
+    
+    
+    
+    
 
 
 
