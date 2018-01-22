@@ -188,7 +188,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     
     ######################################################################    
     # Assembling the joint reactions vector
-    file.write("JR_s=pd.Series([np.zeros((%s,1))],index=%s)\n"%(6*len(joints),list(joints_eq_ind)))
+    file.write("JR_s=pd.Series(np.zeros((%s)),index=%s)\n"%(6*len(joints),list(joints_eq_ind)))
     file.write("def JR(joints,q,lamda): \n")
 
     for j in joints:
