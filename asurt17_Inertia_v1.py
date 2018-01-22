@@ -129,9 +129,9 @@ wheel  = rigid('wheel',mass,J,cm,dcm)
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
 spring_damper=tsda('f1',seat1,d1,seat2,d2,k=80*1e6,lf=140,c=-8*1e6)
-nl=(160)*9.81*1e6
-force_vector=np.array([[nl*1],[nl*1],[0]])
-vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
+#nl=(160)*9.81*1e6
+#force_vector=np.array([[nl*1],[nl*1],[0]])
+#vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
 tf=tire_force('tvf',wheel,300*1e6,-1*1e6,254,vector([0,600,0]))
 
 
@@ -187,6 +187,7 @@ joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
 actuators = [vertical_travel,wheel_drive,wheel_lock]
 forces    = [spring_damper,tf]
 
+ps=pd.Series(points     ,index=[i.name for i in points])
 js=pd.Series(joints_list,index=[i.name for i in joints_list])
 bs=pd.Series(bodies_list,index=[i.name for i in bodies_list])
 ac=pd.Series(actuators  ,index=[i.name for i in actuators])
@@ -239,12 +240,6 @@ wheel_drive.pos=0
 vertical_travel.pos=254
 actuators = [wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
-
-#def ssm(t,y,Cq_rec,Qt,lagr):
-#        v=y[len(y)/2:]
-#        dydt=[v, (1/644)*(Qt[51]-(Cq_rec.T.dot(lagr))[51])]
-#        return dydt
-
     
 topology_writer(bs,js,ac,fs,'dyn_2')
 
@@ -287,7 +282,7 @@ plt.show()
 plt.figure('UCA Mount Reaction')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fx'],label=r'$F_{x}$')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fy'],label=r'$F_{y}$')
-#plt.plot(xaxis[1:],1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
+plt.plot(xaxis,1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
@@ -295,9 +290,9 @@ plt.grid()
 plt.show()
 
 plt.figure('Shock Mount Reaction')
-#plt.plot(xaxis,1e-6*react['ch_sh_uni_Fx'],label=r'$F_{x}$')
+plt.plot(xaxis,1e-6*react['ch_sh_uni_Fx'],label=r'$F_{x}$')
 plt.plot(xaxis,-1e-6*react['ch_sh_uni_Fy'],label=r'$F_{y}$')
-#plt.plot(xaxis,1e-6*react['ch_sh_uni_Fz'],label=r'$F_{z}$')
+plt.plot(xaxis,1e-6*react['ch_sh_uni_Fz'],label=r'$F_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
