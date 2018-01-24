@@ -243,9 +243,12 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
     
 topology_writer(bs,js,ac,fs,'dyn_2')
 
-dynamic1=dds(q0,qd0,bs,js,ac,fs,'dyn_2',0.25,0.25/100)
+run_time=2
+stepsize=0.005
+
+dynamic1=dds(q0,qd0,bs,js,ac,fs,'dyn_2',run_time,stepsize)
 pos,vel,acc,react=dynamic1
-xaxis=np.arange(0,0.25+0.25/100,0.25/100)
+xaxis=np.arange(0,run_time+stepsize,stepsize)
 
 plt.figure('WheelCenter Position')
 plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
