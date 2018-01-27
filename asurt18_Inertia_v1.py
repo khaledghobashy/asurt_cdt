@@ -7,7 +7,7 @@ Created on Tue Nov  7 13:32:37 2017
 
 from base import grf, vector, point, ep2dcm, rot2ep
 from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
-from inertia_properties import composite_geometry
+from inertia_properties import composite_geometry, triangular_prism
 from constraints import spherical, revolute, universal, \
 cylindrical, rotational_drive, absolute_locating,translational
 from force_elements import tsda, force, tire_force
@@ -48,6 +48,7 @@ dcm=I
 J=I
 mass=1
 ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
+########################################################################
 #Chassis
 ########
 ch_cm=vector([0,0,300])
@@ -74,28 +75,14 @@ dcm,J=principle_inertia(Jcm)
 mass = 1329.83 
 upright  = rigid('upright',mass,J,cm,dcm)
 ########################################################################
-cm=vector([-0.02,306.13,180])
-Jcm=np.array([[254875.61,-52.57, 77.36],
-              [-52.57, 122537.57,16178.36],
-              [77.36,16178.36,193317.90]])
-dcm,J=principle_inertia(Jcm)
-mass = 188.68  
-rocker   = rigid('rocker',mass,J,cm,dcm)
+rocker_g = triangular_prism(bcp,bc_sh,bc_pr,34,2.7)
+rocker   = rigid('rocker',rocker_g.mass,rocker_g.J,rocker_g.cm,rocker_g.C)
 ########################################################################
-cm=vector([0,391.40,200])
-Jcm=np.array([[1950892.69, -64.01      , 16.95    ],
-              [-64.01    ,  1814714.56 , 496026.64],
-              [16.95     ,  496026.64  ,143774.46 ]])
-dcm,J=principle_inertia(Jcm)
-mass = 243.02  
-push   = rigid('push',mass,J,cm,dcm)
+push_g = circular_cylinder(bc_pr,uca_pr,12,8)  
+push   = rigid('push',push_g.mass,push_g.J,push_g.cm,push_g.C)
 ########################################################################
-tie_g = thin_rod(tri,tro,250)
-cm    = tie_g.cm
-dcm   = tie_g.C
-J     = tie_g.J
-mass  = 250 
-tie   = rigid('tie',mass,J,cm,dcm)
+tie_g = circular_cylinder(tri,tro,12,8)
+tie   = rigid('tie',tie_g.mass,tie_g.J,tie_g.cm,tie_g.C)
 ########################################################################
 d1_g  = circular_cylinder(bc_sh,d_m,15)
 cm    = d1_g.cm
