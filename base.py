@@ -297,10 +297,10 @@ class vector(object):
     def __init__(self,components,frame=grf):
         
         # Checking input type and size
-        comp_type   = isinstance(components,(list,tuple,np.ndarray,vector,point,pd.Series))
-        if not comp_type : raise TypeError('should be a list, tuple or ndarray')
-        comp_length = len(components)==3
-        if not comp_length : raise ValueError('should be a vector of 3 components')
+#        comp_type   = isinstance(components,(list,tuple,np.ndarray,vector,point,pd.Series))
+#        if not comp_type : raise TypeError('should be a list, tuple or ndarray')
+#        comp_length = len(components)==3
+#        if not comp_length : raise ValueError('should be a vector of 3 components')
         
         self._a=np.array(components).reshape((3,1))    
         self.frame=frame
@@ -424,7 +424,7 @@ class vector(object):
         return float(np.rad2deg(np.arccos(self.dot(other)/(self.mag*other.mag))))
     
     
-    def normal(p1,p2,p3,frame):
+    def normal(p1,p2,p3,frame=grf):
         '''
         return a vector normal to a plane defined by 3 points.
         To be used as vector.normal(args)
