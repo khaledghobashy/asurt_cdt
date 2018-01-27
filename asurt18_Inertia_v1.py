@@ -7,6 +7,7 @@ Created on Tue Nov  7 13:32:37 2017
 
 from base import grf, vector, point, ep2dcm, rot2ep
 from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
+from inertia_properties import composite_geometry
 from constraints import spherical, revolute, universal, \
 cylindrical, rotational_drive, absolute_locating,translational
 from force_elements import tsda, force, tire_force
@@ -55,21 +56,15 @@ ch_J=I
 ch_mass  = 140*1e3
 chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
-uca_cm=vector([-32.44,389.51,331.31])
-Jcm=np.array([[ 1297540.37,-897778.79 ,-254075.80],
-              [-897778.79 , 3490235.80, 66317.52],
-              [-254075.80 , 66317.52  , 4742845.78]])
-dcm,J=principle_inertia(Jcm)
-uca_mass = 400
-uca      = rigid('uca',uca_mass,J,uca_cm,dcm)
+tube1    = circular_cylinder(ucaf,ucao,10,8)
+tube2    = circular_cylinder(ucar,ucao,10,8)
+uca_g    = composite_geometry([tube1,tube2])
+uca      = rigid('uca',uca_g.mass,uca_g.J,uca_g.cm,I)
 ########################################################################
-lca_cm=vector([-36.65,394.37,172.47])
-Jcm=np.array([[1571314.37,-839834.01,207103.82],
-	               [-839834.01,3706559.61,39301.75],
-	               [207103.82,39301.75,5235433.3]])
-dcm,J=principle_inertia(Jcm)
-lca_mass = 423
-lca      = rigid('lca',lca_mass,J,lca_cm,dcm)
+tube1    = circular_cylinder(lcaf,lcao,10,8)
+tube2    = circular_cylinder(lcar,lcao,10,8)
+lca_g    = composite_geometry([tube1,tube2])
+lca      = rigid('lca',lca_g.mass,lca_g.J,lca_g.cm,I)
 ########################################################################
 cm=vector([-5.21,530.71,239.46])
 Jcm=np.array([[6809559.26,-70112.53, 723753.00],
@@ -133,6 +128,7 @@ spring_damper=tsda('f1',seat1,d1,seat2,d2,k=90*1e6,lf=130,c=-8*1e6)
 #force_vector=np.array([[nl*1],[nl*1],[0]])
 #vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
 tf=tire_force('tvf',wheel,300*1e6,-1*1e6,230,vector([0,585,0]))
+side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
 
 
 ###############################################################################
@@ -185,7 +181,7 @@ joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
               tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub,ch_ground]
 
 actuators = [vertical_travel,wheel_drive,wheel_lock]
-forces    = [spring_damper,tf]
+forces    = [spring_damper,tf,side_force]
 
 ps=pd.Series(points     ,index=[i.name for i in points])
 js=pd.Series(joints_list,index=[i.name for i in joints_list])
@@ -243,8 +239,8 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
     
 topology_writer(bs,js,ac,fs,'asurt18_datafile')
 
-run_time=1
-stepsize=0.002
+run_time=0.5
+stepsize=0.0025
 
 dynamic1=dds(q0,qd0,bs,js,ac,fs,'asurt18_datafile',run_time,stepsize)
 pos,vel,acc,react=dynamic1
@@ -289,6 +285,26 @@ plt.figure('UCA Mount Reaction')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fx'],label=r'$F_{x}$')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fy'],label=r'$F_{y}$')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
+plt.grid()
+plt.show()
+
+plt.figure('LCA Mount Reaction')
+plt.plot(xaxis,1e-6*react['lcaf_rev_Fx'],label=r'$F_{x}$')
+plt.plot(xaxis,1e-6*react['lcaf_rev_Fy'],label=r'$F_{y}$')
+plt.plot(xaxis,1e-6*react['lcaf_rev_Fz'],label=r'$F_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
+plt.grid()
+plt.show()
+
+plt.figure('Tie_Chassis Mount Reaction')
+plt.plot(xaxis,1e-6*react['tri_uni_Fx'],label=r'$F_{x}$')
+plt.plot(xaxis,1e-6*react['tri_uni_Fy'],label=r'$F_{y}$')
+plt.plot(xaxis,1e-6*react['tri_uni_Fz'],label=r'$F_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
