@@ -54,7 +54,7 @@ ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 ch_cm=vector([0,0,300])
 ch_dcm=I
 ch_J=I
-ch_mass  = 140*1e3
+ch_mass  = 70*1e3
 chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 tube1    = circular_cylinder(ucaf,ucao,10,8)
@@ -103,14 +103,14 @@ Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [29954.40    , 535366217.28 , -28626.24    ],
               [-40790.37   ,-28626.24    , 343951084.62  ]])
 dcm,J  = principle_inertia(Jcm)
-mass   = 8*1e3  
+mass   = 4*1e3  
 wheel  = rigid('wheel',mass,J,cm,dcm)
 ###############################################################################
 
 # Defining system forces
 seat1=bc_sh+(50*(ch_sh-bc_sh).unit)
 seat2=bc_sh+(170*(ch_sh-bc_sh).unit)
-spring_damper=tsda('f1',seat1,d1,seat2,d2,k=90*1e6,lf=130,c=-8*1e6)
+spring_damper=tsda('f1',seat1,d1,seat2,d2,k=90*1e6,lf=135,c=-8*1e6)
 #nl=(160)*9.81*1e6
 #force_vector=np.array([[nl*1],[nl*1],[0]])
 #vf=force('vertical_force',force_vector,wheel,vector([0,-600,0]))
@@ -168,7 +168,7 @@ joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
               tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub,ch_ground]
 
 actuators = [vertical_travel,wheel_drive,wheel_lock]
-forces    = [spring_damper,tf,side_force]
+forces    = [spring_damper,tf]#,side_force]
 
 ps=pd.Series(points     ,index=[i.name for i in points])
 js=pd.Series(joints_list,index=[i.name for i in joints_list])

@@ -176,7 +176,6 @@ def Qa(forces,q,qdot):
 	 Qa_s['d1']=Qi
 	 Qa_s['d2']=Qj
 	 Qa_s['wheel']=forces['tvf'].equation(q,qdot)
-	 Qa_s['upright']=forces['sf'].equation(q,qdot)
 	 system=sparse.bmat(Qa_s.values.reshape((11,1)),format='csc') 
 	 return system.A.reshape((77,)) 
 
