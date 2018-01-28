@@ -52,7 +52,7 @@ ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 ch_cm=vector([0,0,320])
 ch_dcm=I
 ch_J=I
-ch_mass  = 80*1e3
+ch_mass  = 160*1e3
 chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 uca_cm=vector([-32.44,-389.51,331.31])

@@ -51,11 +51,11 @@ ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 ########################################################################
 #Chassis
 ########
-ch_cm=vector([0,0,300])
+ch_cm=vector([0,0,0])
 ch_dcm=I
 ch_J=I
 ch_mass  = 70*1e3
-chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
+chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm,typ='mount')
 ########################################################################
 tube1    = circular_cylinder(ucaf,ucao,10,8)
 tube2    = circular_cylinder(ucar,ucao,10,8)
@@ -104,7 +104,7 @@ Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [-40790.37   ,-28626.24    , 343951084.62  ]])
 dcm,J  = principle_inertia(Jcm)
 mass   = 4*1e3  
-wheel  = rigid('wheel',mass,J,cm,dcm)
+wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
@@ -122,11 +122,7 @@ side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
 # Defining System Joints.
 ###############################################################################
 uca_rev     = revolute(ucaf,uca,chassis,ucaf-ucar)
-#ucaf_sph    = spherical(ucaf,uca,chassis)
-#ucar_sph    = spherical(ucar,uca,chassis)
 lca_rev     = revolute(lcaf,lca,chassis,lcaf-lcar)
-#lcaf_sph    = spherical(lcaf,lca,chassis)
-#lcar_sph    = spherical(lcar,lca,chassis)
 bcp_rev     = revolute(bcp,rocker,chassis,vector.normal(bc_pr,bc_sh,bcp,grf))
 wheel_hub   = revolute(wc,wheel,upright,vector([0,-1,0]))
 
@@ -134,7 +130,6 @@ pr_uca_sph  = spherical(uca_pr,uca,push)
 tie_up_sph  = spherical(tro,tie,upright)
 ucao_sph    = spherical(ucao,uca,upright)
 lcao_sph    = spherical(lcao,lca,upright)
-
 
 damper      = cylindrical(d_m,d1,d2,bc_sh-ch_sh)
 
@@ -149,11 +144,7 @@ tie_ch      = universal(tri,chassis,tie,vector([0,1,0]),ax3)
 wheel_drive = rotational_drive(wheel_hub)
 
 vertical_travel = absolute_locating(wheel,'z')
-wheel_lock      = absolute_locating(wheel,'z')
 ch_ground       = translational(origin,ground,chassis,vector([0,0,1])) 
-###############################################################################
-
-
 
 
 ###############################################################################
@@ -162,12 +153,12 @@ ch_ground       = translational(origin,ground,chassis,vector([0,0,1]))
 
 points      =[bcp,bc_sh,bc_pr,ch_sh,ucaf,ucar,ucao,lcaf,lcar,lcao,tri,tro,uca_pr,cp,wc,d_m]
 
-bodies_list =[ground,chassis,uca,lca,upright,push,tie,d1,d2,rocker,wheel]
+bodies_list =[chassis,uca,lca,upright,push,tie,d1,d2,rocker,wheel]
 
 joints_list =[uca_rev,lca_rev,bcp_rev,ucao_sph,lcao_sph,pr_uca_sph,
-              tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub,ch_ground]
+              tie_up_sph,d2_ch_uni,sh_bc,tie_ch,pr_bc,damper,wheel_hub]
 
-actuators = [vertical_travel,wheel_drive,wheel_lock]
+actuators = [vertical_travel,wheel_drive]
 forces    = [spring_damper,tf]#,side_force]
 
 ps=pd.Series(points     ,index=[i.name for i in points])
@@ -179,106 +170,112 @@ fs=pd.Series(forces     ,index=[i.name for i in forces])
 ##############################################################################
 # Kinematically driven analysis.
 ##############################################################################
+topology_writer(bs,js,ac,fs,'asurt18_kds_datafile')
+q0   = pd.concat([i.dic    for i in bodies_list])
+time=np.linspace(0,2*np.pi,50)
+wheel_drive.pos_array=np.zeros((len(time),))
+vertical_travel.pos_array=230+30*np.sin(2*time)
 
-
+kds_run=kds(bs,js,ac,'asurt18_kds_datafile',time)
+kds_reactions=reactions(kds_run[0],kds_run[1],kds_run[2],bs,js,ac,fs,'asurt18_kds_datafile')
 
 
 ##############################################################################
 # Dynamic Analysis.
 ##############################################################################
-q0   = pd.concat([i.dic    for i in bodies_list])
-qd0  = pd.concat([i.qd0()  for i in bodies_list])
-qdd0 = pd.concat([i.qdd0() for i in bodies_list])
-
-vertical_travel=absolute_locating(wheel,'z')
-wheel_drive.pos=0
-vertical_travel.pos=230
-actuators = [wheel_drive]
-ac=pd.Series(actuators,index=[i.name for i in actuators])
-    
-topology_writer(bs,js,ac,fs,'asurt18_datafile')
-
-run_time=0.5
-stepsize=0.0025
-
-dynamic1=dds(q0,qd0,bs,js,ac,fs,'asurt18_datafile',run_time,stepsize)
-pos,vel,acc,react=dynamic1
-xaxis=np.arange(0,run_time+stepsize,stepsize)
-
-plt.figure('WheelCenter Position')
-plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Displacement (mm)')
-plt.grid()
-plt.show()
-
-plt.figure('Half-track Change')
-plt.plot(xaxis,pos['wheel.y'],label=r'$wc_{y}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Displacement (mm)')
-plt.grid()
-plt.show()
-
-plt.figure('Chassis CG Vertical Position')
-plt.plot(xaxis,pos['chassis.z'],label=r'$chassis_{z}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Displacement (mm)')
-plt.grid()
-plt.show()
-
-plt.figure('WheelHub Verical Reaction Force')
-plt.plot(xaxis,-1e-6*react['wc_rev_Fz'],label=r'$wc_{Fz}$')
-plt.plot(xaxis,-1e-6*react['wc_rev_Fx'],label=r'$wc_{Fx}$')
-plt.plot(xaxis,-1e-6*react['wc_rev_Fy'],label=r'$wc_{Fy}$')
-plt.plot(xaxis,-1e-9*react['wc_rev_Mx'],label=r'$M_{x}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Force (N)')
-plt.grid()
-plt.show()
-
-plt.figure('UCA Mount Reaction')
-plt.plot(xaxis,1e-6*react['ucaf_rev_Fx'],label=r'$F_{x}$')
-plt.plot(xaxis,1e-6*react['ucaf_rev_Fy'],label=r'$F_{y}$')
-plt.plot(xaxis,1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Force (N)')
-plt.grid()
-plt.show()
-
-plt.figure('LCA Mount Reaction')
-plt.plot(xaxis,1e-6*react['lcaf_rev_Fx'],label=r'$F_{x}$')
-plt.plot(xaxis,1e-6*react['lcaf_rev_Fy'],label=r'$F_{y}$')
-plt.plot(xaxis,1e-6*react['lcaf_rev_Fz'],label=r'$F_{z}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Force (N)')
-plt.grid()
-plt.show()
-
-plt.figure('Tie_Chassis Mount Reaction')
-plt.plot(xaxis,1e-6*react['tri_uni_Fx'],label=r'$F_{x}$')
-plt.plot(xaxis,1e-6*react['tri_uni_Fy'],label=r'$F_{y}$')
-plt.plot(xaxis,1e-6*react['tri_uni_Fz'],label=r'$F_{z}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Force (N)')
-plt.grid()
-plt.show()
-
-plt.figure('Shock Mount Reaction')
-plt.plot(xaxis,1e-6*react['ch_sh_uni_Fx'],label=r'$F_{x}$')
-plt.plot(xaxis,-1e-6*react['ch_sh_uni_Fy'],label=r'$F_{y}$')
-plt.plot(xaxis,1e-6*react['ch_sh_uni_Fz'],label=r'$F_{z}$')
-plt.legend()
-plt.xlabel('Time (sec)')
-plt.ylabel('Force (N)')
-plt.grid()
-plt.show()
+#q0   = pd.concat([i.dic    for i in bodies_list])
+#qd0  = pd.concat([i.qd0()  for i in bodies_list])
+#qdd0 = pd.concat([i.qdd0() for i in bodies_list])
+#
+#vertical_travel=absolute_locating(wheel,'z')
+#wheel_drive.pos=0
+#vertical_travel.pos=230
+#actuators = [wheel_drive]
+#ac=pd.Series(actuators,index=[i.name for i in actuators])
+#    
+#topology_writer(bs,js,ac,fs,'asurt18_datafile')
+#
+#run_time=0.5
+#stepsize=0.0025
+#
+#dynamic1=dds(q0,qd0,bs,js,ac,fs,'asurt18_datafile',run_time,stepsize)
+#pos,vel,acc,react=dynamic1
+#xaxis=np.arange(0,run_time+stepsize,stepsize)
+#
+#plt.figure('WheelCenter Position')
+#plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Displacement (mm)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('Half-track Change')
+#plt.plot(xaxis,pos['wheel.y'],label=r'$wc_{y}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Displacement (mm)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('Chassis CG Vertical Position')
+#plt.plot(xaxis,pos['chassis.z'],label=r'$chassis_{z}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Displacement (mm)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('WheelHub Verical Reaction Force')
+#plt.plot(xaxis,-1e-6*react['wc_rev_Fz'],label=r'$wc_{Fz}$')
+#plt.plot(xaxis,-1e-6*react['wc_rev_Fx'],label=r'$wc_{Fx}$')
+#plt.plot(xaxis,-1e-6*react['wc_rev_Fy'],label=r'$wc_{Fy}$')
+#plt.plot(xaxis,-1e-9*react['wc_rev_Mx'],label=r'$M_{x}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Force (N)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('UCA Mount Reaction')
+#plt.plot(xaxis,1e-6*react['ucaf_rev_Fx'],label=r'$F_{x}$')
+#plt.plot(xaxis,1e-6*react['ucaf_rev_Fy'],label=r'$F_{y}$')
+#plt.plot(xaxis,1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Force (N)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('LCA Mount Reaction')
+#plt.plot(xaxis,1e-6*react['lcaf_rev_Fx'],label=r'$F_{x}$')
+#plt.plot(xaxis,1e-6*react['lcaf_rev_Fy'],label=r'$F_{y}$')
+#plt.plot(xaxis,1e-6*react['lcaf_rev_Fz'],label=r'$F_{z}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Force (N)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('Tie_Chassis Mount Reaction')
+#plt.plot(xaxis,1e-6*react['tri_uni_Fx'],label=r'$F_{x}$')
+#plt.plot(xaxis,1e-6*react['tri_uni_Fy'],label=r'$F_{y}$')
+#plt.plot(xaxis,1e-6*react['tri_uni_Fz'],label=r'$F_{z}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Force (N)')
+#plt.grid()
+#plt.show()
+#
+#plt.figure('Shock Mount Reaction')
+#plt.plot(xaxis,1e-6*react['ch_sh_uni_Fx'],label=r'$F_{x}$')
+#plt.plot(xaxis,-1e-6*react['ch_sh_uni_Fy'],label=r'$F_{y}$')
+#plt.plot(xaxis,1e-6*react['ch_sh_uni_Fz'],label=r'$F_{z}$')
+#plt.legend()
+#plt.xlabel('Time (sec)')
+#plt.ylabel('Force (N)')
+#plt.grid()
+#plt.show()
 
 
 
