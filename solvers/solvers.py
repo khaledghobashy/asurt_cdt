@@ -181,11 +181,12 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
         applied=Qa(forces,q,qdot)
         centr=Qv(bodies,q,qdot)
         gravity=Qg(bodies)
-        inertia=(M(q,bodies).dot(qdd))
+        inertia=(M(q,bodies).dot(qdd)).reshape((7*nb,))
         
         
         Qc=inertia-(applied+centr+gravity)
         lamda=sc.sparse.linalg.spsolve(Cq(q,bodies,joints,actuators).T,-Qc)
+#        return lamda,Qc,applied,centr,gravity,inertia
         
         
         lamda_df.loc[i]=lamda.reshape((7*nb,))
