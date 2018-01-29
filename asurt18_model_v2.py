@@ -172,7 +172,7 @@ fs=pd.Series(forces     ,index=[i.name for i in forces])
 ##############################################################################
 topology_writer(bs,js,ac,fs,'asurt18_kds_datafile')
 q0   = pd.concat([i.dic    for i in bodies_list])
-time=np.linspace(0,2*np.pi,100)
+time=np.linspace(0,np.pi,100)
 wheel_drive.pos_array=np.zeros((len(time),))
 vertical_travel.pos_array=230+30*np.sin(2*time)
 
@@ -182,7 +182,7 @@ kds_reactions=reactions(kds_run[0],kds_run[1],kds_run[2],bs,js,ac,fs,'asurt18_kd
 plt.figure('WheelHub Verical Reaction Force')
 plt.plot(kds_run[0]['wheel.z'],-1e-6*kds_reactions[5]['wc_rev_Fz'],label=r'$wc_{Fz}$')
 plt.legend()
-plt.xlabel('Time (sec)')
+plt.xlabel('Vertical Travel (mm)')
 plt.ylabel('Force (N)')
 plt.grid()
 plt.show()
