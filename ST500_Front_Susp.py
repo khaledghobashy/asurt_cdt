@@ -208,7 +208,7 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
 topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
 
 run_time=10
-stepsize=0.003
+stepsize=0.004
 arr_size= round(run_time/stepsize)
 
 road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
@@ -223,15 +223,25 @@ road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
                              200*np.ones ((round(1  /stepsize),)),\
                              0*np.ones ((round(0.5  /stepsize),)),\
                              200*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(1  /stepsize),))])
+                             0*np.ones ((round(2  /stepsize),))])
 
 dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,run_time+stepsize,stepsize)
 
+def deff(q,qdot,road):
+    values=[]
+    forces=[]
+    for i in range(len(q)):
+        forces.append(tf.equation(q.loc[i],qdot.loc[i],road[i])[2,0])
+        values.append(tf.tire_deff)
+    return values, forces
+
+s=deff(pos,vel,road_profile)
+
 plt.figure('WheelCenter Position')
 plt.subplot(211)
-plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
+plt.plot(xaxis,pos['wheel.z']-546,label=r'$wc_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
