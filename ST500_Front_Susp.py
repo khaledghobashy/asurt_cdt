@@ -107,7 +107,7 @@ wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=407*1e6,lf=(lwr_ss-ch_sh).mag,c=-140*1e6)
+spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=407*1e6,lf=(lwr_ss-ch_sh).mag+90,c=-40*1e6)
 tf=tire_force('tvf',wheel,4070*1e6,-3*1e6,546,vector([0,1032.5,0]))
 #side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
 
@@ -207,20 +207,31 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
     
 topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
 
-run_time=3
-stepsize=0.001
+run_time=10
+stepsize=0.0025
 arr_size= round(run_time/stepsize)
 
-road_profile=np.concatenate([np.zeros((round(0.5/stepsize),)),\
-                             20*np.ones((round(1.5/stepsize),)),\
-                             40*np.ones((round(3/stepsize),))])
+road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
+                             30*np.ones ((round(1  /stepsize),)),\
+                             50*np.ones ((round(2  /stepsize),)),\
+                             90*np.ones ((round(1.5  /stepsize),)),\
+                             100*np.ones ((round(2.5  /stepsize),)),\
+                             50*np.ones ((round(2  /stepsize),)),\
+                             80*np.ones ((round(1  /stepsize),))])
 
 dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,run_time+stepsize,stepsize)
 
 plt.figure('WheelCenter Position')
+plt.subplot(211)
 plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
@@ -228,7 +239,14 @@ plt.grid()
 plt.show()
 
 plt.figure('Half-track Change')
+plt.subplot(211)
 plt.plot(xaxis,pos['wheel.y'],label=r'$wc_{y}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
@@ -236,7 +254,14 @@ plt.grid()
 plt.show()
 
 plt.figure('Chassis CG Vertical Position')
+plt.subplot(211)
 plt.plot(xaxis,pos['chassis.z'],label=r'$chassis_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
@@ -244,14 +269,22 @@ plt.grid()
 plt.show()
 
 plt.figure('WheelHub Verical Reaction Force')
+plt.subplot(211)
 plt.plot(xaxis,-1e-6*react['wc_rev_Fz'],label=r'$wc_{Fz}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
 plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
 plt.show()
 
 plt.figure('UCA Mount Reaction')
+plt.subplot(211)
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fx'],label=r'$F_{x}$')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fy'],label=r'$F_{y}$')
 plt.plot(xaxis,1e-6*react['ucaf_rev_Fz'],label=r'$F_{z}$')
@@ -259,9 +292,16 @@ plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
 plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
 plt.show()
 
 plt.figure('LCA Mount Reaction')
+plt.subplot(211)
 plt.plot(xaxis,1e-6*react['lcaf_rev_Fx'],label=r'$F_{x}$')
 plt.plot(xaxis,1e-6*react['lcaf_rev_Fy'],label=r'$F_{y}$')
 plt.plot(xaxis,1e-6*react['lcaf_rev_Fz'],label=r'$F_{z}$')
@@ -269,23 +309,27 @@ plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
 plt.grid()
-plt.show()
-
-plt.figure('Tie_Chassis Mount Reaction')
-plt.plot(xaxis,1e-6*react['tri_uni_Fx'],label=r'$F_{x}$')
-plt.plot(xaxis,1e-6*react['tri_uni_Fy'],label=r'$F_{y}$')
-plt.plot(xaxis,1e-6*react['tri_uni_Fz'],label=r'$F_{z}$')
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
 plt.legend()
 plt.xlabel('Time (sec)')
-plt.ylabel('Force (N)')
+plt.ylabel('Displacement (mm)')
 plt.grid()
 plt.show()
 
+
 plt.figure('Shock Mount Reaction')
+plt.subplot(211)
 plt.plot(xaxis,1e-6*react['ch_sh_uni_Fz'],label=r'$F_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Force (N)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
 plt.grid()
 plt.show()
 
