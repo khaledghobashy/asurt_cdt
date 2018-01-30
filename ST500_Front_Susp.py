@@ -205,12 +205,17 @@ wheel_drive.pos=0
 actuators = [wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
     
-topology_writer(bs,js,ac,fs,'ST500_dyn_datafile')
+topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
 
-run_time=1
-stepsize=0.002
+run_time=3
+stepsize=0.001
+arr_size= round(run_time/stepsize)
 
-dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize)
+road_profile=np.concatenate([np.zeros((round(0.5/stepsize),)),\
+                             20*np.ones((round(1.5/stepsize),)),\
+                             40*np.ones((round(3/stepsize),))])
+
+dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,run_time+stepsize,stepsize)
 

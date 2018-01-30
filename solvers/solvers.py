@@ -203,7 +203,7 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
 
 
-def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
+def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize,road):
     '''
     Dynamically Driven Systems Solver
     '''
@@ -224,7 +224,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     # assigning initial conditions to the system NE equations
     M  = M_f(q0,bodies)
     Cq = Cq_f(q0,bodies,joints,actuators)
-    Qa = Qa_f(forces,q0,qd0)
+    Qa = Qa_f(forces,q0,qd0,road[0])
     Qv = Qv_f(bodies,q0,qd0)
     Qg = Qg_f(bodies)
     Qt = (Qa+Qv+Qg).reshape((7*nb,))
@@ -315,7 +315,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         
         # Evaluating the new coeff matrix bloks of the system NE equations
         M  = M_f(q,bodies)
-        Qa = Qa_f(forces,q,qd)
+        Qa = Qa_f(forces,q,qd,road[i])
         Qv = Qv_f(bodies,q,qd)
         Qg = Qg_f(bodies)
         Qt = (Qa+Qv+Qg).reshape((7*nb,))

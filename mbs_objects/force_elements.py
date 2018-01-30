@@ -112,11 +112,11 @@ class tire_force(object):
         self.c=c
         self.r=r
         
-    def equation(self,q,qdot):
+    def equation(self,q,qdot,road_z):
         qi=q[self.bodyi.dic.index]
         betai=qi[3:]
         Ai=ep2dcm(betai)
-        rw=qi[self.bodyi.name+'.z']
+        rw=qi[self.bodyi.name+'.z']-road_z
         rzdot=qdot[self.bodyi.name+'.z']
         x=max([0,self.r-rw])
         
