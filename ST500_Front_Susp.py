@@ -208,16 +208,22 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
 topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
 
 run_time=10
-stepsize=0.0025
+stepsize=0.003
 arr_size= round(run_time/stepsize)
 
 road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
-                             30*np.ones ((round(1  /stepsize),)),\
-                             50*np.ones ((round(2  /stepsize),)),\
-                             90*np.ones ((round(1.5  /stepsize),)),\
-                             100*np.ones ((round(2.5  /stepsize),)),\
-                             50*np.ones ((round(2  /stepsize),)),\
-                             80*np.ones ((round(1  /stepsize),))])
+                             200*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(0.5  /stepsize),)),\
+                             250*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(1  /stepsize),))])
 
 dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
 pos,vel,acc,react=dynamic1
