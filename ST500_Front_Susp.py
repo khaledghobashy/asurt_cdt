@@ -108,7 +108,7 @@ wheel  = rigid('wheel',mass,J,cm,I)
 
 # Defining system forces
 spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=407*1e6,lf=(lwr_ss-ch_sh).mag+90,c=-40*1e6)
-tf=tire_force('tvf',wheel,4070*1e6,-3*1e6,546,vector([0,1032.5,0]))
+tf=tire_force('tvf',wheel,3000*1e6,-3*1e6,546,vector([0,1032.5,0]))
 #side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
 
 
