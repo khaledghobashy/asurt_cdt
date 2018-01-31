@@ -35,7 +35,7 @@ class tsda(object):
         
         rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
         l=np.linalg.norm(rij)
-        defflection=self.lf-l
+        defflection=max([0,self.lf-l])
         nij=rij/l
         
         self.defflection=defflection
