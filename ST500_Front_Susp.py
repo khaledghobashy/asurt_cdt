@@ -77,7 +77,7 @@ Jcm=np.array([[6809559.26,-70112.53, 723753.00],
               [-70112.53, 6663047.19,-111547.75],
               [723753.00,-111547.75,1658347.31]])
 dcm,J=principle_inertia(Jcm)
-mass = 100*1e3 
+mass = 50*1e3 
 upright  = rigid('upright',mass,J,cm,dcm)
 ########################################################################
 tie_g = circular_cylinder(tri,tro,40,0)
@@ -102,13 +102,13 @@ Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [29954.40    , 535366217.28 , -28626.24    ],
               [-40790.37   ,-28626.24    , 343951084.62  ]])
 dcm,J  = principle_inertia(Jcm)
-mass   = 60*1e3  
+mass   = 50*1e3  
 wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=407*1e6,lf=(lwr_ss-ch_sh).mag+90,c=-40*1e6)
-tf=tire_force('tvf',wheel,3000*1e6,-3*1e6,546,vector([0,1032.5,0]))
+spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
+tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1032.5,0]))
 #side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
 
 
@@ -207,23 +207,25 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
     
 topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
 
-run_time=10
-stepsize=0.004
+run_time=5
+stepsize=0.008
 arr_size= round(run_time/stepsize)
 
 road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
-                             200*np.ones ((round(1  /stepsize),)),\
+                             0*np.ones ((round(1  /stepsize),)),\
                              0*np.ones ((round(0.5  /stepsize),)),\
                              200*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(0.5  /stepsize),)),\
-                             250*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(0.5  /stepsize),)),\
                              200*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(0.5  /stepsize),)),\
                              200*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(0.5  /stepsize),)),\
                              200*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(2  /stepsize),))])
+                             200*np.ones ((round(0.5  /stepsize),)),\
+                             200*np.ones ((round(1  /stepsize),)),\
+                             200*np.ones ((round(2  /stepsize),))])
+
+#road_profile=200*np.sin(10*np.arange(0,run_time+stepsize,stepsize))
 
 dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
 pos,vel,acc,react=dynamic1
@@ -238,6 +240,27 @@ def deff(q,qdot,road):
     return values, forces
 
 s=deff(pos,vel,road_profile)
+
+plt.figure('TDLV')
+plt.subplot(211)
+plt.minorticks_on()
+#plt.xticks(np.linspace(0,run_time,20))
+plt.plot(xaxis,np.array(s[0]),label=r'$TDLV$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+plt.grid(which='major', linewidth='0.5', color='black')
+plt.subplot(212)
+#plt.xticks(np.linspace(0,run_time,20))
+plt.minorticks_on()
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+plt.grid(which='major', linewidth='0.5', color='black')
+plt.show()
 
 plt.figure('WheelCenter Position')
 plt.subplot(211)
@@ -271,7 +294,8 @@ plt.show()
 
 plt.figure('Chassis CG Vertical Position')
 plt.subplot(211)
-plt.plot(xaxis,pos['chassis.z'],label=r'$chassis_{z}$')
+plt.plot(xaxis,pos['chassis.z']-pos['chassis.z'][0]+55,label=r'$chassis_{z}$')
+plt.plot(xaxis,pos['wheel.z']-pos['wheel.z'][0]+21,label=r'$wc_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
