@@ -118,7 +118,7 @@ class tire_force(object):
         Ai=ep2dcm(betai)
         rw=qi[self.bodyi.name+'.z']-road_z
         rzdot=qdot[self.bodyi.name+'.z']
-        self.tire_deff=self.r-rw
+        self.tire_deff=self.r-rw # positive for compression in contact
         x=max([0,self.r-rw])
         
         

@@ -18,6 +18,7 @@ import numpy as np
 from solvers import kds, check_jacobian_dense, reactions, dds, state_space_creator
 from newton_raphson import nr_kds
 import matplotlib.pyplot as plt
+import simulations_subroutines as ss
 
 ###############################################################################
 # Defining System HardPoints.
@@ -72,13 +73,12 @@ tube2    = circular_cylinder(lcar,lcao,40,0)
 lca_g    = composite_geometry([tube1,tube2])
 lca      = rigid('lca',lca_g.mass,lca_g.J,lca_g.cm,I)
 ########################################################################
-cm=vector([-5.21,1032.5,546])
-Jcm=np.array([[6809559.26,-70112.53, 723753.00],
-              [-70112.53, 6663047.19,-111547.75],
-              [723753.00,-111547.75,1658347.31]])
-dcm,J=principle_inertia(Jcm)
-mass = 50*1e3 
-upright  = rigid('upright',mass,J,cm,dcm)
+
+upright_tube = circular_cylinder(lcao,ucao,60,0)
+hub_cylinder = circular_cylinder(point.mid_point(lcao,ucao,"up"),wc,400,200)
+upright_geo  = composite_geometry([upright_tube,hub_cylinder])
+
+upright  = rigid('upright',upright_geo.mass,upright_geo.J,upright_geo.cm,I)
 ########################################################################
 tie_g = circular_cylinder(tri,tro,40,0)
 tie   = rigid('tie',tie_g.mass,tie_g.J,tie_g.cm,tie_g.C)
@@ -156,6 +156,9 @@ bs=pd.Series(bodies_list,index=[i.name for i in bodies_list])
 ac=pd.Series(actuators  ,index=[i.name for i in actuators])
 fs=pd.Series(forces     ,index=[i.name for i in forces])
 
+###############################################################################
+unsprung_mass = sum([i.mass for i in bodies_list[2:]])
+
 ##############################################################################
 # Kinematically driven analysis.
 ##############################################################################
@@ -211,19 +214,24 @@ run_time=5
 stepsize=0.008
 arr_size= round(run_time/stepsize)
 
-road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
-                             0*np.ones ((round(1  /stepsize),)),\
-                             0*np.ones ((round(0.5  /stepsize),)),\
-                             200*np.ones ((round(1  /stepsize),)),\
-                             200*np.ones ((round(0.5  /stepsize),)),\
-                             200*np.ones ((round(1  /stepsize),)),\
-                             200*np.ones ((round(0.5  /stepsize),)),\
-                             200*np.ones ((round(1  /stepsize),)),\
-                             200*np.ones ((round(0.5  /stepsize),)),\
-                             200*np.ones ((round(1  /stepsize),)),\
-                             200*np.ones ((round(0.5  /stepsize),)),\
-                             200*np.ones ((round(1  /stepsize),)),\
-                             200*np.ones ((round(2  /stepsize),))])
+road_longitudinal = np.arange(0,1e6,20)
+road_vertical     = 200*np.sin(1/5*road_longitudinal*2*np.pi*1e-3)
+velocity = 20 *1e6/3600
+road_profile = [max(0,ss.irregularities_height(road_longitudinal,road_vertical,velocity,i)) for i in np.arange(0,run_time+0.008,0.008) ]
+
+#road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
+#                             0*np.ones ((round(1  /stepsize),)),\
+#                             0*np.ones ((round(0.5  /stepsize),)),\
+#                             200*np.ones ((round(1  /stepsize),)),\
+#                             200*np.ones ((round(0.5  /stepsize),)),\
+#                             200*np.ones ((round(1  /stepsize),)),\
+#                             200*np.ones ((round(0.5  /stepsize),)),\
+#                             200*np.ones ((round(1  /stepsize),)),\
+#                             200*np.ones ((round(0.5  /stepsize),)),\
+#                             200*np.ones ((round(1  /stepsize),)),\
+#                             200*np.ones ((round(0.5  /stepsize),)),\
+#                             200*np.ones ((round(1  /stepsize),)),\
+#                             200*np.ones ((round(2  /stepsize),))])
 
 #road_profile=200*np.sin(10*np.arange(0,run_time+stepsize,stepsize))
 
@@ -264,7 +272,7 @@ plt.show()
 
 plt.figure('WheelCenter Position')
 plt.subplot(211)
-plt.plot(xaxis,pos['wheel.z']-546,label=r'$wc_{z}$')
+plt.plot(xaxis,pos['wheel.z'],label=r'$wc_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')

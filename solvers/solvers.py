@@ -12,6 +12,7 @@ import scipy as sc
 from scipy.integrate import ode
 from newton_raphson import nr_kds, nr_dds
 import sys
+import simulations_subroutines as ss
 
     
 def progress_bar(steps,i):
@@ -78,7 +79,7 @@ def state_space_creator(indeces):
         return dydt
     
     return ssm
-    
+   
 
 def kds(bodies,joints,actuators,topology_file,time_array):
     
