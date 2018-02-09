@@ -5,7 +5,7 @@ Created on Sat Nov 18 19:59:55 2017
 @author: khale
 """
 
-from base import dcm2ep, G, orient_along_axis
+from base import dcm2ep, G, orient_along_axis, vector
 import scipy as sc
 import pandas as pd
 import numpy as np
@@ -37,7 +37,7 @@ def principle_inertia(J):
 class rigid(object):
     
     
-    def __init__(self,name,mass,inertia_tensor,cm,dcm,typ='floating'):
+    def __init__(self,name,mass=1,inertia_tensor=np.eye(3),cm=vector([1,1,1]),dcm=np.eye(3),typ='floating'):
         '''
     A class representing the rigid body in space.
     ===========================================================================
