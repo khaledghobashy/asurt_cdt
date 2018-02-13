@@ -201,9 +201,7 @@ unsprung_mass = sum([i.mass for i in bodies_list[2:]])
 ##############################################################################
 q0   = pd.concat([i.dic    for i in bodies_list])
 qd0  = pd.concat([i.qd0()  for i in bodies_list])
-qdd0 = pd.concat([i.qdd0() for i in bodies_list])
 
-vertical_travel=absolute_locating(wheel,'z')
 wheel_drive.pos=0
 actuators = [wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
