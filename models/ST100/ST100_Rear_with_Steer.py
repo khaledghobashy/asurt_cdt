@@ -25,23 +25,22 @@ import simulations_subroutines as ss
 ###############################################################################
 origin = point('origin', [0,0,0])
 
-ch_sh  = point('ch_sh',  [-160 ,572,   471.5+546])
-sh_lca = point('sh_lca', [-160 ,608,   -131.6+546])
-lwr_ss = point('lwr_ss', [-160 ,604,   -61+546])
+ch_sh  = point('ch_sh',  [-3982 ,628, 1251])
+sh_lca = point('sh_lca', [-3971 ,586, 508])
 
-tro    = point('tro',    [279  ,763.5, 131.5+546])
-tri    = point('tri',    [279  ,275,   131.5+546]) #assumed
+tro    = point('tro',    [-4217 ,788, 669])
+tri    = point('tri',    [-4217 ,285, 669]) #assumed
 
-ucaf   = point('ucaf',   [121  ,294,  140+546])
-ucao   = point('ucao',   [6.5  ,777,  152+546])
-ucar   = point('ucar',   [-121 ,294,  140+546])
+ucaf   = point('ucaf',   [-3673 ,334, 807])
+ucao   = point('ucao',   [-3803 ,812, 865])
+ucar   = point('ucar',   [-3933 ,334, 807])
 
-lcaf   = point('lcaf',   [146  ,268,  -123+546])
-lcao   = point('lcao',   [-4.4 ,819,  -150+546])
-lcar   = point('lcar',   [-146 ,268,  -123+546])
+lcaf   = point('lcaf',   [-3463 ,269, 527])
+lcao   = point('lcao',   [-3803 ,848, 453])
+lcar   = point('lcar',   [-4143 ,269, 527])
 
-wc     = point('wc',     [0.0  ,1032.5    , 546])
-cp     = point('cp',     [0.0  ,1032.5    , 0.0])
+wc     = point('wc',     [0.0  ,1100, 600])
+cp     = point('cp',     [0.0  ,1100, 0.0])
 
 d_m    = point.mid_point(ch_sh,sh_lca,'d_m')
 
@@ -137,6 +136,106 @@ ch_ground       = translational(origin,ground,chassis,vector([0,0,1]))
 
 
 ###############################################################################
+
+###############################################################################
+# Mirror of coordinates
+#######################
+ch_sh_r  = point('ch_sh_r',  [-3982 ,-628, 1251])
+sh_lca_r = point('sh_lca_r', [-3971 ,-586, 508])
+
+tro_r    = point('tro_r',    [-4217 ,-788, 669])
+tri_r    = point('tri_r',    [-4217 ,-285, 669]) #assumed
+
+ucaf_r   = point('ucaf_r',   [-3673 ,-334, 807])
+ucao_r   = point('ucao_r',   [-3803 ,-812, 865])
+ucar_r   = point('ucar_r',   [-3933 ,-334, 807])
+
+lcaf_r   = point('lcaf_r',   [-3463 ,-269, 527])
+lcao_r   = point('lcao_r',   [-3803 ,-848, 453])
+lcar_r   = point('lcar_r',   [-4143 ,-269, 527])
+
+wc_r     = point('wc_r',     [0.0  ,-1100, 600])
+cp_r     = point('cp_r',     [0.0  ,-1100, 0.0])
+
+d_m_r    = point.mid_point(ch_sh,sh_lca,'d_m_r')
+
+###############################################################################
+# Defining System Bodies and their inertia properties.
+###############################################################################
+tube1    = circular_cylinder(ucaf_r,ucao_r,40,0)
+tube2    = circular_cylinder(ucar_r,ucao_r,40,0)
+uca_g_r    = composite_geometry([tube1,tube2])
+uca_r      = rigid('uca',uca_g_r.mass,uca_g_r.J,uca_g_r.cm,I)
+########################################################################
+tube1    = circular_cylinder(lcaf_r,lcao_r,40,0)
+tube2    = circular_cylinder(lcar_r,lcao_r,40,0)
+lca_g_r    = composite_geometry([tube1,tube2])
+lca_r      = rigid('lca_r',lca_g_r.mass,lca_g.J,lca_g_r.cm,I)
+########################################################################
+
+upright_tube = circular_cylinder(lcao_r,ucao_r,60,0)
+hub_cylinder = circular_cylinder(point.mid_point(lcao_r,ucao_r,"up_r"),wc_r,400,200)
+upright_geo_r  = composite_geometry([upright_tube,hub_cylinder])
+
+upright_r  = rigid('upright_r',upright_geo_r.mass,upright_geo_r.J,upright_geo_r.cm,I)
+########################################################################
+tie_g_r = circular_cylinder(tri_r,tro_r,40,0)
+tie_r   = rigid('tie_r',tie_g_r.mass,tie_g_r.J,tie_g_r.cm,tie_g_r.C)
+########################################################################
+d1_g_r  = circular_cylinder(sh_lca_r,d_m_r,40)
+cm    = d1_g_r.cm
+dcm   = d1_g_r.C
+J     = d1_g_r.J
+mass  = d1_g_r.mass 
+d1_r    = rigid('d1_r',mass,J,cm,dcm)
+########################################################################
+d2_g_r  = circular_cylinder(ch_sh_r,d_m_r,60,28)
+cm    = d2_g_r.cm
+dcm   = d2_g_r.C
+J     = d2_g_r.J
+mass  = d2_g_r.mass 
+d2_r    = rigid('d2_r',mass,J,cm,dcm)
+########################################################################
+cm     = vector([0,-1032.5,546])
+Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
+              [29954.40    , 535366217.28 , -28626.24    ],
+              [-40790.37   ,-28626.24    , 343951084.62  ]])
+dcm,J  = principle_inertia(Jcm)
+mass   = 50*1e3  
+wheel_r  = rigid('wheel_r',mass,J,cm,I)
+###############################################################################
+
+# Defining system forces
+spring_damper=tsda('f1',sh_lca_r,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
+tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1032.5,0]))
+#side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
+
+
+###############################################################################
+# Defining System Joints.
+###############################################################################
+uca_rev_r     = revolute(ucaf_r,uca_r,chassis,ucaf_r-ucar_r)
+lca_rev_r     = revolute(lcaf_r,lca_r,chassis,lcaf_r-lcar_r)
+wheel_hub_r   = revolute(wc_r,wheel_r,upright_r,vector([0,-1,0]))
+
+tie_up_sph_r  = spherical(tro_r,tie_r,upright_r)
+ucao_sph_r    = spherical(ucao_r,uca_r,upright_r)
+lcao_sph_r    = spherical(lcao_r,lca_r,upright_r)
+
+damper_r      = cylindrical(d_m_r,d1_r,d2_r,sh_lca_r-ch_sh_r)
+
+d1_uni_r      = universal(sh_lca_r,lca_r, d1_r     ,sh_lca_r-sh_lca_r,sh_lca_r-sh_lca_r)
+d2_uni_r      = universal(ch_sh_r ,d2_r , chassis  ,sh_lca_r-sh_lca_r,sh_lca_r-sh_lca_r)
+ax3_r         = tro_r-tri_r ##################################
+tie_ch      = universal(tri,chassis,tie,vector([0,1,0]),ax3)
+
+wheel_drive = rotational_drive(wheel_hub)
+
+vertical_travel = absolute_locating(wheel,'z')
+ch_ground       = translational(origin,ground,chassis,vector([0,0,1])) 
+
+
+###############################################################################
 # Collecting System Data in lists.
 ###############################################################################
 
@@ -201,9 +300,7 @@ unsprung_mass = sum([i.mass for i in bodies_list[2:]])
 ##############################################################################
 q0   = pd.concat([i.dic    for i in bodies_list])
 qd0  = pd.concat([i.qd0()  for i in bodies_list])
-qdd0 = pd.concat([i.qdd0() for i in bodies_list])
 
-vertical_travel=absolute_locating(wheel,'z')
 wheel_drive.pos=0
 actuators = [wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
