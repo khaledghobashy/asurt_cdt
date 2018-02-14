@@ -16,8 +16,9 @@ project_dir=os.getcwd()
 
 f1 = project_dir + '\mbs_objects'
 f2 = project_dir + '\solvers'
+f3 = project_dir + '\models'
 
-path=[f1,f2]
+path=[f1,f2,f3]
 for i in path:
     if i not in sys.path:
         sys.path.append(i)

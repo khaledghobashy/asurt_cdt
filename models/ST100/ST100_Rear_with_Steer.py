@@ -10,7 +10,7 @@ from base import grf, vector, point, ep2dcm, rot2ep
 from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
 from inertia_properties import composite_geometry, triangular_prism
 from constraints import spherical, revolute, universal, \
-cylindrical, rotational_drive, absolute_locating,translational
+cylindrical, rotational_drive, absolute_locating,translational,bounce_roll
 from force_elements import tsda, force, tire_force
 from pre_processor import topology_writer
 import pandas as pd
@@ -224,7 +224,6 @@ ax3_r         = tro_r-tri_r ##################################
 wheel_drive_r = rotational_drive(wheel_hub_r)
 
 vertical_travel_r = absolute_locating(wheel_r,'z')
-ch_ground       = translational(origin,ground,chassis,vector([0,0,1])) 
 
 ###############################################################################
 # REAR STEARING MECHANISM
@@ -252,18 +251,18 @@ l4      = rigid('l4',l4g.mass,l4g.J,l4g.cm,l4g.C)
 l5      = rigid('l5',l5g.mass,l5g.J,l5g.cm,l5g.C)
 
 z=vector([0,0,1])
-x=vector([0,1,0])
+y=vector([0,1,0])
 
 revA = revolute(mount_1,l1,ground,z)
 revD = revolute(mount_2,l3,ground,z)
 
-uniB = universal(coupler_1,l1,l2,x,-x)
-uniE = universal(E,l4,ground,x,-x)
-uniF = universal(F,l5,l3,x,-x)
+uniB = universal(coupler_1,l1,l2,y,-y)
+uniE = universal(E,l4,ground,y,-y)
+uniF = universal(F,l5,l3,y,-y)
 
 sphC = spherical(coupler_2,l2,l3)
 
-cylEF = cylindrical(EF,l4,l5,x)
+cylEF = cylindrical(EF,l4,l5,y)
 
 driver= absolute_locating(l5,'y')
 
@@ -272,6 +271,11 @@ driver= absolute_locating(l5,'y')
 ##############################################
 tie_ch_r      = universal(tri_r,l1,tie_r,vector([0,1,0]),ax3_r)
 tie_ch        = universal(tri,l3,tie,vector([0,1,0]),ax3)
+
+##############################################
+# chassis ground connection
+##############################################
+ch_gr = bounce_roll(origin,ground,chassis,z,vector([1,0,0]))
 
 
 ###############################################################################
@@ -291,12 +295,12 @@ joints_list_l =[uca_rev,lca_rev,ucao_sph,lcao_sph,
 joints_list_r =[uca_rev_r,lca_rev_r,ucao_sph_r,lcao_sph_r,
               tie_up_sph_r,d2_uni_r,d1_uni_r,tie_ch_r,damper_r,wheel_hub_r]
 joints_steer  =[revA,revD,uniB,uniE,uniF,sphC,cylEF]
-joints_list   = joints_list_l+joints_list_r 
+joints_list   = joints_list_l+joints_list_r+[ch_gr]
 
 actuators_l = [vertical_travel,wheel_drive]
 actuators_r = [vertical_travel_r,wheel_drive_r]
 actuators_s = [driver]
-actuators   = actuators_l+actuators_r+driver
+actuators   = actuators_l+actuators_r+actuators_s
 
 forces_l    = [spring_damper,tf]
 forces_r    = [spring_damper_r,tf_r]
@@ -356,10 +360,12 @@ q0   = pd.concat([i.dic    for i in bodies_list])
 qd0  = pd.concat([i.qd0()  for i in bodies_list])
 
 wheel_drive.pos=0
-actuators = [wheel_drive]
+wheel_drive_r.pos=0
+driver.pos_array=l5.R.y
+actuators = [wheel_drive,wheel_drive_r,driver]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
     
-topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
+topology_writer(bs,js,ac,fs,'ST100_dyn_datafile_v1')
 
 run_time=5
 stepsize=0.008
@@ -386,7 +392,7 @@ road_profile = [max(0,ss.irregularities_height(road_longitudinal,road_vertical,v
 
 #road_profile=200*np.sin(10*np.arange(0,run_time+stepsize,stepsize))
 
-dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
+dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST100_dyn_datafile',run_time,stepsize,road_profile)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,run_time+stepsize,stepsize)
 
