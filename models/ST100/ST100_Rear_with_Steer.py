@@ -106,10 +106,8 @@ wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
-tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1032.5,0]))
-#side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
-
+spring_damper=tsda('tsda',sh_lca,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
+tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1100,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -122,18 +120,15 @@ tie_up_sph  = spherical(tro,tie,upright)
 ucao_sph    = spherical(ucao,uca,upright)
 lcao_sph    = spherical(lcao,lca,upright)
 
-damper      = cylindrical(d_m,d1,d2,lwr_ss-ch_sh)
+damper      = cylindrical(d_m,d1,d2,sh_lca-ch_sh)
 
-d1_uni      = universal(sh_lca,lca, d1     ,sh_lca-lwr_ss,sh_lca-lwr_ss)
-d2_uni      = universal(ch_sh ,d2 , chassis,sh_lca-lwr_ss,sh_lca-lwr_ss)
+d1_uni      = universal(sh_lca,lca, d1     ,sh_lca-d_m,sh_lca-d_m)
+d2_uni      = universal(ch_sh ,d2 , chassis,sh_lca-d_m,sh_lca-d_m)
 ax3         = tro-tri
-tie_ch      = universal(tri,chassis,tie,vector([0,1,0]),ax3)
 
 wheel_drive = rotational_drive(wheel_hub)
 
 vertical_travel = absolute_locating(wheel,'z')
-ch_ground       = translational(origin,ground,chassis,vector([0,0,1])) 
-
 
 ###############################################################################
 
@@ -165,7 +160,7 @@ d_m_r    = point.mid_point(ch_sh,sh_lca,'d_m_r')
 tube1    = circular_cylinder(ucaf_r,ucao_r,40,0)
 tube2    = circular_cylinder(ucar_r,ucao_r,40,0)
 uca_g_r    = composite_geometry([tube1,tube2])
-uca_r      = rigid('uca',uca_g_r.mass,uca_g_r.J,uca_g_r.cm,I)
+uca_r      = rigid('uca_r',uca_g_r.mass,uca_g_r.J,uca_g_r.cm,I)
 ########################################################################
 tube1    = circular_cylinder(lcaf_r,lcao_r,40,0)
 tube2    = circular_cylinder(lcar_r,lcao_r,40,0)
@@ -206,10 +201,8 @@ wheel_r  = rigid('wheel_r',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('f1',sh_lca_r,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
-tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1032.5,0]))
-#side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
-
+spring_damper_r=tsda('tsda_r',sh_lca_r,d1_r,ch_sh_r,d2_r,k=406*1e6,lf=600,c=-40*1e6)
+tf_r=tire_force('tvf_r',wheel_r,1000*1e6,0*1e6,546,vector([0,-1100,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -227,12 +220,58 @@ damper_r      = cylindrical(d_m_r,d1_r,d2_r,sh_lca_r-ch_sh_r)
 d1_uni_r      = universal(sh_lca_r,lca_r, d1_r     ,sh_lca_r-sh_lca_r,sh_lca_r-sh_lca_r)
 d2_uni_r      = universal(ch_sh_r ,d2_r , chassis  ,sh_lca_r-sh_lca_r,sh_lca_r-sh_lca_r)
 ax3_r         = tro_r-tri_r ##################################
-tie_ch      = universal(tri,chassis,tie,vector([0,1,0]),ax3)
 
-wheel_drive = rotational_drive(wheel_hub)
+wheel_drive_r = rotational_drive(wheel_hub_r)
 
-vertical_travel = absolute_locating(wheel,'z')
+vertical_travel_r = absolute_locating(wheel_r,'z')
 ch_ground       = translational(origin,ground,chassis,vector([0,0,1])) 
+
+###############################################################################
+# REAR STEARING MECHANISM
+###############################################################################
+
+mount_1   = point("mount_1" , [-4500  , 286  ,54+19+600])
+mount_2   = point("mount_2" , [-4500  ,-286  ,54+19+600])
+coupler_1 = point("C1"      , [-4376  , 364  ,50+19+600])
+coupler_2 = point("C2"      , [-4376  ,-364  ,50+19+600])
+E = point("E" , [-4320  , 608  ,157+19+600])
+F = point("F" , [-4349  ,-285  ,85+19+600])
+EF = point.mid_point(E,F,'EF')
+
+
+l1g = circular_cylinder(mount_1,coupler_1,40)
+l2g = circular_cylinder(coupler_1,coupler_2,40)
+l3g = circular_cylinder(coupler_2,mount_2,40)
+l4g = circular_cylinder(E,EF,40)
+l5g = circular_cylinder(EF,F,70,40)
+
+l1      = rigid('l1',l1g.mass,l1g.J,l1g.cm,l1g.C)
+l2      = rigid('l2',l2g.mass,l2g.J,l2g.cm,l2g.C)
+l3      = rigid('l3',l3g.mass,l3g.J,l3g.cm,l3g.C)
+l4      = rigid('l4',l4g.mass,l4g.J,l4g.cm,l4g.C)
+l5      = rigid('l5',l5g.mass,l5g.J,l5g.cm,l5g.C)
+
+z=vector([0,0,1])
+x=vector([0,1,0])
+
+revA = revolute(mount_1,l1,ground,z)
+revD = revolute(mount_2,l3,ground,z)
+
+uniB = universal(coupler_1,l1,l2,x,-x)
+uniE = universal(E,l4,ground,x,-x)
+uniF = universal(F,l5,l3,x,-x)
+
+sphC = spherical(coupler_2,l2,l3)
+
+cylEF = cylindrical(EF,l4,l5,x)
+
+driver= absolute_locating(l5,'y')
+
+##############################################
+# Steering_Suspension Connection
+##############################################
+tie_ch_r      = universal(tri_r,l1,tie_r,vector([0,1,0]),ax3_r)
+tie_ch        = universal(tri,l3,tie,vector([0,1,0]),ax3)
 
 
 ###############################################################################
@@ -241,13 +280,28 @@ ch_ground       = translational(origin,ground,chassis,vector([0,0,1]))
 
 points      =[ch_sh,ucaf,ucar,ucao,lcaf,lcar,lcao,tri,tro,cp,wc,d_m]
 
-bodies_list =[ground,chassis,uca,lca,upright,tie,d1,d2,wheel]
+bodies_list_l =[ground,chassis,uca,lca,upright,tie,d1,d2,wheel]
+bodies_list_r =[uca_r,lca_r,upright_r,tie_r,d1_r,d2_r,wheel_r]
+bodies_steer  =[l1,l2,l3,l4,l5]
+bodies_list   = bodies_list_l+bodies_list_r+bodies_steer
 
-joints_list =[uca_rev,lca_rev,ucao_sph,lcao_sph,
-              tie_up_sph,d2_uni,d1_uni,tie_ch,damper,wheel_hub,ch_ground]
 
-actuators = [vertical_travel,wheel_drive]
-forces    = [spring_damper,tf]#,side_force]
+joints_list_l =[uca_rev,lca_rev,ucao_sph,lcao_sph,
+              tie_up_sph,d2_uni,d1_uni,tie_ch,damper,wheel_hub]
+joints_list_r =[uca_rev_r,lca_rev_r,ucao_sph_r,lcao_sph_r,
+              tie_up_sph_r,d2_uni_r,d1_uni_r,tie_ch_r,damper_r,wheel_hub_r]
+joints_steer  =[revA,revD,uniB,uniE,uniF,sphC,cylEF]
+joints_list   = joints_list_l+joints_list_r 
+
+actuators_l = [vertical_travel,wheel_drive]
+actuators_r = [vertical_travel_r,wheel_drive_r]
+actuators_s = [driver]
+actuators   = actuators_l+actuators_r+driver
+
+forces_l    = [spring_damper,tf]
+forces_r    = [spring_damper_r,tf_r]
+forces      = forces_l+forces_r
+
 
 ps=pd.Series(points     ,index=[i.name for i in points])
 js=pd.Series(joints_list,index=[i.name for i in joints_list])
