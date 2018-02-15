@@ -885,7 +885,7 @@ class bounce_roll(joint):
         
         
         c=[eq1,eq3,eq4,eq5]
-        return np.array([c]).reshape((5,1))
+        return np.array([c]).reshape((4,1))
     
     
     def jacobian_i(self,q):

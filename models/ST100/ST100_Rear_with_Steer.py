@@ -217,8 +217,8 @@ lcao_sph_r    = spherical(lcao_r,lca_r,upright_r)
 
 damper_r      = cylindrical(d_m_r,d1_r,d2_r,sh_lca_r-ch_sh_r)
 
-d1_uni_r      = universal(sh_lca_r,lca_r, d1_r     ,sh_lca_r-sh_lca_r,sh_lca_r-sh_lca_r)
-d2_uni_r      = universal(ch_sh_r ,d2_r , chassis  ,sh_lca_r-sh_lca_r,sh_lca_r-sh_lca_r)
+d1_uni_r      = universal(sh_lca_r,lca_r, d1_r     ,sh_lca_r-ch_sh_r,sh_lca_r-ch_sh_r)
+d2_uni_r      = universal(ch_sh_r ,d2_r , chassis  ,sh_lca_r-ch_sh_r,sh_lca_r-ch_sh_r)
 ax3_r         = tro_r-tri_r ##################################
 
 wheel_drive_r = rotational_drive(wheel_hub_r)
@@ -374,7 +374,7 @@ arr_size= round(run_time/stepsize)
 road_longitudinal = np.arange(0,1e6,20)
 road_vertical     = 200*np.sin(1/5*road_longitudinal*2*np.pi*1e-3)
 velocity = 20 *1e6/3600
-road_profile = [max(0,ss.irregularities_height(road_longitudinal,road_vertical,velocity,i)) for i in np.arange(0,run_time+0.008,0.008) ]
+road_profile = [0*max(0,ss.irregularities_height(road_longitudinal,road_vertical,velocity,i)) for i in np.arange(0,run_time+0.008,0.008) ]
 
 #road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
 #                             0*np.ones ((round(1  /stepsize),)),\

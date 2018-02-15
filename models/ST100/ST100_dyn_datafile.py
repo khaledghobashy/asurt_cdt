@@ -272,11 +272,11 @@ def Qa(forces,q,qdot,r):
 	 Qi,Qj=forces['tsda'].equation(q,qdot) 
 	 Qa_s['d1']=Qi
 	 Qa_s['d2']=Qj
-	 Qa_s['wheel']=forces['tvf'].equation(q,qdot,r)
+	 Qa_s['wheel']=forces['tvf'].equation(q,qdot,0)
 	 Qi,Qj=forces['tsda_r'].equation(q,qdot) 
 	 Qa_s['d1_r']=Qi
 	 Qa_s['d2_r']=Qj
-	 Qa_s['wheel_r']=forces['tvf_r'].equation(q,qdot,r)
+	 Qa_s['wheel_r']=forces['tvf_r'].equation(q,qdot,0)
 	 system=sparse.bmat(Qa_s.values.reshape((21,1)),format='csc') 
 	 return system.A.reshape((147,)) 
 
