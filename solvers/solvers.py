@@ -204,7 +204,7 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
 
 
-def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize,road):
+def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     '''
     Dynamically Driven Systems Solver
     '''
@@ -225,7 +225,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize,road):
     # assigning initial conditions to the system NE equations
     M  = M_f(q0,bodies)
     Cq = Cq_f(q0,bodies,joints,actuators)
-    Qa = Qa_f(forces,q0,qd0,road[0])
+    Qa = Qa_f(forces,q0,qd0)
     Qv = Qv_f(bodies,q0,qd0)
     Qg = Qg_f(bodies)
     Qt = (Qa+Qv+Qg).reshape((7*nb,))
@@ -236,6 +236,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize,road):
     qstr=qind[0]
     Ids=qind[1]
     qind_index=list(coordinates_mapper(q0)[1][qstr])
+    print('DOF : %s \n' %len(qstr))
     print('Independent Coordinates are: %s with indices: %s \n'%(qstr,qind_index))
     
     
@@ -316,7 +317,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize,road):
         
         # Evaluating the new coeff matrix bloks of the system NE equations
         M  = M_f(q,bodies)
-        Qa = Qa_f(forces,q,qd,road[i])
+        Qa = Qa_f(forces,q,qd)
         Qv = Qv_f(bodies,q,qd)
         Qg = Qg_f(bodies)
         Qt = (Qa+Qv+Qg).reshape((7*nb,))

@@ -23,7 +23,7 @@ import simulations_subroutines as ss
 ###############################################################################
 # Defining System HardPoints.
 ###############################################################################
-origin = point('origin', [0,0,0])
+origin = point('origin', [-3982,0,0])
 
 ch_sh  = point('ch_sh',  [-3982 ,628, 1251])
 sh_lca = point('sh_lca', [-3971 ,586, 508])
@@ -39,8 +39,8 @@ lcaf   = point('lcaf',   [-3463 ,269, 527])
 lcao   = point('lcao',   [-3803 ,848, 453])
 lcar   = point('lcar',   [-4143 ,269, 527])
 
-wc     = point('wc',     [0.0  ,1100, 600])
-cp     = point('cp',     [0.0  ,1100, 0.0])
+wc     = point('wc',     [-3803  ,1100, 600])
+cp     = point('cp',     [-3803  ,1100, 0.0])
 
 d_m    = point.mid_point(ch_sh,sh_lca,'d_m')
 
@@ -48,7 +48,7 @@ d_m    = point.mid_point(ch_sh,sh_lca,'d_m')
 # Defining System Bodies and their inertia properties.
 ###############################################################################
 I=np.eye(3)
-cm=vector([0,0,0])
+cm=vector([-3982,0,0])
 dcm=I
 J=I
 mass=1
@@ -56,10 +56,10 @@ ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 ########################################################################
 #Chassis
 ########
-ch_cm=vector([0,0,1300])
+ch_cm=vector([-3803,0,1300])
 ch_dcm=I
 ch_J=I
-ch_mass  = 2015*1e3
+ch_mass  = 2*2015*1e3
 chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 tube1    = circular_cylinder(ucaf,ucao,40,0)
@@ -96,7 +96,7 @@ J     = d2_g.J
 mass  = d2_g.mass 
 d2    = rigid('d2',mass,J,cm,dcm)
 ########################################################################
-cm     = vector([0,1032.5,546])
+cm     = vector([-3803,1100.5,600])
 Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [29954.40    , 535366217.28 , -28626.24    ],
               [-40790.37   ,-28626.24    , 343951084.62  ]])
@@ -106,8 +106,8 @@ wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('tsda',sh_lca,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
-tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1100,0]))
+spring_damper=tsda('tsda',sh_lca,d1,ch_sh,d2,k=406*1e6,lf=800,c=-80*1e6)
+tf=tire_force('tvf',wheel,1000*1e6,0*1e6,600,vector([-3803,1100,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -149,8 +149,8 @@ lcaf_r   = point('lcaf_r',   [-3463 ,-269, 527])
 lcao_r   = point('lcao_r',   [-3803 ,-848, 453])
 lcar_r   = point('lcar_r',   [-4143 ,-269, 527])
 
-wc_r     = point('wc_r',     [0.0  ,-1100, 600])
-cp_r     = point('cp_r',     [0.0  ,-1100, 0.0])
+wc_r     = point('wc_r',     [-3803  ,-1100, 600])
+cp_r     = point('cp_r',     [-3803  ,-1100, 0.0])
 
 d_m_r    = point.mid_point(ch_sh,sh_lca,'d_m_r')
 
@@ -191,7 +191,7 @@ J     = d2_g_r.J
 mass  = d2_g_r.mass 
 d2_r    = rigid('d2_r',mass,J,cm,dcm)
 ########################################################################
-cm     = vector([0,-1032.5,546])
+cm     = vector([-3803,-1100.5,600])
 Jcm=np.array([[343952295.71, 29954.40     , -40790.37    ],
               [29954.40    , 535366217.28 , -28626.24    ],
               [-40790.37   ,-28626.24    , 343951084.62  ]])
@@ -201,8 +201,8 @@ wheel_r  = rigid('wheel_r',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper_r=tsda('tsda_r',sh_lca_r,d1_r,ch_sh_r,d2_r,k=406*1e6,lf=600,c=-40*1e6)
-tf_r=tire_force('tvf_r',wheel_r,1000*1e6,0*1e6,546,vector([0,-1100,0]))
+spring_damper_r=tsda('tsda_r',sh_lca_r,d1_r,ch_sh_r,d2_r,k=406*1e6,lf=800,c=-80*1e6)
+tf_r=tire_force('tvf_r',wheel_r,1000*1e6,0*1e6,600,vector([-3803,-1100,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -253,11 +253,11 @@ l5      = rigid('l5',l5g.mass,l5g.J,l5g.cm,l5g.C)
 z=vector([0,0,1])
 y=vector([0,1,0])
 
-revA = revolute(mount_1,l1,ground,z)
-revD = revolute(mount_2,l3,ground,z)
+revA = revolute(mount_1,l1,chassis,z)
+revD = revolute(mount_2,l3,chassis,z)
 
 uniB = universal(coupler_1,l1,l2,y,-y)
-uniE = universal(E,l4,ground,y,-y)
+uniE = universal(E,l4,chassis,y,-y)
 uniF = universal(F,l5,l3,y,-y)
 
 sphC = spherical(coupler_2,l2,l3)
@@ -269,8 +269,8 @@ driver= absolute_locating(l5,'y')
 ##############################################
 # Steering_Suspension Connection
 ##############################################
-tie_ch_r      = universal(tri_r,l1,tie_r,vector([0,1,0]),ax3_r)
-tie_ch        = universal(tri,l3,tie,vector([0,1,0]),ax3)
+tie_ch_r      = universal(tri_r,l3,tie_r,y,-y)
+tie_ch        = universal(tri,l1,tie,y,-y)
 
 ##############################################
 # chassis ground connection
@@ -295,7 +295,7 @@ joints_list_l =[uca_rev,lca_rev,ucao_sph,lcao_sph,
 joints_list_r =[uca_rev_r,lca_rev_r,ucao_sph_r,lcao_sph_r,
               tie_up_sph_r,d2_uni_r,d1_uni_r,tie_ch_r,damper_r,wheel_hub_r]
 joints_steer  =[revA,revD,uniB,uniE,uniF,sphC,cylEF]
-joints_list   = joints_list_l+joints_list_r+[ch_gr]
+joints_list   = joints_list_l+joints_list_r+[ch_gr]+joints_steer
 
 actuators_l = [vertical_travel,wheel_drive]
 actuators_r = [vertical_travel_r,wheel_drive_r]
@@ -313,8 +313,6 @@ bs=pd.Series(bodies_list,index=[i.name for i in bodies_list])
 ac=pd.Series(actuators  ,index=[i.name for i in actuators])
 fs=pd.Series(forces     ,index=[i.name for i in forces])
 
-###############################################################################
-unsprung_mass = sum([i.mass for i in bodies_list[2:]])
 
 ##############################################################################
 # Kinematically driven analysis.
@@ -361,38 +359,18 @@ qd0  = pd.concat([i.qd0()  for i in bodies_list])
 
 wheel_drive.pos=0
 wheel_drive_r.pos=0
-driver.pos_array=l5.R.y
+driver.pos=l5.R.y
 actuators = [wheel_drive,wheel_drive_r,driver]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
     
-topology_writer(bs,js,ac,fs,'ST100_dyn_datafile_v1')
+topology_writer(bs,js,ac,fs,'ST100_dyn_datafile')
 
-run_time=5
-stepsize=0.008
+run_time=2.5
+stepsize=0.01
 arr_size= round(run_time/stepsize)
 
-road_longitudinal = np.arange(0,1e6,20)
-road_vertical     = 200*np.sin(1/5*road_longitudinal*2*np.pi*1e-3)
-velocity = 20 *1e6/3600
-road_profile = [0*max(0,ss.irregularities_height(road_longitudinal,road_vertical,velocity,i)) for i in np.arange(0,run_time+0.008,0.008) ]
 
-#road_profile=np.concatenate([   np.zeros((round(0.5/stepsize),)),\
-#                             0*np.ones ((round(1  /stepsize),)),\
-#                             0*np.ones ((round(0.5  /stepsize),)),\
-#                             200*np.ones ((round(1  /stepsize),)),\
-#                             200*np.ones ((round(0.5  /stepsize),)),\
-#                             200*np.ones ((round(1  /stepsize),)),\
-#                             200*np.ones ((round(0.5  /stepsize),)),\
-#                             200*np.ones ((round(1  /stepsize),)),\
-#                             200*np.ones ((round(0.5  /stepsize),)),\
-#                             200*np.ones ((round(1  /stepsize),)),\
-#                             200*np.ones ((round(0.5  /stepsize),)),\
-#                             200*np.ones ((round(1  /stepsize),)),\
-#                             200*np.ones ((round(2  /stepsize),))])
-
-#road_profile=200*np.sin(10*np.arange(0,run_time+stepsize,stepsize))
-
-dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST100_dyn_datafile',run_time,stepsize,road_profile)
+dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST100_dyn_datafile',run_time,stepsize)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,run_time+stepsize,stepsize)
 
@@ -400,11 +378,13 @@ def deff(q,qdot,road):
     values=[]
     forces=[]
     for i in range(len(q)):
-        forces.append(tf.equation(q.loc[i],qdot.loc[i],road[i])[2,0])
+        forces.append(tf.equation(q.loc[i],qdot.loc[i],0)[2,0])
         values.append(tf.tire_deff)
     return values, forces
 
-s=deff(pos,vel,road_profile)
+s=deff(pos,vel,0)
+
+road_profile=np.zeros((arr_size+1,))
 
 plt.figure('TDLV')
 plt.subplot(211)
@@ -539,6 +519,22 @@ plt.grid()
 plt.show()
 
 
+plt.figure('Steering Actuator Fixation')
+plt.subplot(211)
+plt.plot(xaxis,1e-6*react['E_uni_Fy'],label=r'$F_{y}$')
+plt.plot(xaxis,1e-6*react['E_uni_Fx'],label=r'$F_{x}$')
+plt.plot(xaxis,1e-6*react['E_uni_Fz'],label=r'$F_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
 
 
 

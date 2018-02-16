@@ -112,7 +112,7 @@ class tire_force(object):
         self.c=c
         self.r=r
         
-    def equation(self,q,qdot,road_z):
+    def equation(self,q,qdot,road_z=0):
         qi=q[self.bodyi.dic.index]
         betai=qi[3:]
         Ai=ep2dcm(betai)
