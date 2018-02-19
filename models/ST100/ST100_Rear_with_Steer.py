@@ -48,7 +48,7 @@ d_m    = point.mid_point(ch_sh,sh_lca,'d_m')
 # Defining System Bodies and their inertia properties.
 ###############################################################################
 I=np.eye(3)
-cm=vector([-3982,0,0])
+cm=vector([-3982,0,10])
 dcm=I
 J=I
 mass=1
@@ -201,8 +201,12 @@ wheel_r  = rigid('wheel_r',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
+###############################################################################
 spring_damper_r=tsda('tsda_r',sh_lca_r,d1_r,ch_sh_r,d2_r,k=406*1e6,lf=800,c=-80*1e6)
 tf_r=tire_force('tvf_r',wheel_r,1000*1e6,0*1e6,600,vector([-3803,-1100,0]))
+
+side_right=force('sr',vector([0,-5*1e6*0.8*9.81*1e3,0]),upright_r,cp_r+vector([0,0,0]))
+side_left =force('sl',vector([0,-3*1e6*0.8*9.81*1e3,0]),upright,cp+vector([0,0,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -275,7 +279,7 @@ tie_ch        = universal(tri,l1,tie,y,-y)
 ##############################################
 # chassis ground connection
 ##############################################
-ch_gr = bounce_roll(origin,ground,chassis,z,vector([1,0,0]))
+ch_gr = bounce_roll(origin,chassis,ground,z,vector([1,0,0]))
 
 
 ###############################################################################
@@ -303,7 +307,7 @@ actuators_s = [driver]
 actuators   = actuators_l+actuators_r+actuators_s
 
 forces_l    = [spring_damper,tf]
-forces_r    = [spring_damper_r,tf_r]
+forces_r    = [spring_damper_r,tf_r,side_right,side_left]
 forces      = forces_l+forces_r
 
 
@@ -365,8 +369,8 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
     
 topology_writer(bs,js,ac,fs,'ST100_dyn_datafile')
 
-run_time=2.5
-stepsize=0.01
+run_time=1
+stepsize=0.009
 arr_size= round(run_time/stepsize)
 
 
@@ -422,6 +426,21 @@ plt.ylabel('Displacement (mm)')
 plt.grid()
 plt.show()
 
+plt.figure('Actuator Position')
+plt.subplot(211)
+plt.plot(xaxis,pos['l4.y'],label=r'$wc_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
+
 plt.figure('Half-track Change')
 plt.subplot(211)
 plt.plot(xaxis,pos['wheel.y'],label=r'$wc_{y}$')
@@ -439,8 +458,7 @@ plt.show()
 
 plt.figure('Chassis CG Vertical Position')
 plt.subplot(211)
-plt.plot(xaxis,pos['chassis.z']-pos['chassis.z'][0]+55,label=r'$chassis_{z}$')
-plt.plot(xaxis,pos['wheel.z']-pos['wheel.z'][0]+21,label=r'$wc_{z}$')
+plt.plot(xaxis,pos['chassis.y'],label=r'$chassis_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
@@ -537,5 +555,20 @@ plt.grid()
 plt.show()
 
 
-
+plt.figure('Roll Joint')
+plt.subplot(211)
+plt.plot(xaxis,1e-6*react['origin_br_Fy'],label=r'$F_{y}$')
+plt.plot(xaxis,1e-6*react['E_uni_Fx'],label=r'$F_{x}$')
+plt.plot(xaxis,1e-6*react['E_uni_Fz'],label=r'$F_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Force (N)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
 

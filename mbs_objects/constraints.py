@@ -875,16 +875,18 @@ class bounce_roll(joint):
         v2=self.vij
         v3=self.vjk
         v4=self.vjj
-        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
+        
+        print(rij/np.linalg.norm(rij))
 
         
         eq1=np.linalg.multi_dot([v1.T,Ai.T,Aj,v3])
+        eq2=np.linalg.multi_dot([v1.T,Ai.T,Aj,v4])
         eq3=np.linalg.multi_dot([v1.T,Ai.T,rij])
         eq4=np.linalg.multi_dot([v2.T,Ai.T,rij])
-        eq5=np.linalg.multi_dot([v1.T,Ai.T,Aj,v4])
+                
         
-        
-        c=[eq1,eq3,eq4,eq5]
+        c=[eq1,eq2,eq3,eq4]
         return np.array([c]).reshape((4,1))
     
     
@@ -906,7 +908,7 @@ class bounce_roll(joint):
         v2=Ai.dot(self.vij)
         v3=Aj.dot(self.vjk)
         v4=Aj.dot(self.vjj)
-        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
         
         Hiv1=B(betai,self.vii)
         Hiv2=B(betai,self.vij)
@@ -915,9 +917,9 @@ class bounce_roll(joint):
         Z=sparse.csr_matrix([[0,0,0]])
         
         jac=sparse.bmat([[Z,v3.T.dot(Hiv1)],
+                         [Z,v4.T.dot(Hiv1)],
                          [v1.T,rij.T.dot(Hiv1)+v1.T.dot(Hiup)],
-                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)],
-                         [Z,v4.T.dot(Hiv1)]],format='csr')
+                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)]],format='csr')
         
         return jac
     
@@ -941,9 +943,9 @@ class bounce_roll(joint):
         Z=sparse.csr_matrix([[0,0,0]])
         
         jac=sparse.bmat([[  Z,   v1.T.dot(Hjv3)],
+                         [  Z,   v1.T.dot(Hjv4)],
                          [-v1.T, -v1.T.dot(Hjup)],
-                         [-v2.T, -v2.T.dot(Hjup)],
-                         [  Z,   v1.T.dot(Hjv4)]],format='csr')
+                         [-v2.T, -v2.T.dot(Hjup)]],format='csr')
         
         return jac
     

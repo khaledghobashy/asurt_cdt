@@ -45,8 +45,8 @@ def cq(q,bodies,joints,actuators):
 	 jac_df.loc['d_m_r_cyl','d2_r']=joints['d_m_r_cyl'].jacobian_j(q)
 	 jac_df.loc['wc_r_rev','wheel_r']=joints['wc_r_rev'].jacobian_i(q)
 	 jac_df.loc['wc_r_rev','upright_r']=joints['wc_r_rev'].jacobian_j(q)
-	 jac_df.loc['origin_br','ground']=joints['origin_br'].jacobian_i(q)
-	 jac_df.loc['origin_br','chassis']=joints['origin_br'].jacobian_j(q)
+	 jac_df.loc['origin_br','chassis']=joints['origin_br'].jacobian_i(q)
+	 jac_df.loc['origin_br','ground']=joints['origin_br'].jacobian_j(q)
 	 jac_df.loc['mount_1_rev','l1']=joints['mount_1_rev'].jacobian_i(q)
 	 jac_df.loc['mount_1_rev','chassis']=joints['mount_1_rev'].jacobian_j(q)
 	 jac_df.loc['mount_2_rev','l3']=joints['mount_2_rev'].jacobian_i(q)
@@ -305,6 +305,8 @@ def Qa(forces,q,qdot):
 	 Qa_s['d1_r']=Qi
 	 Qa_s['d2_r']=Qj
 	 Qa_s['wheel_r']=forces['tvf_r'].equation(q,qdot)
+	 Qa_s['upright_r']=forces['sr'].equation(q,qdot)
+	 Qa_s['upright']=forces['sl'].equation(q,qdot)
 	 system=sparse.bmat(Qa_s.values.reshape((21,1)),format='csc') 
 	 return system.A.reshape((147,)) 
 
