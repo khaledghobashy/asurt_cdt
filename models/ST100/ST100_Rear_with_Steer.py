@@ -316,10 +316,10 @@ joints_list_r =[uca_rev_r,lca_rev_r,ucao_sph_r,lcao_sph_r,
 joints_steer  =[revA,revD,uniB,uniE,uniF,sphC,cylEF]
 joints_list   = joints_list_l+joints_list_r+joints_steer+[grounded]
 
-actuators_l = [vertical_travel,wheel_drive]
-actuators_r = [vertical_travel_r,wheel_drive_r]
-actuators_s = [driver]
-actuators   = actuators_l+actuators_r+actuators_s
+#actuators_l = [vertical_travel,wheel_drive]
+#actuators_r = [vertical_travel_r,wheel_drive_r]
+#actuators_s = [driver]
+#actuators   = actuators_l+actuators_r+actuators_s
 
 forces_l    = [spring_damper,tf]
 forces_r    = [spring_damper_r,tf_r]#,side_right,side_left]

@@ -142,7 +142,14 @@ class air_strut(object):
     def spring_curve(self):
         
         plt.figure('Gas Spring Data')
-        plt.plot(np.arange(0,200,1),self.fs(np.arange(0,200,1)))
+        plt.plot(np.arange(0,175,1),self.fs(np.arange(0,175,1)))
+        plt.grid()
+        plt.show()
+        
+    def damping_curve(self):
+        
+        plt.figure('Damping Data')
+        plt.plot(np.arange(-2,2.5,0.1)*1e3,self.fd(np.arange(-2,2.5,0.1)*1e3))
         plt.grid()
         plt.show()
    
