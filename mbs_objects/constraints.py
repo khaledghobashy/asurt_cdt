@@ -877,8 +877,6 @@ class bounce_roll(joint):
         v4=self.vjj
         rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
         
-        print(rij/np.linalg.norm(rij))
-
         
         eq1=np.linalg.multi_dot([v1.T,Ai.T,Aj,v3])
         eq2=np.linalg.multi_dot([v1.T,Ai.T,Aj,v4])

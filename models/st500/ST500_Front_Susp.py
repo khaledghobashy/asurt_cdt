@@ -11,7 +11,7 @@ from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
 from inertia_properties import composite_geometry, triangular_prism
 from constraints import spherical, revolute, universal, \
 cylindrical, rotational_drive, absolute_locating,translational
-from force_elements import tsda, force, tire_force
+from force_elements import tsda_linear_coeff, force, tire_force
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
@@ -107,7 +107,7 @@ wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('f1',lwr_ss,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
+spring_damper=tsda_linear_coeff('f1',lwr_ss,d1,ch_sh,d2,k=406*1e6,lf=600,c=-40*1e6)
 tf=tire_force('tvf',wheel,1000*1e6,0*1e6,546,vector([0,1032.5,0]))
 #side_force=force('sf',vector([0,140*9.81*1e6,0]),upright,cp)
 
@@ -206,7 +206,7 @@ wheel_drive.pos=0
 actuators = [wheel_drive]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
     
-topology_writer(bs,js,ac,fs,'ST500_dyn_datafil_v1')
+topology_writer(bs,js,ac,fs,'ST500_dyn_datafile')
 
 run_time=5
 stepsize=0.008
@@ -233,7 +233,7 @@ road_profile = [max(0,ss.irregularities_height(road_longitudinal,road_vertical,v
 
 #road_profile=200*np.sin(10*np.arange(0,run_time+stepsize,stepsize))
 
-dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize,road_profile)
+dynamic1=dds(q0,qd0,bs,js,ac,fs,'ST500_dyn_datafile',run_time,stepsize)
 pos,vel,acc,react=dynamic1
 xaxis=np.arange(0,run_time+stepsize,stepsize)
 

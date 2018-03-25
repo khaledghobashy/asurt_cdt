@@ -11,7 +11,7 @@ from bodies_inertia import rigid, principle_inertia, thin_rod, circular_cylinder
 from inertia_properties import composite_geometry, triangular_prism
 from constraints import spherical, revolute, universal, \
 cylindrical, rotational_drive, absolute_locating,translational,bounce_roll
-from force_elements import tsda, force, tire_force
+from force_elements import air_strut,tsda_linear_coeff, force, tire_force
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
@@ -23,7 +23,7 @@ import simulations_subroutines as ss
 ###############################################################################
 # Defining System HardPoints.
 ###############################################################################
-origin = point('origin', [-3982,0,0])
+origin = point('origin', [-3982,0,1300])
 
 ch_sh  = point('ch_sh',  [-3982 ,628, 1251])
 sh_lca = point('sh_lca', [-3971 ,586, 508])
@@ -48,18 +48,24 @@ d_m    = point.mid_point(ch_sh,sh_lca,'d_m')
 # Defining System Bodies and their inertia properties.
 ###############################################################################
 I=np.eye(3)
-cm=vector([-3982,0,10])
+cm=vector([-3982,0,0])
 dcm=I
 J=I
 mass=1
 ground  = rigid('ground',mass,J,cm,dcm,typ='mount')
 ########################################################################
+I=np.eye(3)
+cm=vector([-3982,0,1300])
+dcm=I
+J=I
+mass=1
+stick  = rigid('stick',mass,J,cm,dcm)
 #Chassis
 ########
 ch_cm=vector([-3803,0,1300])
 ch_dcm=I
 ch_J=I
-ch_mass  = 2*2015*1e3
+ch_mass  = 2*2000*1e3
 chassis  = rigid('chassis',ch_mass,ch_J,ch_cm,ch_dcm)
 ########################################################################
 tube1    = circular_cylinder(ucaf,ucao,40,0)
@@ -106,8 +112,17 @@ wheel  = rigid('wheel',mass,J,cm,I)
 ###############################################################################
 
 # Defining system forces
-spring_damper=tsda('tsda',sh_lca,d1,ch_sh,d2,k=406*1e6,lf=800,c=-80*1e6)
-tf=tire_force('tvf',wheel,1000*1e6,0*1e6,600,vector([-3803,1100,0]))
+########################
+## Defining air-spring and damping properties
+#############################################
+deflection   = np.array([0,25,50,75,100,125,150,175,200])
+spring_force = np.array([49,50,55,60,70,80,100,125,170])*0.7*1e9
+
+velocity    = np.array([-2 ,-1 ,-0.5,-0.1, 0, 0.1,0.15,0.18,0.2,0.5,1 ,2 , 3])*1e3
+damp_force  = np.array([-55,-37,-30 ,-20 , 0, 20 ,35  ,40  ,45 ,48 ,55,60,70])*1e9
+
+spring_damper=air_strut('gk_w11',sh_lca,d1,ch_sh,d2,[deflection,spring_force],[velocity,damp_force],80)
+tf=tire_force('tvf',wheel,1000*1e6,1*1e6,600,vector([-3803,1100,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -127,8 +142,6 @@ d2_uni      = universal(ch_sh ,d2 , chassis,sh_lca-d_m,sh_lca-d_m)
 ax3         = tro-tri
 
 wheel_drive = rotational_drive(wheel_hub)
-
-vertical_travel = absolute_locating(wheel,'z')
 
 ###############################################################################
 
@@ -152,7 +165,7 @@ lcar_r   = point('lcar_r',   [-4143 ,-269, 527])
 wc_r     = point('wc_r',     [-3803  ,-1100, 600])
 cp_r     = point('cp_r',     [-3803  ,-1100, 0.0])
 
-d_m_r    = point.mid_point(ch_sh,sh_lca,'d_m_r')
+d_m_r    = point.mid_point(ch_sh_r,sh_lca_r,'d_m_r')
 
 ###############################################################################
 # Defining System Bodies and their inertia properties.
@@ -202,11 +215,11 @@ wheel_r  = rigid('wheel_r',mass,J,cm,I)
 
 # Defining system forces
 ###############################################################################
-spring_damper_r=tsda('tsda_r',sh_lca_r,d1_r,ch_sh_r,d2_r,k=406*1e6,lf=800,c=-80*1e6)
-tf_r=tire_force('tvf_r',wheel_r,1000*1e6,0*1e6,600,vector([-3803,-1100,0]))
+spring_damper_r=air_strut('gk_w11_r',sh_lca_r,d1_r,ch_sh_r,d2_r,[deflection,spring_force],[velocity,damp_force],80)
+tf_r=tire_force('tvf_r',wheel_r,1000*1e6,1*1e6,600,vector([-3803,-1100,0]))
 
-side_right=force('sr',vector([0,-5*1e6*0.8*9.81*1e3,0]),upright_r,cp_r+vector([0,0,0]))
-side_left =force('sl',vector([0,-3*1e6*0.8*9.81*1e3,0]),upright,cp+vector([0,0,0]))
+#side_right=force('sr',vector([0,0*-5*1e6*0.8*9.81*1e3,0]),upright_r,cp_r+vector([0,0,0]))
+#side_left =force('sl',vector([0,0*-3*1e6*0.8*9.81*1e3,0]),upright,cp+vector([0,0,0]))
 
 ###############################################################################
 # Defining System Joints.
@@ -279,8 +292,10 @@ tie_ch        = universal(tri,l1,tie,y,-y)
 ##############################################
 # chassis ground connection
 ##############################################
-ch_gr = bounce_roll(origin,chassis,ground,z,vector([1,0,0]))
+ch_stick = revolute(origin,chassis,stick,vector([1,0,0]))
+gr_stick = translational(origin,ground,stick,vector([0,0,1]))
 
+grounded = bounce_roll(origin,ground,chassis,vector([0,0,1]),vector([1,0,0]))
 
 ###############################################################################
 # Collecting System Data in lists.
@@ -299,7 +314,7 @@ joints_list_l =[uca_rev,lca_rev,ucao_sph,lcao_sph,
 joints_list_r =[uca_rev_r,lca_rev_r,ucao_sph_r,lcao_sph_r,
               tie_up_sph_r,d2_uni_r,d1_uni_r,tie_ch_r,damper_r,wheel_hub_r]
 joints_steer  =[revA,revD,uniB,uniE,uniF,sphC,cylEF]
-joints_list   = joints_list_l+joints_list_r+[ch_gr]+joints_steer
+joints_list   = joints_list_l+joints_list_r+joints_steer+[grounded]
 
 actuators_l = [vertical_travel,wheel_drive]
 actuators_r = [vertical_travel_r,wheel_drive_r]
@@ -307,7 +322,7 @@ actuators_s = [driver]
 actuators   = actuators_l+actuators_r+actuators_s
 
 forces_l    = [spring_damper,tf]
-forces_r    = [spring_damper_r,tf_r,side_right,side_left]
+forces_r    = [spring_damper_r,tf_r]#,side_right,side_left]
 forces      = forces_l+forces_r
 
 
@@ -369,8 +384,8 @@ ac=pd.Series(actuators,index=[i.name for i in actuators])
     
 topology_writer(bs,js,ac,fs,'ST100_dyn_datafile')
 
-run_time=1
-stepsize=0.009
+run_time=5
+stepsize=0.002
 arr_size= round(run_time/stepsize)
 
 
@@ -458,7 +473,7 @@ plt.show()
 
 plt.figure('Chassis CG Vertical Position')
 plt.subplot(211)
-plt.plot(xaxis,pos['chassis.y'],label=r'$chassis_{z}$')
+plt.plot(xaxis,pos['chassis.z'],label=r'$chassis_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')

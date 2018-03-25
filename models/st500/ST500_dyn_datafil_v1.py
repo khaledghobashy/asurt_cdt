@@ -148,9 +148,7 @@ def Qv(bodies,q,qdot):
 
 Qa_s=pd.Series([9 *np.zeros((7,1))],index=['ground', 'chassis', 'uca', 'lca', 'upright', 'tie', 'd1', 'd2', 'wheel'])
 def Qa(forces,q,qdot): 
-	 Qi,Qj=forces['f1'].equation(q,qdot) 
-	 Qa_s['d1']=Qi
-	 Qa_s['d2']=Qj
+	 Qa_s['d1']=forces['f1'].equation(q,qdot)
 	 Qa_s['wheel']=forces['tvf'].equation(q,qdot)
 	 system=sparse.bmat(Qa_s.values.reshape((9,1)),format='csc') 
 	 return system.A.reshape((63,)) 

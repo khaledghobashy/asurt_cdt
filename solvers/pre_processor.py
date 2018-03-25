@@ -6,7 +6,7 @@ Created on Wed Nov  1 07:58:27 2017
 """
 
 from bodies import mount
-from force_elements import tsda
+from force_elements import air_strut
 from constraints import absolute_locating
 import numpy as np
 
@@ -172,7 +172,7 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     file.write("def Qa(forces,q,qdot): \n")
 
     for f in forces:
-        if isinstance(f,tsda):
+        if isinstance(f,air_strut):
             file.write("\t Qi,Qj=forces['%s'].equation(q,qdot) \n" %f.name)
             file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
             file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
