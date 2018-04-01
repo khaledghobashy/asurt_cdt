@@ -29,19 +29,19 @@ import simulations_subroutines as ss
 # Right Rear.
 ###############################################################################
 
+ucaf_rr   = point('ucaf_rr',   [-3673 ,334, 807])
+ucar_rr   = point('ucar_rr',   [-3933 ,334, 807])
+ucao_rr   = point('ucao_rr',   [-3803 ,812, 865])
+
+lcaf_rr   = point('lcaf_rr',   [-3463 ,269, 527])
+lcao_rr   = point('lcao_rr',   [-3803 ,848, 453])
+lcar_rr   = point('lcar_rr',   [-4143 ,269, 527])
+
 ch_sh_rr  = point('ch_sh_rr',  [-3982 ,628, 1251])
 sh_lca_rr = point('sh_lca_rr', [-3971 ,586, 508])
 
 tro_rr    = point('tro_rr',    [-4217 ,788, 669])
 tri_rr    = point('tri_rr',    [-4217 ,285, 669]) #assumed
-
-ucaf_rr   = point('ucaf_rr',   [-3673 ,334, 807])
-ucao_rr   = point('ucao_rr',   [-3803 ,812, 865])
-ucar_rr   = point('ucar_rr',   [-3933 ,334, 807])
-
-lcaf_rr   = point('lcaf_rr',   [-3463 ,269, 527])
-lcao_rr   = point('lcao_rr',   [-3803 ,848, 453])
-lcar_rr   = point('lcar_rr',   [-4143 ,269, 527])
 
 wc_rr     = point('wc_rr',     [-3803 ,1100, 600])
 cp_rr     = point('cp_rr',     [-3803 ,1100, 0.0])
