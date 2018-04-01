@@ -201,9 +201,11 @@ class tire_force(object):
         rzdot=qdot[self.bodyi.name+'.z']
         self.tire_deff=self.r-rw # positive for compression in contact
         x=max([0,self.r-rw])
+        lateral_def=self.bodyi.R.y-qi[self.bodyi.name+'.y']
+        lateral_vel=qdot[self.bodyi.name+'.y']
         
         
-        F=np.array([[0,0,self.k*x+self.c*rzdot]]).T
+        F=np.array([[0,((self.k*lateral_def)+(self.c*lateral_vel)),self.k*x+self.c*rzdot]]).T
         Z=np.zeros((4,1))
         M=2*G(betai).T.dot(vec2skew(self.u_i).dot(Ai.T.dot(F)))
         Qi=np.bmat([[F],[Z]])

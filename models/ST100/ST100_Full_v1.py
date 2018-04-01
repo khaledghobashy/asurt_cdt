@@ -151,8 +151,8 @@ lca_g    = composite_geometry([tube1,tube2])
 lca_rr   = rigid('lca_rr',lca_g.mass,lca_g.J,lca_g.cm,I)
 ########################################################################
 
-upright_tube = circular_cylinder(lcao_rr,ucao_rr,60,0)
-hub_cylinder = circular_cylinder(point.mid_point(lcao_rr,ucao_rr,"up_rr"),wc_rr,400,200)
+upright_tube = circular_cylinder(lcao_rr,ucao_rr,50,0)
+hub_cylinder = circular_cylinder(point.mid_point(lcao_rr,ucao_rr,"up_rr"),wc_rr,400,350)
 upright_geo  = composite_geometry([upright_tube,hub_cylinder])
 
 upright_rr   = rigid('upright_rr',upright_geo.mass,upright_geo.J,upright_geo.cm,I)
@@ -199,8 +199,8 @@ lca_g    = composite_geometry([tube1,tube2])
 lca_lr   = rigid('lca_lr',lca_g.mass,lca_g.J,lca_g.cm,I)
 ########################################################################
 
-upright_tube = circular_cylinder(lcao_lr,ucao_lr,60,0)
-hub_cylinder = circular_cylinder(point.mid_point(lcao_lr,ucao_lr,"up_lr"),wc_lr,400,200)
+upright_tube = circular_cylinder(lcao_lr,ucao_lr,50,0)
+hub_cylinder = circular_cylinder(point.mid_point(lcao_lr,ucao_lr,"up_lr"),wc_lr,400,350)
 upright_geo  = composite_geometry([upright_tube,hub_cylinder])
 
 upright_lr   = rigid('upright_lr',upright_geo.mass,upright_geo.J,upright_geo.cm,I)
@@ -247,8 +247,8 @@ lca_g    = composite_geometry([tube1,tube2])
 lca_rf   = rigid('lca_rf',lca_g.mass,lca_g.J,lca_g.cm,I)
 ########################################################################
 
-upright_tube = circular_cylinder(lcao_rf,ucao_rf,60,0)
-hub_cylinder = circular_cylinder(point.mid_point(lcao_rf,ucao_rf,"up_rf"),wc_rf,400,200)
+upright_tube = circular_cylinder(lcao_rf,ucao_rf,50,0)
+hub_cylinder = circular_cylinder(point.mid_point(lcao_rf,ucao_rf,"up_rf"),wc_rf,400,350)
 upright_geo  = composite_geometry([upright_tube,hub_cylinder])
 
 upright_rf   = rigid('upright_rf',upright_geo.mass,upright_geo.J,upright_geo.cm,I)
@@ -295,8 +295,8 @@ lca_g    = composite_geometry([tube1,tube2])
 lca_lf   = rigid('lca_lf',lca_g.mass,lca_g.J,lca_g.cm,I)
 ########################################################################
 
-upright_tube = circular_cylinder(lcao_lf,ucao_lf,60,0)
-hub_cylinder = circular_cylinder(point.mid_point(lcao_lf,ucao_lf,"up_lf"),wc_lf,400,200)
+upright_tube = circular_cylinder(lcao_lf,ucao_lf,50,0)
+hub_cylinder = circular_cylinder(point.mid_point(lcao_lf,ucao_lf,"up_lf"),wc_lf,400,350)
 upright_geo  = composite_geometry([upright_tube,hub_cylinder])
 
 upright_lf   = rigid('upright_lf',upright_geo.mass,upright_geo.J,upright_geo.cm,I)
@@ -460,8 +460,8 @@ driver_front = absolute_locating(l5_front,'y')
 ##############################################
 # Steering_Suspension Connection
 ##############################################
-tie_ch_lf      = universal(tri_lf,chassis,tie_lf,y,-y)
-tie_ch_rf      = universal(tri_rf,chassis,tie_rf,y,-y)
+tie_ch_lf      = universal(tri_lf,l3_front,tie_lf,y,-y)
+tie_ch_rf      = universal(tri_rf,l1_front,tie_rf,y,-y)
 
 ###############################################################################
 # REAR STEARING MECHANISM
@@ -520,7 +520,7 @@ deflection   = np.array([0,25,50,75,100,125,150,175,200])
 spring_force = np.array([50,60,68,78,90,110,140,200,250])*1e9
 
 velocity    = np.array([-2 ,-1.5 ,-1  ,-0.5,-0.2 ,-0.1, 0, 0.15, 0.2 ,0.3,0.5,1 ,1.5 ,2 ])*1e3
-damp_force  = np.array([-25,-18  ,-15 ,-12 ,-10  ,-8  , 0, 20  , 23  ,28 ,30 ,30,48  ,60])*1.5*1e9
+damp_force  = np.array([-25,-18  ,-15 ,-12 ,-10  ,-8  , 0, 20  , 23  ,28 ,30 ,30,48  ,60])*1e9
 
 spring_damper_rr = air_strut('gk_w11_rr',sh_lca_rr,d1_rr,ch_sh_rr,d2_rr,[deflection,spring_force],[velocity,damp_force],80)
 tf_rr            = tire_force('tvf_rr',wheel_rr,1000*1e6,1*1e6,600,vector([-3803,1100,0]))
@@ -543,7 +543,7 @@ bodies_list_lf      = [uca_lf,lca_lf,upright_lf,tie_lf,d1_lf,d2_lf,wheel_lf]
 bodies_steer_rear   = [l1_rear ,l2_rear ,l3_rear ,l4_rear ,l5_rear]
 bodies_steer_front  = [l1_front,l2_front,l3_front,l4_front,l5_front]
 Chassis_Ground      = [chassis,ground]
-bodies_list         = Chassis_Ground+bodies_list_rr+bodies_list_lr+bodies_list_rf+bodies_list_lf+bodies_steer_rear
+bodies_list         = Chassis_Ground+bodies_list_rr+bodies_list_lr+bodies_list_rf+bodies_list_lf+bodies_steer_rear+bodies_steer_front
 
 
 joints_list_rr =[uca_rev_rr,lca_rev_rr,ucao_sph_rr,lcao_sph_rr,
@@ -559,7 +559,7 @@ joints_list_lf =[uca_rev_lf,lca_rev_lf,ucao_sph_lf,lcao_sph_lf,
 joints_steer_front  =[revA_front,revD_front,uniB_front,uniE_front,uniF_front,sphC_front,cylEF_front]
 joints_steer_rear   =[revA_rear,revD_rear,uniB_rear,uniE_rear,uniF_rear,sphC_rear,cylEF_rear]
 
-joints_list   = joints_list_lf+joints_list_rr+joints_list_rf+joints_list_lr+joints_steer_rear
+joints_list   = joints_list_lf+joints_list_rr+joints_list_rf+joints_list_lr+joints_steer_front+joints_steer_rear
 
 
 forces    = [spring_damper_rr,spring_damper_lr,spring_damper_rf,spring_damper_lf,
@@ -576,7 +576,7 @@ wheel_drive_rf.pos=0
 wheel_drive_rr.pos=0
 driver_front.pos =l5_front.R.y
 driver_rear.pos  =l5_rear.R.y
-actuators = [wheel_drive_lf,wheel_drive_rf,wheel_drive_lr,wheel_drive_rr,driver_rear]
+actuators = [wheel_drive_lf,wheel_drive_rf,wheel_drive_lr,wheel_drive_rr,driver_rear,driver_front]
 ac=pd.Series(actuators,index=[i.name for i in actuators])
 
 
@@ -590,7 +590,7 @@ qd0  = pd.concat([i.qd0()  for i in bodies_list])
 topology_writer(bs,js,ac,fs,'ST100_full_dyn_datafile')
 
 run_time=2
-stepsize=0.008
+stepsize=0.002
 arr_size= round(run_time/stepsize)
 
 
@@ -633,8 +633,8 @@ plt.show()
 
 plt.figure('WheelCenter Position')
 plt.subplot(211)
-plt.plot(xaxis,pos['wheel_rr.z'],label=r'$wc_rr_{z}$')
-plt.plot(xaxis,pos['wheel_lf.z'],label=r'$wc_lf_{z}$')
+plt.plot(xaxis,pos['wheel_rr.z'],label=r'$wc RightRear_{z}$')
+plt.plot(xaxis,pos['wheel_lf.z'],label=r'$wc LeftFront_{z}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
@@ -680,6 +680,21 @@ plt.show()
 plt.figure('Chassis CG Vertical Position')
 plt.subplot(211)
 plt.plot(xaxis,pos['chassis.z'],label=r'$chassis_{z}$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.subplot(212)
+plt.plot(xaxis,road_profile[0:arr_size+1],label=r'$road profile$')
+plt.legend()
+plt.xlabel('Time (sec)')
+plt.ylabel('Displacement (mm)')
+plt.grid()
+plt.show()
+
+plt.figure('Chassis CG Lateral Position')
+plt.subplot(211)
+plt.plot(xaxis,pos['chassis.y'],label=r'$chassis_{y}$')
 plt.legend()
 plt.xlabel('Time (sec)')
 plt.ylabel('Displacement (mm)')
