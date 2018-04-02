@@ -30,9 +30,9 @@ def nr_kds(eq,jac,guess,bodies,joints,actuators,debug=False):
     
     itr=0
     while np.linalg.norm(delta_q)>1e-5:
-        print('iteration: %s'%(itr))
-        print('correction norm = %s'%(np.linalg.norm(delta_q)))
-        print('equations  norm = %s \n'%(np.linalg.norm(b)))
+#        print('iteration: %s'%(itr))
+#        print('correction norm = %s'%(np.linalg.norm(delta_q)))
+#        print('equations  norm = %s \n'%(np.linalg.norm(b)))
 
         if debug:
             eqdf.loc[itr]=-1*b

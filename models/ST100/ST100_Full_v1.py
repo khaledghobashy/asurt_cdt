@@ -34,14 +34,14 @@ ucar_rr   = point('ucar_rr',   [-3933 ,334, 807])
 ucao_rr   = point('ucao_rr',   [-3803 ,812, 865])
 
 lcaf_rr   = point('lcaf_rr',   [-3463 ,269, 527])
-lcao_rr   = point('lcao_rr',   [-3803 ,848, 453])
 lcar_rr   = point('lcar_rr',   [-4143 ,269, 527])
+lcao_rr   = point('lcao_rr',   [-3803 ,841, 453])
 
-ch_sh_rr  = point('ch_sh_rr',  [-3982 ,628, 1251])
-sh_lca_rr = point('sh_lca_rr', [-3971 ,586, 508])
+ch_sh_rr  = point('ch_sh_rr',  [-3982 ,588, 1251])
+sh_lca_rr = point('sh_lca_rr', [-3971 ,588, 539])
 
-tro_rr    = point('tro_rr',    [-4217 ,788, 669])
-tri_rr    = point('tri_rr',    [-4217 ,285, 669]) #assumed
+tro_rr    = point('tro_rr',    [-4217 ,800, 604])
+tri_rr    = point('tri_rr',    [-4217 ,278, 631]) #assumed
 
 wc_rr     = point('wc_rr',     [-3803 ,1100, 600])
 cp_rr     = point('cp_rr',     [-3803 ,1100, 0.0])
@@ -52,19 +52,20 @@ d_m_rr    = point.mid_point(ch_sh_rr,sh_lca_rr,'d_m_rr')
 # Left Rear.
 ###############################################################################
 
-ch_sh_lr  = point('ch_sh_lr',  [-3982 ,-628, 1251])
-sh_lca_lr = point('sh_lca_lr', [-3971 ,-586, 508])
-
-tro_lr    = point('tro_lr',    [-4217 ,-788, 669])
-tri_lr    = point('tri_lr',    [-4217 ,-285, 669]) #assumed
 
 ucaf_lr   = point('ucaf_lr',   [-3673 ,-334, 807])
-ucao_lr   = point('ucao_lr',   [-3803 ,-812, 865])
 ucar_lr   = point('ucar_lr',   [-3933 ,-334, 807])
+ucao_lr   = point('ucao_lr',   [-3803 ,-812, 865])
 
 lcaf_lr   = point('lcaf_lr',   [-3463 ,-269, 527])
-lcao_lr   = point('lcao_lr',   [-3803 ,-848, 453])
 lcar_lr   = point('lcar_lr',   [-4143 ,-269, 527])
+lcao_lr   = point('lcao_lr',   [-3803 ,-841, 453])
+
+ch_sh_lr  = point('ch_sh_lr',  [-3982 ,-588, 1251])
+sh_lca_lr = point('sh_lca_lr', [-3971 ,-588, 539])
+
+tro_lr    = point('tro_lr',    [-4217 ,-800, 604])
+tri_lr    = point('tri_lr',    [-4217 ,-278, 631]) #assumed
 
 wc_lr     = point('wc_lr',     [-3803 ,-1100, 600])
 cp_lr     = point('cp_lr',     [-3803 ,-1100, 0.0])
@@ -589,7 +590,7 @@ qd0  = pd.concat([i.qd0()  for i in bodies_list])
 
 topology_writer(bs,js,ac,fs,'ST100_full_dyn_datafile')
 
-run_time=2
+run_time=3
 stepsize=0.002
 arr_size= round(run_time/stepsize)
 
