@@ -137,13 +137,13 @@ ac=pd.Series(actuat  ,index=[i.name for i in actuat])
 ##############################################################################
 topology_writer(bs,js,ac,[],'ST100_datafile_kinematic')
 q0   = pd.concat([i.dic    for i in bodies])
-time=np.linspace(-1*np.pi,np.pi,50)
+time=np.linspace(-1*np.pi,np.pi,100)
 wheel_drive.pos_array=np.zeros((len(time),))
-vertical_travel.pos_array=600+180*np.sin(time)
+vertical_motion=250*np.sin(time)
+
+vertical_travel.pos_array=600+vertical_motion
 
 kds_run=kds(bs,js,ac,'ST100_datafile_kinematic',time)
-
-vertical_motion=180*np.sin(time)
 
 def body_dcm(dataframe,body):
     l=[]
@@ -157,6 +157,7 @@ def body_dcm(dataframe,body):
 wheel_reference = body_dcm(kds_run[0],'wheel')
 y_wheel = [i[:,1] for i in wheel_reference]
 z_wheel = [i[:,2] for i in wheel_reference]
+z_caster = [i[:,2] for i in wheel_reference]
 
 for i in y_wheel:
     i[2]=0
@@ -164,8 +165,13 @@ for i in y_wheel:
 for i in z_wheel:
     i[0]=0
 
+#for i in z_caster:
+#    i[1]=0
+
+
 steer_angle = []
 for i in y_wheel:
+#    i=i/np.linalg.norm(i)
     if i[0]<=0:
         angle = np.rad2deg(np.arccos(i.dot(np.array([0,1,0]))))
     else:
@@ -175,23 +181,33 @@ for i in y_wheel:
         
 camber_angle = []
 for i in z_wheel:
-    if i[1]>=0:
-        angle = np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
+    i=i/np.linalg.norm(i)
+    if i[1]<=0:
+        angle = -1*np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
     else:
         print('5ra')
         angle = np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
-        angle = angle*-1
     camber_angle.append(angle)     
 
-camber_angle = []
-for i in z_wheel:
-    if i[1]<=0:
-        angle = vector(i).angle_between(vector([0,0,1]))
-    else:
-        print('5ra')
-        angle = vector(i).angle_between(vector([0,0,1]))
-        angle = angle*-1
-    camber_angle.append(angle)  
+#caster_angle = []
+#for i in z_caster:
+#    i=i/np.linalg.norm(i)
+#    if i[1]<=0:
+#        angle = -1*np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
+#    else:
+#        angle = np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
+#    caster_angle.append(angle)
+#
+
+#camber_angle = []
+#for i in z_wheel:
+#    if i[1]<=0:
+#        angle = vector(i).angle_between(vector([0,0,1]))
+#    else:
+#        print('5ra')
+#        angle = vector(i).angle_between(vector([0,0,1]))
+#        angle = angle*-1
+#    camber_angle.append(angle)  
 
 plt.figure('Half-track Change')
 plt.plot(vertical_motion,kds_run[0]['wheel.y'][1:],label=r'$wc_{y}$')
@@ -225,3 +241,12 @@ plt.ylabel('Angle (deg)')
 plt.grid()
 plt.show()
 
+
+#plt.figure('caster angle')
+#plt.plot(vertical_motion,caster_angle[1:],label=r'$wc_{y}$')
+#plt.legend()
+#plt.xlabel('Vertical Travel (mm)')
+#plt.ylabel('Angle (deg)')
+#plt.grid()
+#plt.show()
+#
