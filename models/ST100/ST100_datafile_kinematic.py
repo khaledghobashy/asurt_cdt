@@ -142,6 +142,9 @@ def Qv(bodies,q,qdot):
 
 Qa_s=pd.Series([8 *np.zeros((7,1))],index=['chassis', 'uca', 'lca', 'upright', 'wheel', 'strut_lower', 'strut_upper', 'tie'])
 def Qa(forces,q,qdot): 
+	 Qi,Qj=forces['gk_w11'].equation(q,qdot) 
+	 Qa_s['strut_lower']=Qi
+	 Qa_s['strut_upper']=Qj
 	 system=sparse.bmat(Qa_s.values.reshape((8,1)),format='csc') 
 	 return system.A.reshape((56,)) 
 

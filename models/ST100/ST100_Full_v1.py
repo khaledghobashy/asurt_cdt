@@ -590,7 +590,7 @@ qd0  = pd.concat([i.qd0()  for i in bodies_list])
 
 topology_writer(bs,js,ac,fs,'ST100_full_dyn_datafile')
 
-run_time=3
+run_time=1
 stepsize=0.002
 arr_size= round(run_time/stepsize)
 

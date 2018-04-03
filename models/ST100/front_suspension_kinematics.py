@@ -13,9 +13,9 @@ cylindrical, rotational_drive, absolute_locating,translational,bounce_roll
 from pre_processor import topology_writer
 import pandas as pd
 import numpy as np
-from solvers import kds
+from solvers import kds, reactions
 import matplotlib.pyplot as plt
-
+from force_elements import air_strut
 
 ###############################################################################
 # Defining System HardPoints.
@@ -123,19 +123,28 @@ wheel_drive     = rotational_drive(wheel_hub)
 vertical_travel = absolute_locating(wheel,'z')
 ###############################################################################
 
+deflection   = np.array([0,25,50,75,100,125,150,175,200])
+spring_force = np.array([50,60,68,78,90,110,140,200,250])*1e9
+
+velocity    = np.array([-2 ,-1.5 ,-1  ,-0.5,-0.2 ,-0.1, 0, 0.15, 0.2 ,0.3,0.5,1 ,1.5 ,2 ])*1e3
+damp_force  = np.array([-25,-18  ,-15 ,-12 ,-10  ,-8  , 0, 20  , 23  ,28 ,30 ,30,48  ,60])*1e9
+
+spring_damper = air_strut('gk_w11',strut_lca,strut_lower,strut_ch,strut_upper,[deflection,spring_force],[velocity,damp_force],80)
+
 bodies = [chassis,uca,lca,upright,wheel,strut_lower,strut_upper,tie]
 joints = [uca_rev,lca_rev,wheel_hub,tie_up_sph,ucao_sph,lcao_sph,strut,strut_upper_uni,strut_lower_uni,tie_ch]
 actuat = [wheel_drive,vertical_travel]
+forces = [spring_damper,]
 
 js=pd.Series(joints,index=[i.name for i in joints])
 bs=pd.Series(bodies,index=[i.name for i in bodies])
-ac=pd.Series(actuat  ,index=[i.name for i in actuat])
-
+ac=pd.Series(actuat,index=[i.name for i in actuat])
+fs=pd.Series(forces,index=[i.name for i in forces])
 
 ##############################################################################
 # Kinematically driven analysis.
 ##############################################################################
-topology_writer(bs,js,ac,[],'ST100_datafile_kinematic')
+topology_writer(bs,js,ac,fs,'ST100_datafile_kinematic')
 q0   = pd.concat([i.dic    for i in bodies])
 time=np.linspace(-1*np.pi,np.pi,100)
 wheel_drive.pos_array=np.zeros((len(time),))
@@ -143,7 +152,8 @@ vertical_motion=250*np.sin(time)
 
 vertical_travel.pos_array=600+vertical_motion
 
-kds_run=kds(bs,js,ac,'ST100_datafile_kinematic',time)
+pos_df,vel_df,acc_df,itr=kds(bs,js,ac,'ST100_datafile_kinematic',time)
+system_reactions = reactions(pos_df,vel_df,acc_df,bs,js,ac,fs,'ST100_datafile_kinematic')
 
 def body_dcm(dataframe,body):
     l=[]
@@ -154,7 +164,7 @@ def body_dcm(dataframe,body):
     return l
 
 
-wheel_reference = body_dcm(kds_run[0],'wheel')
+wheel_reference = body_dcm(pos_df,'wheel')
 y_wheel = [i[:,1] for i in wheel_reference]
 z_wheel = [i[:,2] for i in wheel_reference]
 z_caster = [i[:,2] for i in wheel_reference]
@@ -185,7 +195,6 @@ for i in z_wheel:
     if i[1]<=0:
         angle = -1*np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
     else:
-        print('5ra')
         angle = np.rad2deg(np.arccos(i.dot(np.array([0,0,1]))))
     camber_angle.append(angle)     
 
@@ -210,7 +219,7 @@ for i in z_wheel:
 #    camber_angle.append(angle)  
 
 plt.figure('Half-track Change')
-plt.plot(vertical_motion,kds_run[0]['wheel.y'][1:],label=r'$wc_{y}$')
+plt.plot(vertical_motion,pos_df['wheel.y'][1:],label=r'$wc_{y}$')
 plt.legend()
 plt.xlabel('Vertical Travel (mm)')
 plt.ylabel('Displacement (mm)')
@@ -218,7 +227,7 @@ plt.grid()
 plt.show()
 
 plt.figure('wheel recession ')
-plt.plot(vertical_motion,kds_run[0]['wheel.x'][1:],label=r'$wc_{y}$')
+plt.plot(vertical_motion,pos_df['wheel.x'][1:],label=r'$wc_{y}$')
 plt.legend()
 plt.xlabel('Vertical Travel (mm)')
 plt.ylabel('Displacement (mm)')

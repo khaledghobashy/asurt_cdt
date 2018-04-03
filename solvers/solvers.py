@@ -192,7 +192,7 @@ def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
         
         lamda_df.loc[i]=lamda.reshape((7*nb,))
 #        Qc_df.loc[i]=Qc.reshape((7*nb,))
-#        Qa_df.loc[i]=applied.reshape((7*nb,))
+        Qa_df.loc[i]=applied.reshape((7*nb,))
 #        Qv_df.loc[i]=centr.reshape((7*nb,))
 #        Qi_df.loc[i]=inertia.reshape((7*nb,))
         reaction=JR(joints,q,lamda_df.loc[i])
