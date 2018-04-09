@@ -1,0 +1,64 @@
+file=open('tst.ipynb','w')
+file.write('{"cells": [{"cell_type": "markdown","metadata": {},"source": ["# CREATING NEW MODEL" ]},
+            {"cell_type": "code","execution_count": 6,"metadata": {},"outputs": [],"source": ["import os\n","import sys\n","import importlib\n","import shutil"]},
+            {"cell_type": "code","execution_count": 7,"metadata": {},"outputs": [{"name": "stderr","output_type": "stream","text": [ "ERROR:root:File `'source_code/jupyter_lab_gui/gui_backend.py'` not found.\n"]}],"source": ["cur_dir = os.getcwd()\n","mod_dir = os.makedirs(cur_dir+'\\models\\st100_v1',exist_ok=True)\n","%run source_code/jupyter_lab_gui/gui_backend\n","os.chdir(cur_dir+'\\models\\st100_v1')"]},{"cell_type": "code","execution_count": 8,"metadata": {},"outputs": [{"data": {"application/vnd.jupyter.widget-view+json": {"model_id": "dfa8e3d5ce38446dbf784fc0a0c49122","version_major": 2,"version_minor": 0},"text/plain": ["QgridWidget(grid_options={'fullWidthRows': False, 'syncColumnCellResize': True, 'forceFitColumns': False, 'def…"},"metadata": {},"output_type": "display_data"}],"source": [
+    "points_grid"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "points_grid.get_changed_df().to_csv('points.csv')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "http://localhost:8888/lab/tree/models%2FST100%2Fst100_front_sus_data.ipynb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tst=open('TEST.ipynb','w')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2}
+')
+
+file.cloes()
