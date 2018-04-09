@@ -156,4 +156,4 @@ def adding_points_gui(existing_csv_file=None):
     return tab,points_objects,data
 
 
-
+ipy.display.display(adding_points_gui()[0])
