@@ -4,7 +4,10 @@ import ipywidgets as widgets
 import IPython as ipy
 import qgrid
 import pandas as pd
-from base import *
+from base import point, vector
+from bodies_inertia import rigid,circular_cylinder
+from inertia_properties import composite_geometry
+import numpy as np
 
 def adding_points_gui(existing_csv_file=None):
     
@@ -156,4 +159,212 @@ def adding_points_gui(existing_csv_file=None):
     return tab,points_objects,data
 
 
-ipy.display.display(adding_points_gui()[0])
+
+
+def add_bodies_gui(points=[]):
+    
+    # Defining used gui blocks
+    
+    body_name_lable = widgets.Label(value='$Body$ $Name$')
+    body_name_value = widgets.Text(placeholder='Enter Body Name')
+    body_name_block = widgets.VBox([body_name_lable,body_name_value])
+    
+    # accordion 1 data
+    ############################################################################
+    # CG Data
+    ############################################################################
+    mass_label = widgets.Label(value='$Body$ $Mass$')
+    mass_value = widgets.FloatText()
+    mass_block = widgets.VBox([mass_label,mass_value])
+    mass_value.layout=widgets.Layout(width='80px')
+    
+    reference_point_lable = widgets.Label(value='$C.G$ $Location$')
+    x_lable = widgets.Label(value='$R_x$')
+    y_lable = widgets.Label(value='$R_y$')
+    z_lable = widgets.Label(value='$R_z$')
+    x_lable.layout=y_lable.layout=z_lable.layout=widgets.Layout(width='80px')
+
+    x = widgets.FloatText()
+    y = widgets.FloatText()
+    z = widgets.FloatText()
+    x.layout=y.layout=z.layout=widgets.Layout(width='80px')
+    
+    cg_lables_block = widgets.HBox([x_lable,y_lable,z_lable])
+    cg_input_block  = widgets.HBox([x,y,z])
+    cg_block        = widgets.VBox([reference_point_lable,cg_lables_block,cg_input_block])
+    
+    ############################################################################
+    # Inertia Moments Data
+    ############################################################################
+    layout_80px = widgets.Layout(width='80px')
+    inertia_lable = widgets.Label(value='$Inertia$ $Tensor$')
+    ixx = widgets.FloatText(layout=layout_80px)
+    iyy = widgets.FloatText(layout=layout_80px)
+    izz = widgets.FloatText(layout=layout_80px)
+    ixy = widgets.FloatText(layout=layout_80px)
+    ixz = widgets.FloatText(layout=layout_80px)
+    iyz = widgets.FloatText(layout=layout_80px)
+    iyx = widgets.FloatText(value=ixy.value,disabled=True,layout=layout_80px)
+    izx = widgets.FloatText(value=ixz.value,disabled=True,layout=layout_80px)
+    izy = widgets.FloatText(value=iyz.value,disabled=True,layout=layout_80px)
+    
+    
+    ix = widgets.VBox([ixx,ixy,ixz])
+    iy = widgets.VBox([iyx,iyy,iyz])
+    iz = widgets.VBox([izx,izy,izz])
+    
+    inertia_tensor = widgets.HBox([ix,iy,iz])
+    inertia_block  = widgets.VBox([inertia_lable,inertia_tensor],layout=widgets.Layout(top='40px'))
+    
+    ############################################################################
+    # Inertia Reference Frame Data
+    ############################################################################
+    frame_lable = widgets.Label(value='$Inertia$ $Frame$')
+    xx = widgets.FloatText(layout=layout_80px)
+    xy = widgets.FloatText(layout=layout_80px)
+    xz = widgets.FloatText(layout=layout_80px)
+    yx = widgets.FloatText(layout=layout_80px)
+    yy = widgets.FloatText(layout=layout_80px)
+    yz = widgets.FloatText(layout=layout_80px)
+    zx = widgets.FloatText(layout=layout_80px)
+    zy = widgets.FloatText(layout=layout_80px)
+    zz = widgets.FloatText(layout=layout_80px)
+    
+    
+    x_vector = widgets.VBox([xx,xy,xz])
+    y_vector = widgets.VBox([yx,yy,yz])
+    z_vector = widgets.VBox([zx,zy,zz])
+    
+    reference_frame    = widgets.HBox([x_vector,y_vector,z_vector])
+    inertia_ref_block  = widgets.VBox([frame_lable,reference_frame],layout=widgets.Layout(top='60px'))
+    ############################################################################
+    
+    ############################################################################
+    # Defining Interactive Buttons for adding bodies
+    ############################################################################
+    accord1_out = widgets.Output()
+    add_body    = widgets.Button(description='Apply',tooltip='submitt selected data')
+    
+    def create_body(b):
+        with accord1_out:
+            body_name = body_name_value.value
+            mass      = mass_value.value
+            cm        = vector([x,y,z])
+            ref_frame = np.array([[xx.value,yx.value,zx.value],
+                                  [xy.value,yy.value,zy.value],
+                                  [xz.value,yz.value,zz.value]])
+            
+            iner_tens = np.array([[ixx.value,ixy.value,ixz.value],
+                                  [ixy.value,iyy.value,iyz.value],
+                                  [ixz.value,iyz.value,izz.value]])
+            
+            bod = rigid(body_name,mass,iner_tens,cm,ref_frame)
+            
+    
+    
+    
+    accordion_1_block = widgets.VBox([mass_block,cg_block,inertia_block,inertia_ref_block])
+    ############################################################################
+    
+    
+    
+    ############################################################################
+    # accordion 2 data
+    ############################################################################
+    accord2_out      = widgets.Output()
+    geometries_label = widgets.Label(value='$Select$ $Geometry$')
+    geometries_value = widgets.Dropdown(options=['','COMPOSITE','Cylinder','Wishbone'])
+    geometries_block = widgets.VBox([geometries_label,geometries_value])
+    sub_geometries_v = widgets.Dropdown(options=['','Cylinder'])
+    sub_geometries_l = widgets.Label(value='$Select$ $Sub-Geometry$')
+    sub_geometries_b = widgets.VBox([sub_geometries_l,sub_geometries_v])
+    layout_120px     = widgets.Layout(width='120px')
+
+    p1_label = widgets.Label(value='$Point$ $1$',layout=layout_120px)
+    p2_label = widgets.Label(value='$Point$ $2$',layout=layout_120px)
+    outer_label = widgets.Label(value='$Outer$ $Diameter$',layout=layout_120px)
+    inner_label = widgets.Label(value='$Inner$ $Diameter$',layout=layout_120px)
+    
+    p1_value = widgets.Dropdown(options=[name for name in points.index],layout=layout_120px)
+    p2_value = widgets.Dropdown(options=[name for name in points.index],layout=layout_120px)
+    outer_value = widgets.FloatText(layout=layout_120px)
+    inner_value = widgets.FloatText(layout=layout_120px)
+    
+    p1_block = widgets.VBox([p1_label,p1_value])
+    p2_block = widgets.VBox([p2_label,p2_value])
+    outer_block = widgets.VBox([outer_label,outer_value])
+    inner_block = widgets.VBox([inner_label,inner_value])
+    
+    cylinder_window = widgets.VBox([p1_block,p2_block,outer_block,inner_block])
+    
+    pf_label = widgets.Label(value='$Front$ $Point$',layout=layout_120px)
+    pr_label = widgets.Label(value='$Rear$  $Point$',layout=layout_120px)
+    po_label = widgets.Label(value='$Outer$ $Point$',layout=layout_120px)
+
+    outer_label = widgets.Label(value='$Outer$ $Diameter$',layout=layout_120px)
+    inner_label = widgets.Label(value='$Inner$ $Diameter$',layout=layout_120px)
+    
+    pf_value = widgets.Dropdown(options=[name for name in points.index],layout=layout_120px)
+    pr_value = widgets.Dropdown(options=[name for name in points.index],layout=layout_120px)
+    po_value = widgets.Dropdown(options=[name for name in points.index],layout=layout_120px)
+    outer_value = widgets.FloatText(layout=layout_120px)
+    inner_value = widgets.FloatText(layout=layout_120px)
+    
+    pf_block = widgets.HBox([pf_label,pf_value])
+    pr_block = widgets.HBox([pr_label,pr_value])
+    po_block = widgets.HBox([po_label,po_value])
+    outer_block = widgets.HBox([outer_label,outer_value])
+    inner_block = widgets.HBox([inner_label,inner_value])
+    
+    wishbone_window = widgets.VBox([pf_block,pr_block,po_block,outer_block,inner_block])
+
+    
+    def on_change(change):
+        if change['type'] == 'change' and change['name'] == 'value':
+            accord2_out.clear_output()
+            with accord2_out:
+                if change['new']=='Cylinder':
+                    ipy.display.display(cylinder_window)
+                elif change['new']=='COMPOSITE':
+                    ipy.display.display(sub_geometries_b)
+                elif change['new']=='Wishbone':
+                    ipy.display.display(wishbone_window)
+                
+    geometries_value.observe(on_change)
+    
+    accordion_2_block = widgets.VBox([geometries_block,accord2_out])
+    
+    
+    
+    
+    
+    accord = widgets.Accordion()
+    accord_children = [accordion_1_block,accordion_2_block]
+    accord.children = accord_children
+    accord.set_title(0,'EXPLICTLY DEFINE BODY PROPERTIES')
+    accord.set_title(1,'DEFINE BODY GEOMETRY')
+    accord.set_title(2,'IMPORT / EXPORT')
+    
+    tab=widgets.Tab([widgets.VBox([body_name_block,accord]),])
+    tab.set_title(0,'DEFINING NEW BODY')
+    
+    return tab
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
