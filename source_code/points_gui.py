@@ -264,7 +264,9 @@ def add_bodies_gui(points=[]):
     
     add_body.on_click(create_body)
     
-    accordion_1_block = widgets.HBox([widgets.VBox([mass_block,cg_block,inertia_block,inertia_ref_block]),add_body])
+    body_data_block   = widgets.VBox([mass_block,cg_block,inertia_block,inertia_ref_block])
+    body_data_block.layout=widgets.Layout(width='300px',height='500px')
+    accordion_1_block = widgets.HBox([body_data_block,add_body])
     ############################################################################
     
     
