@@ -244,6 +244,7 @@ def add_bodies_gui(points=[]):
     ############################################################################
     accord1_out = widgets.Output()
     add_body    = widgets.Button(description='Apply',tooltip='submitt selected data')
+    bodies_objects = pd.Series()
     
     def create_body(b):
         with accord1_out:
@@ -259,11 +260,11 @@ def add_bodies_gui(points=[]):
                                   [ixz.value,iyz.value,izz.value]])
             
             bod = rigid(body_name,mass,iner_tens,cm,ref_frame)
-            
+            bodies_objects[body_name]=bod
     
+    add_body.on_click(create_body)
     
-    
-    accordion_1_block = widgets.VBox([mass_block,cg_block,inertia_block,inertia_ref_block])
+    accordion_1_block = widgets.HBox([widgets.VBox([mass_block,cg_block,inertia_block,inertia_ref_block]),add_body])
     ############################################################################
     
     
@@ -348,7 +349,7 @@ def add_bodies_gui(points=[]):
     tab=widgets.Tab([widgets.VBox([body_name_block,accord]),])
     tab.set_title(0,'DEFINING NEW BODY')
     
-    return tab
+    return tab,bodies_objects
 
 
 
