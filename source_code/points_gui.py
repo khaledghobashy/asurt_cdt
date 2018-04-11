@@ -163,18 +163,34 @@ def adding_points_gui(existing_csv_file=None):
 
 def add_bodies_gui(points=[]):
     
+    main_out = widgets.Output()
+
     # Defining used gui blocks
-    
+    bodies_objects = pd.Series()
+
     body_name_lable = widgets.Label(value='$Body$ $Name$')
     body_name_value = widgets.Text(placeholder='Enter Body Name')
     body_name_block = widgets.VBox([body_name_lable,body_name_value])
+
+    add_body_default   = widgets.Button(description='Apply',tooltip='Create Body with default values')
+    def create_body_default(b):
+        with main_out:
+            if body_name_value.value=='':
+                print('ERROR: Please Enter a Valid Name')
+                return
+            body_name = body_name_value.value
+            bod = rigid(body_name)
+            bodies_objects[body_name]=bod
+            exsisting_bodies_value.options=bodies_objects
+            body_name_value.value=''
     
+    add_body_default.on_click(create_body_default)
     # accordion 1 data
     ############################################################################
     # CG Data
     ############################################################################
     mass_label = widgets.Label(value='$Body$ $Mass$')
-    mass_value = widgets.FloatText()
+    mass_value = widgets.FloatText(value=1)
     mass_block = widgets.VBox([mass_label,mass_value])
     mass_value.layout=widgets.Layout(width='80px')
     
@@ -248,7 +264,6 @@ def add_bodies_gui(points=[]):
     ############################################################################
     accord1_out = widgets.Output()
     add_body    = widgets.Button(description='Apply',tooltip='submitt selected data')
-    bodies_objects = pd.Series()
     
     def create_body(b):
         with accord1_out:
@@ -282,13 +297,13 @@ def add_bodies_gui(points=[]):
     geometries_objects = pd.Series()
     accord2_out        = widgets.Output()
     
-    geometries_dict={'':'','Cylinder':circular_cylinder,'COMPOSITE':composite_geometry}
+    geometries_dict={'':'','Cylinder':circular_cylinder}
     
     exsisting_bodies_label = widgets.Label(value='$Select$ $Body$')
     exsisting_bodies_value = widgets.Dropdown(options=bodies_objects)
     exsisting_bodies_block = widgets.VBox([exsisting_bodies_label,exsisting_bodies_value])
     
-    geo_name_label = widgets.Label(value='$Geometryt$ $Name$')
+    geo_name_label = widgets.Label(value='$Geometry$ $Name$')
     geo_name_value = widgets.Text(placeholder='Enter Geometry Name')
     geo_name_block = widgets.VBox([geo_name_label,geo_name_value])
 
@@ -296,9 +311,6 @@ def add_bodies_gui(points=[]):
     geometries_label = widgets.Label(value='$Select$ $Geometry$')
     geometries_value = widgets.Dropdown(options=geometries_dict)
     geometries_block = widgets.VBox([geometries_label,geometries_value])
-    sub_geometries_v = widgets.Dropdown(options=['','Cylinder'])
-    sub_geometries_l = widgets.Label(value='$Select$ $Sub-Geometry$')
-    sub_geometries_b = widgets.VBox([sub_geometries_l,sub_geometries_v])
     layout_120px     = widgets.Layout(width='120px')
 
     p1_label = widgets.Label(value='$Point$ $1$',layout=layout_120px)
@@ -328,8 +340,7 @@ def add_bodies_gui(points=[]):
             geometries_objects[geo_name]=geometries_dict[geometries_value.label](geo_name,body,points[p1_value.value],points[p2_value.value],outer_value.value,inner_value.value)
             body.update_inertia()
             geo_name_value.value=''
-            
-            
+                        
     assign_geometry.on_click(assign_click)
     
     def on_change(change):
@@ -338,10 +349,6 @@ def add_bodies_gui(points=[]):
             with accord2_out:
                 if change['new']==geometries_dict['Cylinder']:
                     ipy.display.display(cylinder_window)
-                elif change['new']==geometries_dict['COMPOSITE']:
-                    ipy.display.display(sub_geometries_b)
-#                elif change['new']=='Wishbone':
-#                    ipy.display.display(wishbone_window)
                 
     geometries_value.observe(on_change)
     
@@ -357,8 +364,9 @@ def add_bodies_gui(points=[]):
     accord.set_title(0,'EXPLICTLY DEFINE BODY PROPERTIES')
     accord.set_title(1,'DEFINE BODY GEOMETRY')
     accord.set_title(2,'IMPORT / EXPORT')
+    accord.selected_index=1
     
-    tab=widgets.Tab([widgets.VBox([body_name_block,accord]),])
+    tab=widgets.Tab([widgets.VBox([body_name_block,add_body_default,accord,main_out]),])
     tab.set_title(0,'DEFINING NEW BODY')
     
     return tab,bodies_objects,geometries_objects
