@@ -204,10 +204,14 @@ def add_bodies_gui(points=[]):
     ixy = widgets.FloatText(layout=layout_80px)
     ixz = widgets.FloatText(layout=layout_80px)
     iyz = widgets.FloatText(layout=layout_80px)
-    iyx = widgets.FloatText(value=ixy.value,disabled=True,layout=layout_80px)
-    izx = widgets.FloatText(value=ixz.value,disabled=True,layout=layout_80px)
-    izy = widgets.FloatText(value=iyz.value,disabled=True,layout=layout_80px)
+    iyx = widgets.FloatText(disabled=True,layout=layout_80px)
+    izx = widgets.FloatText(disabled=True,layout=layout_80px)
+    izy = widgets.FloatText(disabled=True,layout=layout_80px)
     
+    widgets.link((ixy, 'value'), (iyx, 'value'))
+    widgets.link((ixz, 'value'), (izx, 'value'))
+    widgets.link((iyz, 'value'), (izy, 'value'))
+                              
     
     ix = widgets.VBox([ixx,ixy,ixz])
     iy = widgets.VBox([iyx,iyy,iyz])
@@ -250,7 +254,7 @@ def add_bodies_gui(points=[]):
         with accord1_out:
             body_name = body_name_value.value
             mass      = mass_value.value
-            cm        = vector([x,y,z])
+            cm        = vector([x.value,y.value,z.value])
             ref_frame = np.array([[xx.value,yx.value,zx.value],
                                   [xy.value,yy.value,zy.value],
                                   [xz.value,yz.value,zz.value]])
