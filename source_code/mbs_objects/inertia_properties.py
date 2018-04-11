@@ -62,7 +62,7 @@ class triangular_prism(object):
         self.J=density*thickness*1e-3*np.diag([Ixc,Iyc,Izc])
 
 class circular_cylinder(object):
-    def __init__(self,p1,p2,do,di=0):
+    def __init__(self,name,body,p1,p2,do,di=0):
         self.p1=p1
         self.p2=p2
         
@@ -78,6 +78,8 @@ class circular_cylinder(object):
         
         self.J=np.diag([Jxx,Jyy,Jzz])
         self.C=orient_along_axis(self.axis)
+        
+        body.geometries[name]=(self)
 
 class composite_geometry(object):
     def __init__(self,geometries):

@@ -6,6 +6,7 @@ Created on Sat Nov 18 19:59:55 2017
 """
 
 from base import dcm2ep, G, orient_along_axis, vector
+from inertia_properties import composite_geometry
 import scipy as sc
 import pandas as pd
 import numpy as np
@@ -60,6 +61,29 @@ class rigid(object):
         self.P=dcm2ep(dcm)
         self.typ=typ
         self.nc=(7 if typ=='mount' else 1)
+        self.geometries=pd.Series()
+    
+    
+    def update_inertia(self):
+        if len(self.geometries)==0:
+            raise ValueError
+        elif len(self.geometries)==1:
+            geo=self.geometries[0]
+            
+            self.mass = geo.mass
+            self.R    = geo.cm
+            self.dcm  = geo.C
+            self.P    = dcm2ep(self.dcm)
+            self.J    = geo.J
+        
+        elif len(self.geometries)>1:
+            geo=composite_geometry(self.geometries)
+            
+            self.mass = geo.mass
+            self.R    = geo.cm
+            self.dcm  = np.eye(3)
+            self.P    = dcm2ep(self.dcm)
+            self.J    = geo.J
         
     @property
     def dic(self):
@@ -167,45 +191,9 @@ class rigid(object):
         jac=sc.sparse.csc_matrix(b)
         return jac
         
-
-class thin_rod(object):
-    def __init__(self,p1,p2,mass):
-        self.p1=p1
-        self.p2=p2
-        self.mass=mass
-        
-        self.axis=p2-p1
-        self.l=self.axis.mag
-        
-        self.cm=p1+0.5*self.axis
-        Jxx=Jyy=(self.mass/12)*self.l**2
-        Jzz=0
-        
-        self.J=sc.sparse.diags([Jxx,Jyy,Jzz]).A
-        self.C=orient_along_axis(self.axis)
-        
-class rectangle_prism(object):
-    def __init__(self,l,w,h,mass):
-        pass
-
-class circular_cylinder(object):
-    def __init__(self,p1,p2,do,di=0):
-        self.p1=p1
-        self.p2=p2
-        
-        self.axis=p2-p1
-        self.l=self.axis.mag
-        
-        self.mass=7.7*np.pi*(do**2-di**2)*self.l*1e-3
-
-        
-        self.cm=p1+0.5*self.axis
-        Jxx=Jyy=(self.mass/12)*(3*do**2+3*di**2+self.l**2)
-        Jzz=(self.mass/2)*(do**2+di**2)
-        
-        self.J=np.diag([Jxx,Jyy,Jzz])
-        self.C=orient_along_axis(self.axis)
-      
-        
+    def __repr__(self):
+        return self.name
     
+    def __str__(self):
+        return self.name
 
