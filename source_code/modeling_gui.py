@@ -34,6 +34,7 @@ class model(object):
         self.geometries = pd.Series()
         
         self.points_dataframe = pd.DataFrame(columns=['x','y','z','Alignment','Notes'])
+        self.geometries_dataframe = pd.DataFrame(columns=['body','p1','p2','outer','inner'])
         self.points_dropdown_options = pd.Series()
 
          
@@ -198,6 +199,7 @@ class model(object):
         
         bodies_out  = widgets.Output()
         accord2_out = widgets.Output()
+        accord3_out = widgets.Output()
 
 
         name_l = widgets.Label(value='$Body$ $Name$')
@@ -222,7 +224,108 @@ class model(object):
 
 
         main_block = widgets.VBox([name_b,add_button])
+        
+        
+        mass_l = widgets.Label(value='$Body$ $Mass$')
+        mass_v = widgets.FloatText(value=1)
+        mass_b = widgets.VBox([mass_l,mass_v])
+        mass_v.layout=widgets.Layout(width='80px')
+        
+        reference_point_lable = widgets.Label(value='$C.G$ $Location$')
+        x_l = widgets.Label(value='$R_x$')
+        y_l = widgets.Label(value='$R_y$')
+        z_l = widgets.Label(value='$R_z$')
+        x_l.layout=y_l.layout=z_l.layout=layout80px
     
+        x = widgets.FloatText()
+        y = widgets.FloatText()
+        z = widgets.FloatText()
+        x.layout=y.layout=z.layout=layout80px
+        
+        cg_lables_block = widgets.HBox([x_l,y_l,z_l])
+        cg_input_block  = widgets.HBox([x,y,z])
+        cg_block        = widgets.VBox([reference_point_lable,cg_lables_block,cg_input_block])
+        
+        ############################################################################
+        # Inertia Moments Data
+        ############################################################################
+        inertia_lable = widgets.Label(value='$Inertia$ $Tensor$')
+        ixx = widgets.FloatText(value=1,layout=layout80px)
+        iyy = widgets.FloatText(value=1,layout=layout80px)
+        izz = widgets.FloatText(value=1,layout=layout80px)
+        ixy = widgets.FloatText(layout=layout80px)
+        ixz = widgets.FloatText(layout=layout80px)
+        iyz = widgets.FloatText(layout=layout80px)
+        iyx = widgets.FloatText(disabled=True,layout=layout80px)
+        izx = widgets.FloatText(disabled=True,layout=layout80px)
+        izy = widgets.FloatText(disabled=True,layout=layout80px)
+        
+        widgets.link((ixy, 'value'), (iyx, 'value'))
+        widgets.link((ixz, 'value'), (izx, 'value'))
+        widgets.link((iyz, 'value'), (izy, 'value'))
+                                  
+        
+        ix = widgets.VBox([ixx,ixy,ixz])
+        iy = widgets.VBox([iyx,iyy,iyz])
+        iz = widgets.VBox([izx,izy,izz])
+        
+        inertia_tensor = widgets.HBox([ix,iy,iz])
+        inertia_block  = widgets.VBox([inertia_lable,inertia_tensor],layout=widgets.Layout(top='40px'))
+        
+        ############################################################################
+        # Inertia Reference Frame Data
+        ############################################################################
+        frame_lable = widgets.Label(value='$Inertia$ $Frame$')
+        xx = widgets.FloatText(value=1,layout=layout80px)
+        xy = widgets.FloatText(layout=layout80px)
+        xz = widgets.FloatText(layout=layout80px)
+        yx = widgets.FloatText(layout=layout80px)
+        yy = widgets.FloatText(value=1,layout=layout80px)
+        yz = widgets.FloatText(layout=layout80px)
+        zx = widgets.FloatText(layout=layout80px)
+        zy = widgets.FloatText(layout=layout80px)
+        zz = widgets.FloatText(value=1,layout=layout80px)
+        
+        
+        x_vector = widgets.VBox([xx,xy,xz])
+        y_vector = widgets.VBox([yx,yy,yz])
+        z_vector = widgets.VBox([zx,zy,zz])
+        
+        reference_frame    = widgets.HBox([x_vector,y_vector,z_vector])
+        inertia_ref_block  = widgets.VBox([frame_lable,reference_frame],layout=widgets.Layout(top='60px'))
+        ############################################################################
+        
+        ############################################################################
+        # Defining Interactive Buttons for adding bodies
+        ############################################################################
+        accord1_out = widgets.Output()
+        add_body    = widgets.Button(description='Apply',tooltip='submitt selected data')
+        
+        def create_body(b):
+            with accord1_out:
+                body_name = name_v.value
+                mass      = mass_v.value
+                cm        = vector([x.value,y.value,z.value])
+                ref_frame = np.array([[xx.value,yx.value,zx.value],
+                                      [xy.value,yy.value,zy.value],
+                                      [xz.value,yz.value,zz.value]])
+                
+                iner_tens = np.array([[ixx.value,ixy.value,ixz.value],
+                                      [ixy.value,iyy.value,iyz.value],
+                                      [ixz.value,iyz.value,izz.value]])
+                
+                bod = rigid(body_name,mass,iner_tens,cm,ref_frame)
+                self.bodies[body_name]=bod
+                bodies_dropdown.options=self.bodies
+        
+        add_body.on_click(create_body)
+        
+        body_data_block   = widgets.VBox([mass_b,cg_block,inertia_block,inertia_ref_block])
+        body_data_block.layout=widgets.Layout(width='300px',height='500px')
+        sub_block1 = widgets.HBox([body_data_block,add_body])
+        ############################################################################
+        
+        
         geometries_dict={'':'','Cylinder':circular_cylinder}
         
         bodies_dropdown_l = widgets.Label(value='$Select$ $Body$')
@@ -259,10 +362,14 @@ class model(object):
         assign_geometry = widgets.Button(description='Apply',tooltip='Assign Geometry to Body')
         def assign_click(b):
             with accord2_out:
+                if bodies_dropdown.value==None:
+                    print('ERROR: Please Chose a Body Object')
+                    return 
                 body = bodies_dropdown.value
                 geo_name = body.name+'_'+geo_name_v.value
                 self.geometries[geo_name]=geometries_dict[geometries_v.label](geo_name,body,self.points[p1_v.value],self.points[p2_v.value],outer_v.value,inner_v.value)
                 body.update_inertia()
+                self.geometries_dataframe.loc[geo_name]=[body.name,p1_v.value,p2_v.value,outer_v.value,inner_v.value]
                 geo_name_v.value=''
                             
         assign_geometry.on_click(assign_click)
@@ -277,9 +384,31 @@ class model(object):
                     
         geometries_v.observe(on_change)
         
-        accordion_2_block = widgets.VBox([bodies_dropdown_b,geo_name_b,geometries_b,accord2_out,assign_geometry])
+        sub_block2 = widgets.VBox([bodies_dropdown_b,geo_name_b,geometries_b,accord2_out,assign_geometry])
         
-        return widgets.VBox([main_block,accordion_2_block])
+        
+        geometries_file_v = widgets.Text(placeholder='write file name')
+        export_button     = widgets.Button(description='Export',tooltip='Export geometries to excel file')
+        def export_click(dummy):
+            accord3_out.clear_output()
+            with accord3_out:
+                self.geometries_dataframe.to_excel(geometries_file_v.value+'.xls')
+                print('Export Done !')
+        export_button.on_click(export_click)
+        
+        sub_block3 = widgets.HBox([geometries_file_v,export_button,accord3_out])
+        
+        main_block2 = widgets.Accordion()
+        main_block2.children=[sub_block1,sub_block2,sub_block3]
+        main_block2.set_title(0,'EXPLICTLY DEFINE BODY PROPERTIES')
+        main_block2.set_title(1,'DEFINE BODY GEOMETRY')
+        main_block2.set_title(2,'IMPORT / EXPORT')
+        main_block2.selected_index=1
+        
+        return widgets.VBox([main_block,main_block2])
+    
+    
+    
     
     
     def show(self):
@@ -288,6 +417,7 @@ class model(object):
         fields.children=[self.add_point(),self.add_bodies()]
         fields.set_title(0,'SYSTEM POINTS')
         fields.set_title(1,'SYSTEM BODIES')
+        
         return fields
         
         
