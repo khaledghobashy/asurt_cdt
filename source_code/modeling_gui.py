@@ -432,13 +432,46 @@ class model(object):
     
     
     
+    def add_joints(self):
+        
+        main_out = widgets.Output()
+        
+        refresh_button = widgets.Button(description='Refresh')
+        refresh_button.layout=layout80px
+        def refresh_click(dummy):
+            with main_out:
+                body_i_v.options=self.bodies.index
+                body_j_v.options=self.bodies.index
+        refresh_button.on_click(refresh_click)
+
+
+        
+        name_l = widgets.Label(value='$Joint$ $Name$',layout=layout80px)
+        name_v = widgets.Text(placeholder='joint name',layout=layout80px)
+        name_b = widgets.VBox([name_l,name_v])
+        
+        body_i_l = widgets.Label(value='$Body$ $i$',layout=layout80px)
+        body_i_v = widgets.Dropdown(layout=layout80px)
+        body_i_v.options=self.bodies.index
+        body_i_b = widgets.VBox([body_i_l,body_i_v])
+        
+        body_j_l = widgets.Label(value='$Body$ $j$')
+        body_j_v = widgets.Dropdown(layout=layout80px)
+        body_j_v.options=self.bodies.index
+        body_j_b = widgets.VBox([body_j_l,body_j_v])
+        
+        
+        return widgets.HBox([name_b,body_i_b,body_j_b,refresh_button])
+    
+    
     
     def show(self):
         
         fields = widgets.Accordion()
-        fields.children=[self.add_point(),self.add_bodies()]
+        fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
         fields.set_title(0,'SYSTEM POINTS')
         fields.set_title(1,'SYSTEM BODIES')
+        fields.set_title(2,'SYSTEM JOINTS')
         
         return fields
         
