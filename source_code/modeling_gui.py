@@ -393,10 +393,32 @@ class model(object):
             accord3_out.clear_output()
             with accord3_out:
                 self.geometries_dataframe.to_excel(geometries_file_v.value+'.xls')
-                print('Export Done !')
+                print('Export Done!')
         export_button.on_click(export_click)
         
-        sub_block3 = widgets.HBox([geometries_file_v,export_button,accord3_out])
+        import_button     = widgets.Button(description='Import',tooltip='Import geometries from excel file')
+        def import_click(dummy):
+            accord3_out.clear_output()
+            with accord3_out:
+                self.geometries_dataframe=pd.read_excel(geometries_file_v.value+'.xls')
+                for i in self.geometries_dataframe.index:
+                    body_name = self.geometries_dataframe.loc[i]['body']
+                    if body_name not in self.bodies.index:
+                        body = rigid(body_name)
+                    
+                    p1 = self.points[self.geometries_dataframe.loc[i]['p1']]
+                    p2 = self.points[self.geometries_dataframe.loc[i]['p2']]
+                    outer = self.geometries_dataframe.loc[i]['outer']
+                    inner = self.geometries_dataframe.loc[i]['inner']
+                    self.geometries[i]=circular_cylinder(i,body,p1,p2,outer,inner)
+                    self.bodies[body_name]=body
+                    self.bodies[body_name].update_inertia()
+                    
+                
+                print('Import Done!')
+        import_button.on_click(import_click)
+        
+        sub_block3 = widgets.VBox([geometries_file_v,export_button,import_button,accord3_out])
         
         main_block2 = widgets.Accordion()
         main_block2.children=[sub_block1,sub_block2,sub_block3]
