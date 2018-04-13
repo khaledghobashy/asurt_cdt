@@ -15,7 +15,7 @@ import numpy as np
 from constraints import cylindrical, spherical, revolute, translational,\
                         universal, rotational_drive, absolute_locating
 
-layout80px = widgets.Layout(width='80px')
+layout80px  = widgets.Layout(width='80px')
 layout100px = widgets.Layout(width='100px')
 layout120px = widgets.Layout(width='120px')
 layout200px = widgets.Layout(width='200px')
@@ -23,7 +23,19 @@ layout200px = widgets.Layout(width='200px')
 separator      = widgets.Label(value=''.join(55*['__']))
 vertical_space = widgets.Label(value='\n')
 
+def openfile_dialog():
+    from PyQt5 import QtGui
+    from PyQt5 import QtGui, QtWidgets
+    app = QtWidgets.QApplication([dir])
+    fname = QtWidgets.QFileDialog.getOpenFileName(None, "Select a file...", '.', filter="All files (*)")
+    return fname[0]
 
+def savefile_dialog():
+    from PyQt5 import QtGui
+    from PyQt5 import QtGui, QtWidgets
+    app = QtWidgets.QApplication([dir])
+    fname = QtWidgets.QFileDialog.getSaveFileName(None, "Save File", '.', filter="All files (*)")
+    return fname[0]
 
 class model(object):
     
@@ -38,7 +50,13 @@ class model(object):
         
         self.points_dataframe = pd.DataFrame(columns=['x','y','z','Alignment','Notes'])
         self.geometries_dataframe = pd.DataFrame(columns=['body','p1','p2','outer','inner'])
-        self.points_dropdown_options = pd.Series()
+        self.bodies_dataframe = pd.DataFrame(columns=['mass','Rx','Ry','Rz',
+                                                      'Ixx','Iyx','Izx',
+                                                      'Ixy','Iyy','Izy',
+                                                      'Ixz','Iyz','Izz',
+                                                      'xx','yx','zx',
+                                                      'xy','yy','zy',
+                                                      'xz','yz','zz'])
 
          
     
@@ -53,7 +71,7 @@ class model(object):
         tab2_out = widgets.Output()
         tab3_out = widgets.Output()
         
-        name_l = widgets.Label(value='$Name$')
+        name_l = widgets.HTML('<b>Name')
         name_v = widgets.Text(placeholder='Point Name')
         name_b = widgets.VBox([name_l,name_v])
         
@@ -79,10 +97,10 @@ class model(object):
         notes.layout=widgets.Layout(width='350px',height='55px')
         alignment=widgets.RadioButtons(options={'R':'hpr_','L':'hpl_','S':'hps_'})
         
-        edit_l = widgets.Label(value='$Edit$ $Point$')
+        edit_l = widgets.HTML('<b>Edit Point')
         
         points_dropdown = widgets.Dropdown()
-        points_dropdown.options = dict(zip([name[4:] for name in self.points.index ],self.points.index))
+        points_dropdown.options = dict(self.points)
         points_dropdown.layout=layout120px
         
         
@@ -128,7 +146,7 @@ class model(object):
                 
                 name_v.value=''
                 notes.value=''
-                points_dropdown.options=dict(zip([name[4:] for name in self.points.index ],self.points.index))
+                points_dropdown.options=dict(self.points)
                 
             with tab2_out:
                 ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
@@ -139,29 +157,30 @@ class model(object):
         def on_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
                 with tab1_out:
-                    name_v.value=points_dropdown.value[4:]
-                    x_v.value=self.points[points_dropdown.value].x
-                    y_v.value=self.points[points_dropdown.value].y
-                    z_v.value=self.points[points_dropdown.value].z
-                    alignment.value=self.points[points_dropdown.value].alignment
-                    notes.value=self.points_dataframe.loc[points_dropdown.value]['Notes']
+                    name_v.value=points_dropdown.label[4:]
+                    x_v.value=points_dropdown.value.x
+                    y_v.value=points_dropdown.value.y
+                    z_v.value=points_dropdown.value.z
+                    alignment.value=points_dropdown.value.alignment
+                    notes.value=self.points_dataframe.loc[points_dropdown.label]['Notes']
         points_dropdown.observe(on_change)
         
         
         
-        export_l = widgets.Label(value='$Exporting$ $Points$')
+        export_l = widgets.HTML('<b>Exporting Points')
         export_v = widgets.Text(placeholder='write file name here')
         export_v.layout=layout200px
         export_button = widgets.Button(description='Export')
         def export_click(b):
             tab3_out.clear_output()
             with tab3_out:
-                self.points_dataframe.to_excel(export_v.value+'.xls')
+                f=savefile_dialog()
+                self.points_dataframe.to_excel(f+'.xlsx')
                 ipy.display.display('Export Done!')
         export_button.on_click(export_click)
         
         
-        import_l = widgets.Label(value='$Importing$ $Points$')
+        import_l = widgets.HTML('<b>Importing Points')
         import_v = widgets.Text(placeholder='write file name here')
         import_v.layout=layout200px
         import_button = widgets.Button(description='Import')
@@ -169,7 +188,8 @@ class model(object):
             tab3_out.clear_output()
             tab2_out.clear_output()
             with tab3_out:
-                data_import=pd.read_excel(import_v.value+'.xls')
+                f=openfile_dialog()
+                data_import=pd.read_excel(f)
                 for i in data_import.index:
                     self.points_dataframe.loc[i]=data_import.loc[i]
                 print('Import Done!')
@@ -181,18 +201,14 @@ class model(object):
                     p=point(i,self.points_dataframe.loc[i]['x':'z'])
                     p.alignment=i[0:4]
                     self.points[i]=p
-                self.points_dropdown_options = dict(zip([name[4:] for name in  self.points.index ], self.points.index))
-                points_dropdown.options = self.points_dropdown_options
+                points_dropdown.options = dict(self.points)
                 p1_v.options=p2_v.options=points_dropdown.options
         import_button.on_click(import_click)
         
-        
-        t3_f1 = widgets.HBox([import_v,import_button])
-        t3_f2 = widgets.HBox([export_v,export_button])
-        
+                
         tab1_content = widgets.VBox([field1,field2,add_button,separator,field3])
         tab2_content = tab2_out
-        tab3_content = widgets.VBox([import_l,t3_f1,separator,export_l,t3_f2,tab3_out])
+        tab3_content = widgets.VBox([import_l,import_button,separator,export_l,export_button,tab3_out])
         
         tabs.children=[tab1_content,tab2_content,tab3_content]
         
@@ -217,19 +233,19 @@ class model(object):
         add_vector_button = widgets.Button(description='Apply',tooltip='add vector')
         def add_vector_click(dummy):
             with vectors_out:
-                p1 = self.points[p1_v.value]
-                p2 = self.points[p2_v.value]
+                p1 = p1_v.value
+                p2 = p2_v.value
                 v  = p1-p2
                 self.vectors.loc[vector_name_v.value]=v
         add_vector_button.on_click(add_vector_click)
                 
         
-        vectors_field = widgets.VBox([vector_name_b,p1_b,p2_b,add_vector_button])
+        vectors_field = widgets.VBox([separator,vector_name_b,p1_b,p2_b,add_vector_button])
         vectors_tab = widgets.Tab([vectors_field])
         vectors_tab.set_title(0,'Defining Vectors')
         
         
-        return widgets.VBox([tabs,vectors_tab])
+        return widgets.VBox([tabs,vectors_field])
     
     
     def add_bodies(self):
@@ -239,12 +255,21 @@ class model(object):
         accord3_out = widgets.Output()
 
 
-        name_l = widgets.Label(value='$Body$ $Name$')
+        name_l = widgets.HTML('<b>Body Name')
         name_v = widgets.Text(placeholder='Enter Body Name')
         name_b = widgets.VBox([name_l,name_v])
         
         bodies_dropdown = widgets.Dropdown()
-        bodies_dropdown.options = self.bodies
+        bodies_dropdown.options = dict(self.bodies)
+        def bodies_dropdown_change(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                with bodies_out:
+                    name_v.value = bodies_dropdown.label
+                    mass_v.value = bodies_dropdown.value.mass
+                    x.value,y.value,z.value = bodies_dropdown.value.R
+                    ixx.value,ixy.value,ixz.value,iyy.value,iyz.value,izz.value=[bodies_dropdown.value.J.flatten()[v] for v in[0,3,6,4,7,8]]
+                    xx.value,xy.value,xz.value,yx.value,yy.value,yz.value,zx.value,zy.value,zz.value=bodies_dropdown.value.dcm.T.flatten()
+        bodies_dropdown.observe(bodies_dropdown_change)
         
         add_button = widgets.Button(description='Apply',tooltip='Create Body with default values')
         def add_click(b):
@@ -255,7 +280,7 @@ class model(object):
                 body_name = name_v.value
                 bod = rigid(body_name)
                 self.bodies[body_name]=bod
-                bodies_dropdown.options=self.bodies
+                bodies_dropdown.options=dict(self.bodies)
                 name_v.value=''
         add_button.on_click(add_click)
 
@@ -263,12 +288,12 @@ class model(object):
         main_block = widgets.VBox([name_b,add_button])
         
         
-        mass_l = widgets.Label(value='$Body$ $Mass$')
+        mass_l = widgets.HTML('<b>Body Mass')
         mass_v = widgets.FloatText(value=1)
         mass_b = widgets.VBox([mass_l,mass_v])
         mass_v.layout=widgets.Layout(width='80px')
         
-        reference_point_lable = widgets.Label(value='$C.G$ $Location$')
+        reference_point_lable = widgets.HTML('<b>C.G Location')
         x_l = widgets.Label(value='$R_x$')
         y_l = widgets.Label(value='$R_y$')
         z_l = widgets.Label(value='$R_z$')
@@ -286,7 +311,7 @@ class model(object):
         ############################################################################
         # Inertia Moments Data
         ############################################################################
-        inertia_lable = widgets.Label(value='$Inertia$ $Tensor$')
+        inertia_lable = widgets.HTML('<b>Inertia Tensor')
         ixx = widgets.FloatText(value=1,layout=layout80px)
         iyy = widgets.FloatText(value=1,layout=layout80px)
         izz = widgets.FloatText(value=1,layout=layout80px)
@@ -312,7 +337,7 @@ class model(object):
         ############################################################################
         # Inertia Reference Frame Data
         ############################################################################
-        frame_lable = widgets.Label(value='$Inertia$ $Frame$')
+        frame_lable = widgets.HTML('<b>Inertia Frame')
         xx = widgets.FloatText(value=1,layout=layout80px)
         xy = widgets.FloatText(layout=layout80px)
         xz = widgets.FloatText(layout=layout80px)
@@ -337,7 +362,6 @@ class model(object):
         ############################################################################
         accord1_out = widgets.Output()
         add_body    = widgets.Button(description='Apply',tooltip='submitt selected data')
-        
         def create_body(b):
             with accord1_out:
                 body_name = name_v.value
@@ -353,37 +377,68 @@ class model(object):
                 
                 bod = rigid(body_name,mass,iner_tens,cm,ref_frame)
                 self.bodies[body_name]=bod
-                bodies_dropdown.options=self.bodies
-        
+                bodies_dropdown.options=dict(self.bodies)
         add_body.on_click(create_body)
         
+        export_inertia_button = widgets.Button(description='Export Inertia')
+        def export_inertia_click(dummy):
+            with bodies_out:
+                f=savefile_dialog()
+                for b in self.bodies.index:
+                    body = self.bodies[b]
+                    R = list(body.R.a.flatten())
+                    J = list(body.J.flatten())
+                    dcm = list(body.dcm.flatten())
+                    self.bodies_dataframe.loc[b]=[body.mass]+R+J+dcm
+                self.bodies_dataframe.to_excel(f+'.xlsx')
+                print('DONE!')
+        export_inertia_button.on_click(export_inertia_click)
+        
+        import_inertia_button = widgets.Button(description='Import Inertia')
+        def import_inertia_click(dummy):
+            with bodies_out:
+                f=openfile_dialog()
+                df=pd.read_excel(f)
+                ipy.display.display(df)
+                for b in df.index:
+                    mass = df.loc[b]['mass']
+                    R = vector(df.loc[b]['Rx':'Rz'])
+                    J = np.array(df.loc[b]['Ixx':'Izz']).reshape((3,3))
+                    dcm = np.array(df.loc[b]['xx':'zz']).reshape((3,3))
+                    
+                    self.bodies[b]=rigid(b,mass=mass,cm=R,inertia_tensor=J,dcm=dcm)
+        import_inertia_button.on_click(import_inertia_click)
+
         body_data_block   = widgets.VBox([mass_b,cg_block,inertia_block,inertia_ref_block])
         body_data_block.layout=widgets.Layout(width='300px',height='500px')
-        sub_block1 = widgets.HBox([body_data_block,add_body])
+        sub_block1 = widgets.HBox([body_data_block,add_body,bodies_dropdown,widgets.VBox([export_inertia_button,import_inertia_button,bodies_out])])
+        
+                    
+        
         ############################################################################
         
         
         geometries_dict={'':'','Cylinder':circular_cylinder}
         
-        bodies_dropdown_l = widgets.Label(value='$Select$ $Body$')
+        bodies_dropdown_l = widgets.HTML('<b>Select Body')
         bodies_dropdown_b = widgets.VBox([bodies_dropdown_l,bodies_dropdown])
         
-        geo_name_l = widgets.Label(value='$Geometry$ $Name$')
+        geo_name_l = widgets.HTML('<b>Geometry Name')
         geo_name_v = widgets.Text(placeholder='Enter Geometry Name')
         geo_name_b = widgets.VBox([geo_name_l,geo_name_v])
     
         
-        geometries_l = widgets.Label(value='$Select$ $Geometry$')
+        geometries_l = widgets.HTML('<b>Select Geometry')
         geometries_v = widgets.Dropdown(options=geometries_dict)
         geometries_b = widgets.VBox([geometries_l,geometries_v])
     
-        p1_l = widgets.Label(value='$Point$ $1$',layout=layout120px)
-        p2_l = widgets.Label(value='$Point$ $2$',layout=layout120px)
-        outer_l = widgets.Label(value='$Outer$ $Diameter$',layout=layout120px)
-        inner_l = widgets.Label(value='$Inner$ $Diameter$',layout=layout120px)
+        p1_l = widgets.HTML('<b>Point 1',layout=layout120px)
+        p2_l = widgets.HTML('<b>Point 2',layout=layout120px)
+        outer_l = widgets.HTML('<b>Outer Diameter',layout=layout120px)
+        inner_l = widgets.HTML('<b>Inner Diameter',layout=layout120px)
         
-        p1_v = widgets.Dropdown(options=self.points_dropdown_options,layout=layout120px)
-        p2_v = widgets.Dropdown(options=self.points_dropdown_options,layout=layout120px)
+        p1_v = widgets.Dropdown(options=dict(self.points),layout=layout120px)
+        p2_v = widgets.Dropdown(options=dict(self.points),layout=layout120px)
         outer_v = widgets.FloatText(layout=layout120px)
         inner_v = widgets.FloatText(layout=layout120px)
         
@@ -415,7 +470,7 @@ class model(object):
             if change['type'] == 'change' and change['name'] == 'value':
                 accord2_out.clear_output()
                 with accord2_out:
-                    p1_v.options=p2_v.options=self.points_dropdown_options
+                    p1_v.options=p2_v.options=dict(self.points)
                     if change['new']==geometries_dict['Cylinder']:
                         ipy.display.display(cylinder_window)
                     
@@ -492,29 +547,29 @@ class model(object):
         
         joint_inputs_out = widgets.Output()
         
-        name_l = widgets.Label(value='$Joint$ $Name$',layout=layout120px)
+        name_l = widgets.HTML('<b>Joint Name',layout=layout120px)
         name_v = widgets.Text(placeholder='joint name',layout=layout120px)
         name_b = widgets.VBox([name_l,name_v])
         
-        location_l = widgets.Label('$Loc$',layout=layout120px)
-        location_v = widgets.Dropdown(options=self.points_dropdown_options,layout=layout120px)
+        location_l = widgets.HTML('<b>Locaction',layout=layout120px)
+        location_v = widgets.Dropdown(options=dict(self.points),layout=layout120px)
         location_b = widgets.VBox([location_l,location_v])
         
-        body_i_l = widgets.Label(value='$Body$ $i$',layout=layout120px)
+        body_i_l = widgets.HTML('<b>Body i',layout=layout120px)
         body_i_v = widgets.Dropdown(layout=layout120px)
         body_i_v.options=self.bodies.index
         body_i_b = widgets.VBox([body_i_l,body_i_v])
         
-        body_j_l = widgets.Label(value='$Body$ $j$')
+        body_j_l = widgets.HTML('<b>Body j')
         body_j_v = widgets.Dropdown(layout=layout120px)
         body_j_v.options=self.bodies.index
         body_j_b = widgets.VBox([body_j_l,body_j_v])
         
-        axis1_l = widgets.Label('$Axis$ $1$')
+        axis1_l = widgets.HTML('<b>Axis 1')
         axis1_v = widgets.Dropdown(options=self.vectors)
         axis1_b = widgets.VBox([axis1_l,axis1_v])
         
-        axis2_l = widgets.Label('$Axis$ $2$')
+        axis2_l = widgets.HTML('<b>Axis 2')
         axis2_v = widgets.Dropdown(options=self.vectors)
         axis2_b = widgets.VBox([axis2_l,axis2_v])
         
@@ -560,7 +615,7 @@ class model(object):
     
     def show(self):
         
-        fields = widgets.Tab()
+        fields = widgets.Accordion()
         fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
         fields.set_title(0,'SYSTEM POINTS')
         fields.set_title(1,'SYSTEM BODIES')
