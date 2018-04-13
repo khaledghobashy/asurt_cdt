@@ -12,6 +12,8 @@ from base import point, vector
 from bodies_inertia import rigid
 from inertia_properties import composite_geometry,circular_cylinder
 import numpy as np
+from constraints import cylindrical, spherical, revolute, translational,\
+                        universal, rotational_drive, absolute_locating
 
 layout80px = widgets.Layout(width='80px')
 layout100px = widgets.Layout(width='100px')
@@ -32,6 +34,7 @@ class model(object):
         self.bodies     = pd.Series()
         self.joints     = pd.Series()
         self.geometries = pd.Series()
+        self.vectors    = pd.Series()
         
         self.points_dataframe = pd.DataFrame(columns=['x','y','z','Alignment','Notes'])
         self.geometries_dataframe = pd.DataFrame(columns=['body','p1','p2','outer','inner'])
@@ -180,6 +183,7 @@ class model(object):
                     self.points[i]=p
                 self.points_dropdown_options = dict(zip([name[4:] for name in  self.points.index ], self.points.index))
                 points_dropdown.options = self.points_dropdown_options
+                p1_v.options=p2_v.options=points_dropdown.options
         import_button.on_click(import_click)
         
         
@@ -192,7 +196,40 @@ class model(object):
         
         tabs.children=[tab1_content,tab2_content,tab3_content]
         
-        return tabs
+        
+        # Defining Vectors
+        vectors_out = widgets.Output()
+        
+        vector_name_l = widgets.HTML('<b>Vector Name')
+        vector_name_v = widgets.Text(placeholder='vector name here')
+        vector_name_b = widgets.VBox([vector_name_l,vector_name_v])
+        
+        p1_l = widgets.HTML('<b>Reference Point 1')
+        p1_v = widgets.Dropdown()
+        p1_b = widgets.VBox([p1_l,p1_v])
+        
+        p2_l = widgets.HTML('<b>Reference Point 2')
+        p2_v = widgets.Dropdown()
+        p2_b = widgets.VBox([p2_l,p2_v])
+        
+        p1_v.options=p2_v.options=dict(zip([name[4:] for name in self.points.index ],self.points.index))
+        
+        add_vector_button = widgets.Button(description='Apply',tooltip='add vector')
+        def add_vector_click(dummy):
+            with vectors_out:
+                p1 = self.points[p1_v.value]
+                p2 = self.points[p2_v.value]
+                v  = p1-p2
+                self.vectors.loc[vector_name_v.value]=v
+        add_vector_button.on_click(add_vector_click)
+                
+        
+        vectors_field = widgets.VBox([vector_name_b,p1_b,p2_b,add_vector_button])
+        vectors_tab = widgets.Tab([vectors_field])
+        vectors_tab.set_title(0,'Defining Vectors')
+        
+        
+        return widgets.VBox([tabs,vectors_tab])
     
     
     def add_bodies(self):
@@ -414,7 +451,7 @@ class model(object):
                     self.bodies[body_name]=body
                     self.bodies[body_name].update_inertia()
                     
-                
+                bodies_dropdown.options = self.bodies
                 print('Import Done!')
         import_button.on_click(import_click)
         
@@ -444,11 +481,24 @@ class model(object):
                 body_j_v.options=self.bodies.index
         refresh_button.on_click(refresh_click)
 
-
+        joints_dict = {'Spherical': spherical,
+                       'Revolute' : revolute,
+                       'Translational': translational,
+                       'Cylinderical':cylindrical,
+                       'Universal': universal}
+        joint_type_l = widgets.HTML('<b>Joint Type')
+        joint_type_v = widgets.Dropdown(options=joints_dict)
+        joint_type_b = widgets.VBox([joint_type_l,joint_type_v])
+        
+        joint_inputs_out = widgets.Output()
         
         name_l = widgets.Label(value='$Joint$ $Name$',layout=layout120px)
         name_v = widgets.Text(placeholder='joint name',layout=layout120px)
         name_b = widgets.VBox([name_l,name_v])
+        
+        location_l = widgets.Label('$Loc$',layout=layout120px)
+        location_v = widgets.Dropdown(options=self.points_dropdown_options,layout=layout120px)
+        location_b = widgets.VBox([location_l,location_v])
         
         body_i_l = widgets.Label(value='$Body$ $i$',layout=layout120px)
         body_i_v = widgets.Dropdown(layout=layout120px)
@@ -460,14 +510,57 @@ class model(object):
         body_j_v.options=self.bodies.index
         body_j_b = widgets.VBox([body_j_l,body_j_v])
         
+        axis1_l = widgets.Label('$Axis$ $1$')
+        axis1_v = widgets.Dropdown(options=self.vectors)
+        axis1_b = widgets.VBox([axis1_l,axis1_v])
         
-        return widgets.HBox([name_b,body_i_b,body_j_b,refresh_button])
+        axis2_l = widgets.Label('$Axis$ $2$')
+        axis2_v = widgets.Dropdown(options=self.vectors)
+        axis2_b = widgets.VBox([axis2_l,axis2_v])
+        
+        field1 = widgets.VBox([refresh_button,joint_type_b])
+        field2 = widgets.HBox([name_b,location_b,body_i_b,body_j_b])
+        
+        uni_field = widgets.VBox([axis1_b,axis2_b])
+        
+        def joint_type_change(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                joint_inputs_out.clear_output()
+                with joint_inputs_out:
+                    axis1_v.options=axis2_v.options=self.vectors
+                    location_v.options=self.points_dropdown_options
+                    if change['new']==joints_dict['Universal']:
+                        ipy.display.display(uni_field)
+                    elif change['new']==joints_dict['Spherical'] :
+                        joint_inputs_out.clear_output()
+                    else:
+                        ipy.display.display(axis1_b)
+        joint_type_v.observe(joint_type_change)
+                        
+        creat_joint_button = widgets.Button(description='Apply')
+        def creat_joint_click(dummy):
+            with joint_inputs_out:
+                joint_name = name_v.value
+                loc        = self.points[location_v.value]
+                bodyi      = self.bodies[body_i_v.value]
+                bodyj      = self.bodies[body_j_v.value]
+                
+                if joint_type_v.label=='Universal':
+                    j=joint_type_v.value(loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
+                elif joint_type_v.label=='Spherical' :
+                    j=joint_type_v.value(loc,bodyi,bodyj)
+                else:
+                    j=joint_type_v.value(loc,bodyi,bodyj,axis1_v.value)
+                self.joints[joint_name]=j
+        creat_joint_button.on_click(creat_joint_click)
+        
+        return widgets.VBox([field1,field2,joint_inputs_out,creat_joint_button])
     
     
     
     def show(self):
         
-        fields = widgets.Accordion()
+        fields = widgets.Tab()
         fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
         fields.set_title(0,'SYSTEM POINTS')
         fields.set_title(1,'SYSTEM BODIES')

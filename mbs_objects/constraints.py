@@ -49,7 +49,6 @@ class joint(object):
         self.i_body=i_body
         self.j_body=j_body
         self.type="None" # for representing the joint type in subclasses
-        self.typ =location.typ
         
         self._loc=location
         # defining the joint axis which is needed for the different types of joints
