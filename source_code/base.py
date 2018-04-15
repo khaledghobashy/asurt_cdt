@@ -475,6 +475,7 @@ class point(vector):
         self.alignment='hps_'
         self._body=body
         self.u_i=(None if body==None else vector(self-body.loc).express(body))
+        self.notes=''
         
         
     @property

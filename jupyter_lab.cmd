@@ -1,1 +1,1 @@
-jupyter lab
+jupyter lab model_builder.ipynb

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 12 09:45:37 2018
+Created on Sun Apr 15 09:26:13 2018
 
 @author: khaled.ghobashy
 """
+
 import ipywidgets as widgets
 import IPython as ipy
 import qgrid
@@ -48,9 +49,11 @@ class model(object):
         self.joints     = pd.Series()
         self.geometries = pd.Series()
         self.vectors    = pd.Series()
+        self.model      = pd.Series()
+        
+        self.name = ''
         
         self.points_dataframe = pd.DataFrame(columns=['x','y','z','Alignment','Notes'])
-        self.geometries_dataframe = pd.DataFrame(columns=['body','p1','p2','outer','inner'])
         self.bodies_dataframe = pd.DataFrame(columns=['mass','Rx','Ry','Rz',
                                                       'Ixx','Iyx','Izx',
                                                       'Ixy','Iyy','Izy',
@@ -60,7 +63,49 @@ class model(object):
                                                       'xz','yz','zz'])
 
          
-    
+    def save_model(self):
+        save_out = widgets.Output()
+        
+        save_button = widgets.Button(description='Save Model',tooltip='Save Model Binary files')
+        def save_click(dummy):
+            with save_out:
+                f=savefile_dialog()
+                if f=='':
+                    return
+                self.model['points']=self.points
+                self.model['bodies']=self.bodies
+                self.model['joints']=self.joints
+                self.model['geometries']=self.geometries
+                
+                self.model.to_pickle(f)
+                print('Done!')
+        save_button.on_click(save_click)
+        
+        return widgets.VBox([save_button,save_out])
+                
+    def open_model(self):
+        open_out = widgets.Output()
+        
+        open_button = widgets.Button(description='Open Model',tooltip='Open Model Binary files')
+        def open_click(dummy):
+            with open_out:
+                f=openfile_dialog()
+                if f=='':
+                    return
+                self.model=pd.read_pickle(f)
+                self.points,self.bodies,self.joints,self.geometries=self.model
+                fields = widgets.Accordion()
+                fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
+                fields.set_title(0,'SYSTEM POINTS')
+                fields.set_title(1,'SYSTEM BODIES')
+                fields.set_title(2,'SYSTEM JOINTS')
+                print('Done!')
+                return ipy.display.display(fields)
+                
+        open_button.on_click(open_click)
+        
+        return widgets.VBox([open_button,open_out])
+        
     def add_point(self):
         
         tabs = widgets.Tab()
@@ -132,6 +177,7 @@ class model(object):
                     nr='hpr_'+name
                     pr=point(nr,[x,abs(y),z])
                     pr.alignment='R'
+                    pr.notes=pl.notes=notes.value
                     self.points[nr]=pr
                     
                     self.points_dataframe.loc[nl]=[x,-abs(y),z,'L',notes.value]
@@ -141,6 +187,7 @@ class model(object):
                     n='hps_'+name
                     p=point(n,[x,y,z])
                     p.alignment='S'
+                    p.notes=notes.value
                     self.points[n]=p
                     self.points_dataframe.loc[n]=[x,y,z,'S',notes.value]
                     
@@ -179,6 +226,7 @@ class model(object):
                 if f =='':
                     return
                 self.points_dataframe.to_excel(f+'.xlsx')
+                self.points.to_pickle(f)
                 ipy.display.display('Export Done!')
         export_button.on_click(export_click)
         
@@ -192,19 +240,15 @@ class model(object):
             tab2_out.clear_output()
             with tab3_out:
                 f=openfile_dialog()
-                data_import=pd.read_excel(f)
-                for i in data_import.index:
-                    self.points_dataframe.loc[i]=data_import.loc[i]
+                if f=='':
+                    return
+                self.points=pd.read_pickle(f)
+                for i in self.points:
+                    self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
                 print('Import Done!')
             with tab2_out:
                 ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
             
-            with tab1_out:
-                for i in self.points_dataframe.index:
-                    p=point(i,self.points_dataframe.loc[i]['x':'z'])
-                    p.alignment=self.points_dataframe.loc[i]['Alignment']
-                    p.notes=self.points_dataframe.loc[i]['Notes']
-                    self.points[i]=p
                 points_dropdown.options = dict(self.points)
                 p1_v.options=p2_v.options=points_dropdown.options
         import_button.on_click(import_click)
@@ -292,7 +336,7 @@ class model(object):
                 bod = rigid(body_name)
                 self.bodies[body_name]=bod
                 bodies_dropdown.options=dict(self.bodies)
-                name_v.value=''
+                bodies_dropdown.value=bod
         add_button.on_click(add_click)
 
 
@@ -395,13 +439,7 @@ class model(object):
         def export_inertia_click(dummy):
             with bodies_out:
                 f=savefile_dialog()
-                for b in self.bodies.index:
-                    body = self.bodies[b]
-                    R = list(body.R.a.flatten())
-                    J = list(body.J.flatten())
-                    dcm = list(body.dcm.flatten())
-                    self.bodies_dataframe.loc[b]=[body.mass]+R+J+dcm
-                self.bodies_dataframe.to_excel(f+'.xlsx')
+                self.bodies.to_pickle(f)
                 print('DONE!')
         export_inertia_button.on_click(export_inertia_click)
         
@@ -409,15 +447,9 @@ class model(object):
         def import_inertia_click(dummy):
             with bodies_out:
                 f=openfile_dialog()
-                df=pd.read_excel(f)
-                ipy.display.display(df)
-                for b in df.index:
-                    mass = df.loc[b]['mass']
-                    R = vector(df.loc[b]['Rx':'Rz'])
-                    J = np.array(df.loc[b]['Ixx':'Izz']).reshape((3,3))
-                    dcm = np.array(df.loc[b]['xx':'zz']).reshape((3,3))
-                    
-                    self.bodies[b]=rigid(b,mass=mass,cm=R,inertia_tensor=J,dcm=dcm)
+                self.bodies=pd.read_pickle(f)
+                self.geometries=pd.concat([i.geometries for i in self.bodies])
+                bodies_dropdown.options=dict(self.bodies)
         import_inertia_button.on_click(import_inertia_click)
 
         body_data_block   = widgets.VBox([mass_b,cg_block,inertia_block,inertia_ref_block,separator50,add_body])
@@ -469,7 +501,6 @@ class model(object):
                 geo_name = body.name+'_'+geo_name_v.value
                 self.geometries[geo_name]=geometries_dict[geometries_v.label](geo_name,body,p1_v.value,p2_v.value,outer_v.value,inner_v.value)
                 body.update_inertia()
-                self.geometries_dataframe.loc[geo_name]=[body.name,p1_v.value,p2_v.value,outer_v.value,inner_v.value]
                 geo_name_v.value=''
                             
         assign_geometry.on_click(assign_click)
@@ -485,51 +516,11 @@ class model(object):
         geometries_v.observe(on_change)
                 
         
-        export_button     = widgets.Button(description='Export',tooltip='Export geometries to excel file')
-        def export_click(dummy):
-            accord3_out.clear_output()
-            with accord3_out:
-                f=savefile_dialog()
-                self.geometries_dataframe.to_excel(f+'.xlsx')
-                print('Export Done!')
-        export_button.on_click(export_click)
-        
-        import_button     = widgets.Button(description='Import',tooltip='Import geometries from excel file')
-        def import_click(dummy):
-            accord3_out.clear_output()
-            with accord3_out:
-                f=openfile_dialog()
-                if f=='':
-                    return
-                self.geometries_dataframe=pd.read_excel(f)
-                for i in self.geometries_dataframe.index:
-                    body_name = self.geometries_dataframe.loc[i]['body']
-                    if body_name not in self.bodies.index:
-                        body = rigid(body_name)
-                    
-                    p1 = self.points[self.geometries_dataframe.loc[i]['p1']]
-                    p2 = self.points[self.geometries_dataframe.loc[i]['p2']]
-                    outer = self.geometries_dataframe.loc[i]['outer']
-                    inner = self.geometries_dataframe.loc[i]['inner']
-                    self.geometries[i]=circular_cylinder(i,body,p1,p2,outer,inner)
-                    self.bodies[body_name]=body
-                    self.bodies[body_name].update_inertia()
-                    
-                bodies_dropdown.options = self.bodies
-                print('Import Done!')
-        import_button.on_click(import_click)
-        
-        import_button.layout=export_button.layout=layout120px
-
-        geometries_import_export = widgets.VBox([import_button,export_button,accord3_out])
         geometries_define_inputs = widgets.VBox([bodies_dropdown_b,geo_name_b,geometries_b,accord2_out])
         
-        sub_block2 = widgets.Tab([geometries_define_inputs,geometries_import_export])
-        sub_block2.set_title(0,'New Geometry')
-        sub_block2.set_title(1,'Import/Export')
-        
+                
         main_block2 = widgets.Accordion()
-        main_block2.children=[sub_block1,sub_block2]
+        main_block2.children=[sub_block1,geometries_define_inputs]
         main_block2.set_title(0,'EXPLICTLY DEFINE BODY PROPERTIES')
         main_block2.set_title(1,'DEFINE BODY GEOMETRY')
         main_block2.selected_index=1
@@ -547,8 +538,7 @@ class model(object):
         refresh_button.layout=layout80px
         def refresh_click(dummy):
             with main_out:
-                body_i_v.options=self.bodies.index
-                body_j_v.options=self.bodies.index
+                body_i_v.options=body_j_v.options=dict(self.bodies)
         refresh_button.on_click(refresh_click)
 
         joints_dict = {'Spherical': spherical,
@@ -556,6 +546,7 @@ class model(object):
                        'Translational': translational,
                        'Cylinderical':cylindrical,
                        'Universal': universal}
+        
         joint_type_l = widgets.HTML('<b>Joint Type')
         joint_type_v = widgets.Dropdown(options=joints_dict)
         joint_type_b = widgets.VBox([joint_type_l,joint_type_v])
@@ -572,20 +563,20 @@ class model(object):
         
         body_i_l = widgets.HTML('<b>Body i',layout=layout120px)
         body_i_v = widgets.Dropdown(layout=layout120px)
-        body_i_v.options=self.bodies.index
+        body_i_v.options=dict(self.bodies)
         body_i_b = widgets.VBox([body_i_l,body_i_v])
         
         body_j_l = widgets.HTML('<b>Body j')
         body_j_v = widgets.Dropdown(layout=layout120px)
-        body_j_v.options=self.bodies.index
+        body_j_v.options=dict(self.bodies)
         body_j_b = widgets.VBox([body_j_l,body_j_v])
         
         axis1_l = widgets.HTML('<b>Axis 1')
-        axis1_v = widgets.Dropdown(options=self.vectors)
+        axis1_v = widgets.Dropdown(options=dict(self.vectors))
         axis1_b = widgets.VBox([axis1_l,axis1_v])
         
         axis2_l = widgets.HTML('<b>Axis 2')
-        axis2_v = widgets.Dropdown(options=self.vectors)
+        axis2_v = widgets.Dropdown(options=dict(self.vectors))
         axis2_b = widgets.VBox([axis2_l,axis2_v])
         
         field1 = widgets.VBox([refresh_button,joint_type_b])
@@ -611,9 +602,9 @@ class model(object):
         def creat_joint_click(dummy):
             with joint_inputs_out:
                 joint_name = name_v.value
-                loc        = self.points[location_v.value]
-                bodyi      = self.bodies[body_i_v.value]
-                bodyj      = self.bodies[body_j_v.value]
+                loc        = location_v.value
+                bodyi      = body_i_v.value
+                bodyj      = body_j_v.value
                 
                 if joint_type_v.label=='Universal':
                     j=joint_type_v.value(loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
@@ -624,7 +615,27 @@ class model(object):
                 self.joints[joint_name]=j
         creat_joint_button.on_click(creat_joint_click)
         
-        return widgets.VBox([field1,field2,joint_inputs_out,creat_joint_button])
+        
+        export_button = widgets.Button(description='Export',tooltip='Export to binary formate')
+        def export_click(dummy):
+            with main_out:
+                f=savefile_dialog()
+                if f=='':
+                    return
+                self.joints.to_pickle(f)
+                print('Export Done!')
+        export_button.on_click(export_click)
+        
+        import_button = widgets.Button(description='Import',tooltip='Import from binary formate')
+        def import_click(dummy):
+            f=savefile_dialog()
+            if f=='':
+                   return
+            self.joints=pd.read_pickle(f)
+            print('Export Done!')
+        import_button.on_click(import_click)
+        
+        return widgets.VBox([field1,field2,joint_inputs_out,creat_joint_button,import_button,export_button])
     
     
     
@@ -636,7 +647,9 @@ class model(object):
         fields.set_title(1,'SYSTEM BODIES')
         fields.set_title(2,'SYSTEM JOINTS')
         
-        return fields
+        main = widgets.VBox([self.save_model(),self.open_model(),fields])
+        
+        return widgets.VBox([self.save_model(),self.open_model()])
         
         
 
