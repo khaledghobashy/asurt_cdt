@@ -88,12 +88,15 @@ class model(object):
         
         open_button = widgets.Button(description='Open Model',tooltip='Open Model Binary files')
         def open_click(dummy):
+            open_out.clear_output()
             with open_out:
                 f=openfile_dialog()
                 if f=='':
                     return
                 self.model=pd.read_pickle(f)
                 self.points,self.bodies,self.joints,self.geometries=self.model
+                for i in self.points:
+                    self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
                 fields = widgets.Accordion()
                 fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
                 fields.set_title(0,'SYSTEM POINTS')
@@ -104,7 +107,25 @@ class model(object):
                 
         open_button.on_click(open_click)
         
+        
         return widgets.VBox([open_button,open_out])
+    
+    def new_model(self):
+        new_out = widgets.Output()
+        
+        new_button = widgets.Button(description='New Model',tooltip='Creat a New Model')
+        def new_click(dummy):
+            with new_out:
+                fields = widgets.Accordion()
+                fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
+                fields.set_title(0,'SYSTEM POINTS')
+                fields.set_title(1,'SYSTEM BODIES')
+                fields.set_title(2,'SYSTEM JOINTS')
+                return ipy.display.display(fields)
+                
+        new_button.on_click(new_click)
+        
+        return widgets.VBox([new_button,new_out])
         
     def add_point(self):
         
@@ -210,7 +231,7 @@ class model(object):
                     y_v.value=points_dropdown.value.y
                     z_v.value=points_dropdown.value.z
                     alignment.value=points_dropdown.value.alignment
-                    notes.value=self.points_dataframe.loc[points_dropdown.label]['Notes']
+                    notes.value=points_dropdown.value.notes
         points_dropdown.observe(on_change)
         
         
@@ -255,7 +276,7 @@ class model(object):
         
                 
         tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3])
-        tab2_content = tab2_out
+        tab2_content = widgets.VBox([qgrid.QgridWidget(df=self.points_dataframe)],layout=widgets.Layout(width='550px'))
         tab3_content = widgets.VBox([import_l,import_button,separator100,export_l,export_button,tab3_out])
         
         tabs.children=[tab1_content,tab2_content,tab3_content]
@@ -300,13 +321,16 @@ class model(object):
         
         bodies_out  = widgets.Output()
         accord2_out = widgets.Output()
-        accord3_out = widgets.Output()
 
 
         name_l = widgets.HTML('<b>Body Name')
         name_v = widgets.Text(placeholder='Enter Body Name')
         name_b = widgets.VBox([name_l,name_v])
         name_l.layout=name_v.layout=layout120px
+        
+        alignment_l = widgets.HTML('<b>Alignment',layout=layout120px)
+        alignment_v = widgets.RadioButtons(options={'R':'rbr_','L':'rbl_','S':'rbs_'})
+        alignment_b = widgets.VBox([alignment_l,alignment_v])
         
         bodies_dropdown_l = widgets.HTML('<b>Select Body')
         bodies_dropdown = widgets.Dropdown()
@@ -319,6 +343,7 @@ class model(object):
                 with bodies_out:
                     name_v.value = bodies_dropdown.label
                     mass_v.value = bodies_dropdown.value.mass
+                    alignment_v.label=bodies_dropdown.value.alignment
                     x.value,y.value,z.value = bodies_dropdown.value.R
                     ixx.value,ixy.value,ixz.value,iyy.value,iyz.value,izz.value=[bodies_dropdown.value.J.flatten()[v] for v in[0,3,6,4,7,8]]
                     xx.value,xy.value,xz.value,yx.value,yy.value,yz.value,zx.value,zy.value,zz.value=bodies_dropdown.value.dcm.T.flatten()
@@ -332,16 +357,18 @@ class model(object):
                 if name_v.value=='':
                     print('ERROR: Please Enter a Valid Name')
                     return
-                body_name = name_v.value
-                bod = rigid(body_name)
-                self.bodies[body_name]=bod
+                if alignment_v.label in ['R','L']:
+                    body_name_l = 'rbl_'+name_v.value
+                    body_name_r = 'rbr_'+name_v.value
+                    bod_l = rigid(body_name_l)
+                    bod_r = rigid(body_name_r)
+                    self.bodies[body_name_l]=bod_l
+                    self.bodies[body_name_r]=bod_r
                 bodies_dropdown.options=dict(self.bodies)
-                bodies_dropdown.value=bod
         add_button.on_click(add_click)
 
-
-        left_main_block = widgets.HBox([name_b,bodies_dropdown_b])
-        main_block = widgets.VBox([left_main_block,add_button,bodies_out,separator100])
+        initial_data_block = widgets.HBox([name_b,alignment_b])
+        main_block = widgets.VBox([initial_data_block,separator100,add_button,bodies_out,separator100])
         
         mass_l = widgets.HTML('<b>Body Mass')
         mass_v = widgets.FloatText(value=1)
@@ -452,7 +479,7 @@ class model(object):
                 bodies_dropdown.options=dict(self.bodies)
         import_inertia_button.on_click(import_inertia_click)
 
-        body_data_block   = widgets.VBox([mass_b,cg_block,inertia_block,inertia_ref_block,separator50,add_body])
+        body_data_block   = widgets.VBox([bodies_dropdown_b,mass_b,cg_block,inertia_block,inertia_ref_block,separator50,add_body])
         sub_block1 = widgets.Tab([body_data_block,widgets.VBox([export_inertia_button,import_inertia_button,bodies_out])])
         sub_block1.set_title(0,'Body Data')
         sub_block1.set_title(1,'Import / Export')
@@ -640,16 +667,9 @@ class model(object):
     
     
     def show(self):
+               
         
-        fields = widgets.Accordion()
-        fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
-        fields.set_title(0,'SYSTEM POINTS')
-        fields.set_title(1,'SYSTEM BODIES')
-        fields.set_title(2,'SYSTEM JOINTS')
-        
-        main = widgets.VBox([self.save_model(),self.open_model(),fields])
-        
-        return widgets.VBox([self.save_model(),self.open_model()])
+        return widgets.VBox([self.new_model(),self.save_model(),self.open_model()])
         
         
 

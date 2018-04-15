@@ -62,6 +62,7 @@ class rigid(object):
         self.typ=typ
         self.nc=(7 if typ=='mount' else 1)
         self.geometries=pd.Series()
+        self.alignment='S'
     
     
     def update_inertia(self):
