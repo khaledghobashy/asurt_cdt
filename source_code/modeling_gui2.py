@@ -62,7 +62,11 @@ class model(object):
                                                       'xy','yy','zy',
                                                       'xz','yz','zz'])
 
-         
+    
+    
+    def _filter_points(self):
+        return pd.concat([self.points.filter(like='hpr_'),self.points.filter(like='hps_')])
+                        
     def save_model(self):
         save_out = widgets.Output()
         
@@ -167,7 +171,7 @@ class model(object):
         edit_l = widgets.HTML('<b>Edit Point')
         
         points_dropdown = widgets.Dropdown()
-        points_dropdown.options = dict(self.points)
+        points_dropdown.options = dict(self._filter_points())
         points_dropdown.layout=layout120px
         
         
@@ -215,7 +219,7 @@ class model(object):
                 
                 name_v.value=''
                 notes.value=''
-                points_dropdown.options=dict(self.points)
+                points_dropdown.options=dict(self._filter_points())
                 
             with tab2_out:
                 ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
@@ -230,7 +234,7 @@ class model(object):
                     x_v.value=points_dropdown.value.x
                     y_v.value=points_dropdown.value.y
                     z_v.value=points_dropdown.value.z
-                    alignment.value=points_dropdown.value.alignment
+                    alignment.label=points_dropdown.value.alignment
                     notes.value=points_dropdown.value.notes
         points_dropdown.observe(on_change)
         
@@ -270,8 +274,8 @@ class model(object):
             with tab2_out:
                 ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
             
-                points_dropdown.options = dict(self.points)
-                p1_v.options=p2_v.options=points_dropdown.options
+                points_dropdown.options = dict(self._filter_points())
+                p1_v.options=p2_v.options=dict(self.points)
         import_button.on_click(import_click)
         
                 
@@ -297,7 +301,7 @@ class model(object):
         p2_v = widgets.Dropdown()
         p2_b = widgets.VBox([p2_l,p2_v])
         
-        p1_v.options=p2_v.options=dict(zip([name[4:] for name in self.points.index ],self.points.index))
+        p1_v.options=p2_v.options=dict(self.points)
         
         add_vector_button = widgets.Button(description='Apply',tooltip='add vector')
         def add_vector_click(dummy):
@@ -361,7 +365,9 @@ class model(object):
                     body_name_l = 'rbl_'+name_v.value
                     body_name_r = 'rbr_'+name_v.value
                     bod_l = rigid(body_name_l)
+                    bod_l.alignment='L'
                     bod_r = rigid(body_name_r)
+                    bod_r.alignment='R'
                     self.bodies[body_name_l]=bod_l
                     self.bodies[body_name_r]=bod_r
                 bodies_dropdown.options=dict(self.bodies)
@@ -525,9 +531,32 @@ class model(object):
                     print('ERROR: Please Chose a Body Object')
                     return 
                 body = bodies_dropdown.value
-                geo_name = body.name+'_'+geo_name_v.value
-                self.geometries[geo_name]=geometries_dict[geometries_v.label](geo_name,body,p1_v.value,p2_v.value,outer_v.value,inner_v.value)
-                body.update_inertia()
+                if body.alignment in 'RL':
+                    body_1 = bodies_dropdown.value
+                    body_2 = self.bodies[body_1.mirrored]
+                    
+                    p1_1 = self.points[p1_v.label]
+                    p1_2 = self.points[p1_v.value.mirrored]
+                    p2_1 = self.points[p2_v.label]
+                    p2_2 = self.points[p2_v.value.mirrored]
+                    
+                    geo_name_1 = body.name+'_'+geo_name_v.value
+                    geo_name_2 = body.mirrored+'_'+geo_name_v.value
+                    
+                    self.geometries[geo_name_1]=geometries_dict[geometries_v.label](geo_name_1,body_1,p1_1,p2_1,outer_v.value,inner_v.value)
+                    self.geometries[geo_name_2]=geometries_dict[geometries_v.label](geo_name_2,body_2,p1_2,p2_2,outer_v.value,inner_v.value)
+                    
+                    body_1.update_inertia()
+                    body_2.update_inertia()
+                
+                elif  body.alignment=='S':
+                    p1 = self.pointsp1_v.value
+                    p2 = self.pointsp2_v.value
+
+                    geo_name = body.name+'_'+geo_name_v.value
+                    self.geometries[geo_name]=geometries_dict[geometries_v.label](geo_name,body,p1,p2,outer_v.value,inner_v.value)
+                    body.update_inertia()
+                    
                 geo_name_v.value=''
                             
         assign_geometry.on_click(assign_click)

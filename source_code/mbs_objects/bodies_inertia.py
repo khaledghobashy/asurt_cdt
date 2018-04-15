@@ -64,6 +64,14 @@ class rigid(object):
         self.geometries=pd.Series()
         self.alignment='S'
     
+    @property    
+    def mirrored(self):
+        if self.alignment=='S':
+            return 'rbs_'+self.name[4:]
+        elif self.alignment == 'R':
+            return 'rbl_'+self.name[4:]
+        elif self.alignment == 'L':
+            return 'rbr_'+self.name[4:]
     
     def update_inertia(self):
         if len(self.geometries)==0:

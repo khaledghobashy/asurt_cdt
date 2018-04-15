@@ -472,12 +472,20 @@ class point(vector):
         
         
         self.name=name
-        self.alignment='hps_'
+        self.alignment='S'
         self._body=body
         self.u_i=(None if body==None else vector(self-body.loc).express(body))
         self.notes=''
-        
-        
+    
+    @property    
+    def mirrored(self):
+        if self.alignment=='S':
+            return 'hps_'+self.name[4:]
+        elif self.alignment == 'R':
+            return 'hpl_'+self.name[4:]
+        elif self.alignment == 'L':
+            return 'hpr_'+self.name[4:]
+    
     @property
     def right(self):
         return point(self.name+'.r',self._right,typ='r')
