@@ -63,6 +63,7 @@ class rigid(object):
         self.nc=(7 if typ=='mount' else 1)
         self.geometries=pd.Series()
         self.alignment='S'
+        self.notes=''
     
     @property    
     def mirrored(self):

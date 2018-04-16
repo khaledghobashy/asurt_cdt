@@ -337,21 +337,19 @@ class model(object):
         name_l = widgets.HTML('<b>Body Name')
         name_v = widgets.Text(placeholder='Enter Body Name')
         name_b = widgets.VBox([name_l,name_v])
-#        name_l.layout=name_v.layout=layout120px
+        name_l.layout=name_v.layout=layout120px
         
-        alignment_l = widgets.HTML('<b>Alignment')
-        alignment_v = widgets.ToggleButtons(options={'R':'rbr_','L':'rbl_','S':'rbs_'})
-        alignment_v.style.button_width='40px'
+        alignment_l = widgets.HTML('<b>Alignment',layout=layout120px)
+        alignment_v = widgets.ToggleButtons(options={'R':'rbr_','L':'rbl_','S':'rbs_'},layout=layout80px)
         alignment_b = widgets.VBox([alignment_l,alignment_v])
         
         notes_l = widgets.HTML('<b>Notes')
         notes_v = widgets.Textarea(placeholder='Brief description ...')
-        notes_v.layout=widgets.Layout(width='300px',height='55px')
         notes_b = widgets.VBox([notes_l,notes_v])
         
         
         create_default_button = widgets.Button(description=' New Body',icon='plus',tooltip='Create Body with default values')
-        create_default_button.layout=layout120px
+        create_default_button.layout=layout80px
         def create_default_click(b):
             main_out.clear_output()
             with main_out:
@@ -362,11 +360,9 @@ class model(object):
                 if alignment_v.label in ['R','L']:
                     body_name_l = 'rbl_'+name_v.value
                     bod_l = rigid(body_name_l)
-                    bod_l.notes=notes_v.value
                     
                     body_name_r = 'rbr_'+name_v.value
                     bod_r = rigid(body_name_r)
-                    bod_r.notes=notes_v.value
                    
                     bod_l.alignment='L'
                     bod_r.alignment='R'
@@ -382,7 +378,7 @@ class model(object):
                 bodies_dropdown.options=self._filter_bodies()
         create_default_button.on_click(create_default_click)
         
-        main_block_data = widgets.VBox([name_b,alignment_b,notes_b])
+        main_block_data = widgets.HBox([widgets.VBox([name_b,alignment_b]),notes_b])
         main_block = widgets.VBox([main_block_data,separator50,create_default_button,main_out])
 
         #######################################################################
@@ -394,6 +390,7 @@ class model(object):
         # Creating the explicitly defined properties window and its components
         #######################################################################
         accord1_out = widgets.Output()
+        accord2_out = widgets.Output()
         
         bodies_dropdown_l = widgets.HTML('<b>Select Body')
         bodies_dropdown   = widgets.Dropdown(options=self._filter_bodies())
@@ -408,7 +405,6 @@ class model(object):
                     else:
                         mass_v.value = bodies_dropdown.value.mass
                         alignment_v.label=bodies_dropdown.value.alignment
-                        notes_v.value = bodies_dropdown.value.notes
                         x.value,y.value,z.value = bodies_dropdown.value.R
                         ixx.value,ixy.value,ixz.value,iyy.value,iyz.value,izz.value=[bodies_dropdown.value.J.flatten()[v] for v in[0,3,6,4,7,8]]
                         xx.value,xy.value,xz.value,yx.value,yy.value,yz.value,zx.value,zy.value,zz.value=bodies_dropdown.value.dcm.T.flatten()
@@ -531,18 +527,58 @@ class model(object):
 
         data_block = widgets.VBox([bodies_dropdown_b,mass_b,cg_block,inertia_block,frame_block,separator50,add_inertia_button])
         window2_block = widgets.HBox([data_block,accord1_out])
-               
-        #######################################################################
-        #######################################################################
-        #######################################################################
         
         
-        #######################################################################
-        # Creating the explicitly defined properties window and its components
-        #######################################################################
         
-        accord2_out = widgets.Output()
+        ############################################################################
+        # Defining Interactive Buttons for adding bodies
+        ############################################################################
+        accord1_out = widgets.Output()
+        add_body    = widgets.Button(description='Apply',tooltip='submitt selected data')
+        def create_body(b):
+            with accord1_out:
+                body_name = name_v.value
+                mass      = mass_v.value
+                cm        = vector([x.value,y.value,z.value])
+                ref_frame = np.array([[xx.value,yx.value,zx.value],
+                                      [xy.value,yy.value,zy.value],
+                                      [xz.value,yz.value,zz.value]])
+                
+                iner_tens = np.array([[ixx.value,ixy.value,ixz.value],
+                                      [ixy.value,iyy.value,iyz.value],
+                                      [ixz.value,iyz.value,izz.value]])
+                
+                bod = rigid(body_name,mass,iner_tens,cm,ref_frame)
+                self.bodies[body_name]=bod
+                bodies_dropdown.options=self._filter_bodies()
+        add_body.on_click(create_body)
+        
+        export_inertia_button = widgets.Button(description='Export Inertia')
+        def export_inertia_click(dummy):
+            with bodies_out:
+                f=savefile_dialog()
+                self.bodies.to_pickle(f)
+                print('DONE!')
+        export_inertia_button.on_click(export_inertia_click)
+        
+        import_inertia_button = widgets.Button(description='Import Inertia')
+        def import_inertia_click(dummy):
+            with bodies_out:
+                f=openfile_dialog()
+                self.bodies=pd.read_pickle(f)
+                self.geometries=pd.concat([i.geometries for i in self.bodies])
+                bodies_dropdown.options=dict(self.bodies)
+        import_inertia_button.on_click(import_inertia_click)
 
+        body_data_block   = widgets.VBox([bodies_dropdown_b,mass_b,cg_block,inertia_block,frame_block,separator50,add_body])
+        sub_block1 = widgets.Tab([body_data_block,widgets.VBox([export_inertia_button,import_inertia_button,main_out])])
+        sub_block1.set_title(0,'Body Data')
+        sub_block1.set_title(1,'Import / Export')
+                    
+        
+        ############################################################################
+        
+        
         geometries_dict={'':'','Cylinder':circular_cylinder}
                 
         geo_name_l = widgets.HTML('<b>Geometry Name',layout=layout120px)
@@ -625,12 +661,12 @@ class model(object):
         
                 
         main_block2 = widgets.Accordion()
-        main_block2.children=[window2_block,geometries_define_inputs]
+        main_block2.children=[sub_block1,geometries_define_inputs]
         main_block2.set_title(0,'EXPLICTLY DEFINE BODY PROPERTIES')
         main_block2.set_title(1,'DEFINE BODY GEOMETRY')
         main_block2.selected_index=1
         
-        return widgets.VBox([main_block,main_block2])
+        return widgets.VBox([main_block,window2_block])
     
     
     
