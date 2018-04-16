@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Apr 15 09:26:13 2018
+Created on Mon Apr 16 16:57:14 2018
 
 @author: khaled.ghobashy
 """
+
 
 import ipywidgets as widgets
 import IPython as ipy
@@ -11,7 +12,7 @@ import qgrid
 import pandas as pd
 from base import point, vector
 from bodies_inertia import rigid
-from inertia_properties import composite_geometry,circular_cylinder
+from inertia_properties import circular_cylinder
 import numpy as np
 from constraints import cylindrical, spherical, revolute, translational,\
                         universal, rotational_drive, absolute_locating
@@ -75,6 +76,14 @@ class model(object):
         return dict(pd.concat([self.points.filter(like='hpr_'),self.points.filter(like='hps_')]))
     def _filter_bodies(self):
         return dict(pd.concat([self.bodies.filter(like='rbr_'),self.bodies.filter(like='rbs_')]))
+    
+    def _sort(self):
+        self.points=self.points.sort_index()
+        self.bodies=self.bodies.sort_index()
+        self.joints=self.joints.sort_index()
+        self.vectors=self.vectors.sort_index()
+        self.geometries=self.geometries.sort_index()
+        
                         
     def save_model(self):
         save_out = widgets.Output()
@@ -85,11 +94,11 @@ class model(object):
                 f=savefile_dialog()
                 if f=='':
                     return
-                self.model['points']=self.points
-                self.model['bodies']=self.bodies
-                self.model['joints']=self.joints
-                self.model['geometries']=self.geometries
-                self.model['vectors']=self.vectors
+                self.model['points']=self.points.sort_index()
+                self.model['bodies']=self.bodies.sort_index()
+                self.model['joints']=self.joints.sort_index()
+                self.model['geometries']=self.geometries.sort_index()
+                self.model['vectors']=self.vectors.sort_index()
                 
                 self.model.to_pickle(f)
                 print('Done!')
@@ -111,11 +120,15 @@ class model(object):
                 self.points,self.bodies,self.joints,self.geometries=self.model
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
+                
+                self._sort()
+                
                 fields = widgets.Accordion()
-                fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
+                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints()]
                 fields.set_title(0,'SYSTEM POINTS')
-                fields.set_title(1,'SYSTEM BODIES')
-                fields.set_title(2,'SYSTEM JOINTS')
+                fields.set_title(1,'SYSTEM MARKERS')
+                fields.set_title(2,'SYSTEM BODIES')
+                fields.set_title(3,'SYSTEM JOINTS')
                 print('Done!')
                 return ipy.display.display(fields)
                 
@@ -131,10 +144,11 @@ class model(object):
         def new_click(dummy):
             with new_out:
                 fields = widgets.Accordion()
-                fields.children=[self.add_point(),self.add_bodies(),self.add_joints()]
+                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints()]
                 fields.set_title(0,'SYSTEM POINTS')
-                fields.set_title(1,'SYSTEM BODIES')
-                fields.set_title(2,'SYSTEM JOINTS')
+                fields.set_title(1,'SYSTEM MARKERS')
+                fields.set_title(2,'SYSTEM BODIES')
+                fields.set_title(3,'SYSTEM JOINTS')
                 return ipy.display.display(fields)
                 
         new_button.on_click(new_click)
@@ -150,7 +164,6 @@ class model(object):
         
         tab1_out = widgets.Output()
         tab2_out = widgets.Output()
-        tab3_out = widgets.Output()
         
         name_l = widgets.HTML('<b>Name')
         name_v = widgets.Text(placeholder='Point Name')
@@ -173,11 +186,15 @@ class model(object):
         x_l.layout=y_l.layout=z_l.layout=layout100px
         x_v.layout=y_v.layout=z_v.layout=layout100px
         
-                
-        notes = widgets.Textarea(placeholder='Optional brief note/describtion.')
-        notes.layout=widgets.Layout(width='350px',height='55px')
-        alignment=widgets.RadioButtons(options={'R':'hpr_','L':'hpl_','S':'hps_'})
+        notes_l = widgets.HTML('<b>Notes')        
+        notes_v = widgets.Textarea(placeholder='Optional brief note/describtion.')
+        notes_v.layout=widgets.Layout(width='350px',height='55px')
+        notes_b = widgets.VBox([notes_l,notes_v])
         
+        alignment_l = widgets.HTML('<b>Alignment')
+        alignment_v = widgets.ToggleButtons(options={'R':'hpr_','L':'hpl_','S':'hps_'})
+        alignment_v.style.button_width='40px'
+        alignment_b = widgets.VBox([alignment_l,alignment_v])        
         edit_l = widgets.HTML('<b>Edit Point')
         
         points_dropdown = widgets.Dropdown()
@@ -186,13 +203,14 @@ class model(object):
         
         
         field1 = widgets.HBox([name_b,x_b,y_b,z_b])
-        field2 = widgets.HBox([notes,alignment])
+        field2 = widgets.VBox([alignment_b,notes_b])
         field3 = widgets.VBox([edit_l,points_dropdown])
         
         
         
         
-        add_button = widgets.Button(description='Apply')
+        add_button = widgets.Button(description='Apply',icon='check')
+        add_button.layout=layout100px
         def add_click(dummy):
             tab1_out.clear_output()
             tab2_out.clear_output()
@@ -203,33 +221,34 @@ class model(object):
                     print('Please enter a valid name in the Point Name field')
                     return 
                 
-                if alignment.value!='hps_':
-                    nl='hpl_'+name
-                    pl=point(nl,[x,-abs(y),z])
-                    pl.alignment='L'
-                    self.points[nl]=pl
+                if (alignment_v.label=='R' and y<0) or (alignment_v.label=='L' and y>0):
+                    print('Inconsistent Selction of y value and symmetry!!')
+                    return
+
+                name=alignment_v.value+name
+                
+                if alignment_v.label!='S':
+                    p1=point(name,[x,y,z])
+                    p1.alignment=alignment_v.label
+                    p2 = p1.m_object
+                    self.points[p1.name]=p1
+                    self.points[p2.name]=p2
                     
-                    nr='hpr_'+name
-                    pr=point(nr,[x,abs(y),z])
-                    pr.alignment='R'
-                    pr.notes=pl.notes=notes.value
-                    self.points[nr]=pr
-                    
-                    self.points_dataframe.loc[nl]=[x,-abs(y),z,'L',notes.value]
-                    self.points_dataframe.loc[nr]=[x, abs(y),z,'R',notes.value]
+                    self.points_dataframe.loc[p1.name]=[x,p1.y,z,p1.alignment,notes_v.value]
+                    self.points_dataframe.loc[p2.name]=[x,p2.y,z,p2.alignment,notes_v.value]
     
                 else:
-                    n='hps_'+name
-                    p=point(n,[x,y,z])
-                    p.alignment='S'
-                    p.notes=notes.value
-                    self.points[n]=p
-                    self.points_dataframe.loc[n]=[x,y,z,'S',notes.value]
+                    p=point(name,[x,y,z])
+                    p.alignment=alignment_v.label
+                    p.notes=notes_v.value
+                    self.points[p.name]=p
+                    self.points_dataframe.loc[p.name]=[x,y,z,p.alignment,notes_v.value]
                     
                 
                 name_v.value=''
-                notes.value=''
-                points_dropdown.options=self._filter_points()
+                notes_v.value=''
+                self._sort()
+                points_dropdown.options=dict(self.points)
                 
             with tab2_out:
                 ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
@@ -240,63 +259,29 @@ class model(object):
         def on_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
                 with tab1_out:
+                    if points_dropdown.label==None:
+                        return
+                    
                     name_v.value=points_dropdown.label[4:]
                     x_v.value=points_dropdown.value.x
                     y_v.value=points_dropdown.value.y
                     z_v.value=points_dropdown.value.z
-                    alignment.label=points_dropdown.value.alignment
-                    notes.value=points_dropdown.value.notes
+                    alignment_v.label=points_dropdown.value.alignment
+                    notes_v.value=points_dropdown.value.notes
         points_dropdown.observe(on_change)
         
         
         
-        export_l = widgets.HTML('<b>Exporting Points')
-        export_v = widgets.Text(placeholder='write file name here')
-        export_v.layout=layout200px
-        export_button = widgets.Button(description='Export')
-        def export_click(b):
-            tab3_out.clear_output()
-            with tab3_out:
-                f=savefile_dialog()
-                if f =='':
-                    return
-                self.points_dataframe.to_excel(f+'.xlsx')
-                self.points.to_pickle(f)
-                ipy.display.display('Export Done!')
-        export_button.on_click(export_click)
-        
-        
-        import_l = widgets.HTML('<b>Importing Points')
-        import_v = widgets.Text(placeholder='write file name here')
-        import_v.layout=layout200px
-        import_button = widgets.Button(description='Import')
-        def import_click(b):
-            tab3_out.clear_output()
-            tab2_out.clear_output()
-            with tab3_out:
-                f=openfile_dialog()
-                if f=='':
-                    return
-                self.points=pd.read_pickle(f)
-                for i in self.points:
-                    self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
-                print('Import Done!')
-            with tab2_out:
-                ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
-            
-                points_dropdown.options = self._filter_points()
-                p1_v.options=p2_v.options=dict(self.points)
-        import_button.on_click(import_click)
-        
-                
-        tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3])
+        tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out])
         tab2_content = widgets.VBox([qgrid.QgridWidget(df=self.points_dataframe)],layout=widgets.Layout(width='550px'))
-        tab3_content = widgets.VBox([import_l,import_button,separator100,export_l,export_button,tab3_out])
         
-        tabs.children=[tab1_content,tab2_content,tab3_content]
+        tabs.children=[tab1_content,tab2_content]
         
-        
-        # Defining Vectors
+        return tabs
+    
+    
+    def add_vectors(self):
+
         vectors_out = widgets.Output()
         
         vector_name_l = widgets.HTML('<b>Vector Name')
@@ -350,8 +335,8 @@ class model(object):
         vectors_tab = widgets.Tab([vectors_field])
         vectors_tab.set_title(0,'Defining Vectors')
         
-        
-        return widgets.VBox([tabs,vectors_field])
+        return vectors_field
+
     
     
     def add_bodies(self):

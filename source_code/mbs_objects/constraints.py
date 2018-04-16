@@ -71,9 +71,21 @@ class joint(object):
         self.vjj=vector(self.u_jrf[:,1])
         self.vjk=vector(self.u_jrf[:,2])
         
+        self.alignment='S'
+        self.notes = ''
+        
 #        location.body=i_body
         
-        
+    @property    
+    def mirrored(self):
+        if self.alignment=='S':
+            return 'jcs_'+self.name[4:]
+        elif self.alignment == 'R':
+            return 'jcl_'+self.name[4:]
+        elif self.alignment == 'L':
+            return 'jcr_'+self.name[4:]
+
+    
     @property
     def dic(self):
         name=self.name+'.'

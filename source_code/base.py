@@ -306,10 +306,20 @@ class vector(object):
         
         self._a=np.array(components).reshape((3,1))    
         self.frame=frame
-        
+        self.alignment='S'
     ##########################################################################
     # Defining updatable attributes as a decorated class methods
     # ===========================================================
+    
+    @property    
+    def mirrored(self):
+        if self.alignment=='S':
+            return 'ovs_'
+        elif self.alignment == 'R':
+            return 'ovl_'
+        elif self.alignment == 'L':
+            return 'ovr_'
+        
     @property
     def a(self):
         return self._a
@@ -478,13 +488,23 @@ class point(vector):
         self.notes=''
     
     @property    
-    def mirrored(self):
+    def m_name(self):
         if self.alignment=='S':
             return 'hps_'+self.name[4:]
         elif self.alignment == 'R':
             return 'hpl_'+self.name[4:]
         elif self.alignment == 'L':
             return 'hpr_'+self.name[4:]
+    
+    @property    
+    def m_object(self):
+        y=-self.y
+        alignment = 'RL'.replace(self.alignment,'')
+        loc=[self.x,y,self.z]
+        name=self.m_name
+        p = point(name,loc)
+        p.alignment = alignment
+        return p
     
     @property
     def right(self):
