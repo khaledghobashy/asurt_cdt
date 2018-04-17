@@ -38,7 +38,7 @@ def principle_inertia(J):
 class rigid(object):
     
     
-    def __init__(self,name,mass=1,inertia_tensor=np.eye(3),cm=vector([1,1,1]),dcm=np.eye(3),typ='floating'):
+    def __init__(self,name,mass=1,inertia_tensor=np.eye(3),cm=vector([0,0,0]),dcm=np.eye(3),typ='floating'):
         '''
     A class representing the rigid body in space.
     ===========================================================================
@@ -66,7 +66,7 @@ class rigid(object):
         self.notes=''
     
     @property    
-    def mirrored(self):
+    def m_name(self):
         if self.alignment=='S':
             return 'rbs_'+self.name[4:]
         elif self.alignment == 'R':

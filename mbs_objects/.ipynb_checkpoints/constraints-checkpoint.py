@@ -42,10 +42,10 @@ def acc_sph_rhs(betai_dot,Hip,Hjp,betaj_dot):
 
 
 class joint(object):
-    def __init__(self,name,location,i_body,j_body,axis=[0,0,1]):
+    def __init__(self,location,i_body,j_body,axis=[0,0,1]):
         
         # defining the basic attributes in the joint class
-        self.name=name
+        self.name=location.name
         self.i_body=i_body
         self.j_body=j_body
         self.type="None" # for representing the joint type in subclasses
@@ -71,21 +71,9 @@ class joint(object):
         self.vjj=vector(self.u_jrf[:,1])
         self.vjk=vector(self.u_jrf[:,2])
         
-        self.alignment='S'
-        self.notes = ''
-        
 #        location.body=i_body
         
-    @property    
-    def m_name(self):
-        if self.alignment=='S':
-            return 'jcs_'+self.name[4:]
-        elif self.alignment == 'R':
-            return 'jcl_'+self.name[4:]
-        elif self.alignment == 'L':
-            return 'jcr_'+self.name[4:]
-
-    
+        
     @property
     def dic(self):
         name=self.name+'.'
@@ -150,11 +138,11 @@ class spherical(joint):
     Defining the at point constraint which constraints the relative translations
     between two bodies at a given point 
     '''
-    def __init__(self,name,location,i_body,j_body,axis=[0,0,1]):
-        super().__init__(name,location,i_body,j_body,axis)
+    def __init__(self,location,i_body,j_body,axis=[0,0,1]):
+        super().__init__(location,i_body,j_body,axis)
         
         self.type='spherical joint'
-        self.name=name
+        self.name=self.name+'_sph'
         self.nc=3
 
     
@@ -224,10 +212,10 @@ class spherical(joint):
         
 
 class cylindrical(joint):
-    def __init__(self,name,location,i_body,j_body,axis):
-        super().__init__(name,location,i_body,j_body,axis)
+    def __init__(self,location,i_body,j_body,axis):
+        super().__init__(location,i_body,j_body,axis)
         self.type='cylindrical joint'
-        self.name=name
+        self.name=self.name+'_cyl'
         self.nc=4
         self.p2=vector(location)+10*vector(axis).unit
         self.u_j=j_body.dcm.T.dot(self.p2-j_body.R)
@@ -388,10 +376,10 @@ class cylindrical(joint):
 
 
 class translational(joint):
-    def __init__(self,name,location,i_body,j_body,axis):
-        super().__init__(name,location,i_body,j_body,axis)
+    def __init__(self,location,i_body,j_body,axis):
+        super().__init__(location,i_body,j_body,axis)
         self.type='translational joint'
-        self.name=name
+        self.name=self.name+'_trans'
         self.nc=5
         self.p2=vector(location)+10*vector(axis).unit
         self.u_j=j_body.dcm.T.dot(self.p2-j_body.R)
@@ -562,10 +550,10 @@ class translational(joint):
 
 
 class revolute(joint):
-    def __init__(self,name,location,i_body,j_body,axis):
-        super().__init__(name,location,i_body,j_body,axis)
+    def __init__(self,location,i_body,j_body,axis):
+        super().__init__(location,i_body,j_body,axis)
         self.type='revolute joint'
-        self.name=name
+        self.name=self.name+'_rev'
         self.nc=5
         
     
@@ -699,10 +687,10 @@ class revolute(joint):
 
 
 class universal(joint):
-    def __init__(self,name,location,i_body,j_body,i_rot,j_rot):
-        super().__init__(name,location,i_body,j_body)
+    def __init__(self,location,i_body,j_body,i_rot,j_rot):
+        super().__init__(location,i_body,j_body)
         self.type='universal joint'
-        self.name=name
+        self.name=self.name+'_uni'
         self.nc=4
         
         self.i_rot=vector(i_rot)
@@ -849,10 +837,10 @@ class universal(joint):
         return pd.Series([left,right],index=['l','r'])
     
 class bounce_roll(joint):
-    def __init__(self,name,location,i_body,j_body,bounce_ax,roll_ax):
-        super().__init__(name,location,i_body,j_body,bounce_ax)
+    def __init__(self,location,i_body,j_body,bounce_ax,roll_ax):
+        super().__init__(location,i_body,j_body,bounce_ax)
         self.type='bounce_roll joint'
-        self.name=name
+        self.name=self.name+'_br'
         self.nc=4
         self.p2=vector(location)+10*vector(bounce_ax).unit
         self.u_j=j_body.dcm.T.dot(self.p2-j_body.R)
@@ -1030,10 +1018,10 @@ class bounce_roll(joint):
 
 
 class rotational_drive(object):
-    def __init__(self,name,actuated_joint):
+    def __init__(self,actuated_joint):
         
         self.type='driving constraint'
-        self.name=name
+        self.name=actuated_joint.name+'_actuator'
 
         self.joint=actuated_joint
         self.v1=actuated_joint.vii
@@ -1181,9 +1169,9 @@ class rotational_drive(object):
         
     
 class absolute_locating(object):
-    def __init__(self,name,body,coordinate):
+    def __init__(self,body,coordinate):
         self.type='driving constraint'
-        self.name=name
+        self.name=body.name+'.'+coordinate+'_actuator'
         self.body=body
         self.coordinate=body.name+'.'+coordinate
         self.coo_index=list('xyz').index(coordinate)

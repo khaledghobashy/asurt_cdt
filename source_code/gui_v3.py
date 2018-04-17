@@ -9,6 +9,7 @@ Created on Mon Apr 16 16:57:14 2018
 import ipywidgets as widgets
 import IPython as ipy
 import qgrid
+import time
 import pandas as pd
 from base import point, vector
 from bodies_inertia import rigid
@@ -61,6 +62,8 @@ class model(object):
         
         self.name = ''
         
+        self.out = widgets.Output()
+        
         self.points_dataframe = pd.DataFrame(columns=['x','y','z','Alignment','Notes'])
         self.bodies_dataframe = pd.DataFrame(columns=['mass','Rx','Ry','Rz',
                                                       'Ixx','Iyx','Izx',
@@ -85,12 +88,13 @@ class model(object):
         self.geometries=self.geometries.sort_index()
         
                         
-    def save_model(self):
-        save_out = widgets.Output()
+    def save_model_copy(self):
         
-        save_button = widgets.Button(description='Save Model',tooltip='Save Model Binary files')
+        save_button = widgets.Button(description=' Save as',tooltip='Save Copy of the Model and open')
+        save_button.icon='copy'
+        save_button.layout=layout100px
         def save_click(dummy):
-            with save_out:
+            with self.out:
                 f=savefile_dialog()
                 if f=='':
                     return
@@ -101,27 +105,51 @@ class model(object):
                 self.model['vectors']=self.vectors.sort_index()
                 
                 self.model.to_pickle(f)
-                print('Done!')
+                print('Model Saved as "%s" at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
         save_button.on_click(save_click)
         
-        return widgets.VBox([save_button,save_out])
+        return widgets.VBox([save_button])
+    
+    def save_model(self):
+        
+        save_button = widgets.Button(description=' Save',tooltip='Save Model')
+        save_button.icon='save'
+        save_button.layout=layout100px
+        def save_click(dummy):
+            with self.out:
+                
+                self.model['points']=self.points.sort_index()
+                self.model['bodies']=self.bodies.sort_index()
+                self.model['joints']=self.joints.sort_index()
+                self.model['geometries']=self.geometries.sort_index()
+                self.model['vectors']=self.vectors.sort_index()
+                
+                self.model.to_pickle(self.name)
+                print('Model Saved as "%s" at %s'%(self.name.split("/")[-1],time.strftime('%I:%M:%S %p')))
+        save_button.on_click(save_click)
+        
+        return widgets.VBox([save_button])
                 
     def open_model(self):
-        open_out = widgets.Output()
         
-        open_button = widgets.Button(description='Open Model',tooltip='Open Model Binary files')
+        open_button = widgets.Button(description=' Open',tooltip='Open Model Binary files')
+        open_button.icon='folder-open'
+        open_button.layout=layout100px
         def open_click(dummy):
-            open_out.clear_output()
-            with open_out:
+            self.out.clear_output()
+            with self.out:
                 f=openfile_dialog()
                 if f=='':
                     return
+                self.name=f
+                name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
+
                 self.model=pd.read_pickle(f)
                 self.points,self.bodies,self.joints,self.geometries,self.vectors=self.model
+                self._sort()
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
                 
-                self._sort()
                 
                 fields = widgets.Accordion()
                 fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints()]
@@ -129,31 +157,45 @@ class model(object):
                 fields.set_title(1,'SYSTEM MARKERS')
                 fields.set_title(2,'SYSTEM BODIES')
                 fields.set_title(3,'SYSTEM JOINTS')
-                print('Done!')
-                return ipy.display.display(fields)
+                print('Model "%s" Loaded at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
+                return ipy.display.display(widgets.VBox([name_l,fields]))
                 
         open_button.on_click(open_click)
         
         
-        return widgets.VBox([open_button,open_out])
+        return widgets.VBox([open_button])
     
     def new_model(self):
-        new_out = widgets.Output()
         
-        new_button = widgets.Button(description='New Model',tooltip='Creat a New Model')
+        new_button = widgets.Button(description=' New',tooltip='Creat a New Model')
+        new_button.icon='file'
+        new_button.layout=layout100px
         def new_click(dummy):
-            with new_out:
+            self.out.clear_output()
+            with self.out:
+                f=savefile_dialog()
+                if f=='':
+                    return
+                self.model['points']=self.points.sort_index()
+                self.model['bodies']=self.bodies.sort_index()
+                self.model['joints']=self.joints.sort_index()
+                self.model['geometries']=self.geometries.sort_index()
+                self.model['vectors']=self.vectors.sort_index()
+                
+                self.model.to_pickle(f)
+                
                 fields = widgets.Accordion()
                 fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints()]
                 fields.set_title(0,'SYSTEM POINTS')
                 fields.set_title(1,'SYSTEM MARKERS')
                 fields.set_title(2,'SYSTEM BODIES')
                 fields.set_title(3,'SYSTEM JOINTS')
+                print('New Model Created at %s'%time.strftime('%I:%M:%S %p'))
                 return ipy.display.display(fields)
                 
         new_button.on_click(new_click)
         
-        return widgets.VBox([new_button,new_out])
+        return widgets.VBox([new_button])
         
     def add_point(self):
         
@@ -253,7 +295,7 @@ class model(object):
                 name_v.value=''
                 notes_v.value=''
                 self._sort()
-                points_dropdown.options=dict(self.points)
+                points_dropdown.options=self._filter_points
                 
             with tab2_out:
                 tabel.df=self.points_dataframe
@@ -312,7 +354,8 @@ class model(object):
         
         main_data_block = widgets.VBox([name_b,alignment_b,notes_b,separator50,method_b])
         
-
+#        vectors_dropdown_l = widgets.HTML('<b> Select Vector')
+#        vectors_dropdown_v = widgets.Dropdown(options=self._filter)
         #######################################################################
         # Creating Data for first method.
         #######################################################################
@@ -500,13 +543,15 @@ class model(object):
                     
                     self.bodies[body_name_l]=bod_l
                     self.bodies[body_name_r]=bod_r
+                
                 elif alignment_v.label=='S':
                     body_name = 'rbs_'+name_v.value
                     bod = rigid(body_name)
                     bod.alignment='S'
                     self.bodies[body_name]=bod
                 
-                bodies_dropdown.options=self._filter_bodies()
+                self._sort()
+                bodies_dropdown.options=dict(self.bodies)
         create_default_button.on_click(create_default_click)
         
         main_block_data = widgets.VBox([name_b,alignment_b,notes_b])
@@ -523,7 +568,7 @@ class model(object):
         accord1_out = widgets.Output()
         
         bodies_dropdown_l = widgets.HTML('<b>Select Body')
-        bodies_dropdown   = widgets.Dropdown(options=self._filter_bodies())
+        bodies_dropdown   = widgets.Dropdown(options=dict(self.bodies))
         bodies_dropdown_b = widgets.VBox([bodies_dropdown_l,bodies_dropdown])
         bodies_dropdown.layout=bodies_dropdown_l.layout=layout120px
 
@@ -613,47 +658,53 @@ class model(object):
         add_inertia_button = widgets.Button(description=' Apply',icon='check',tooltip='Add inertia values')
         add_inertia_button.layout=layout80px
         def add_inertia_click(dummy):
+            accord1_out.clear_output()
             with accord1_out:
                 if name_v.value=='':
                     print('ERROR: Please Enter a Valid Name')
                     return
+                body = bodies_dropdown.value
                 
                 mass      = mass_v.value
                 iner_tens = np.array([[ixx.value,ixy.value,ixz.value],
                                       [ixy.value,iyy.value,iyz.value],
                                       [ixz.value,iyz.value,izz.value]])
     
-                if alignment_v.label in ['R','L']:
-                    body_name_l = 'rbl_'+name_v.value
-                    cm_l        = vector([x.value,-abs(y.value),z.value])
-                    ref_frame_l = np.array([[xx.value,yx.value,zx.value],
+                if body.alignment in 'RL':
+                    name_1      = body.name
+                    cm_1        = vector([x.value,y.value,z.value])
+                    ref_frame_1 = np.array([[xx.value,yx.value,zx.value],
                                           [xy.value,yy.value,zy.value],
                                           [xz.value,yz.value,zz.value]])
-                    bod_l = rigid(body_name_l,mass,iner_tens,cm_l,ref_frame_l)
+                    body_1 = rigid(name_1,mass,iner_tens,cm_1,ref_frame_1)
                     
-                    body_name_r = 'rbr_'+name_v.value
-                    cm_r        = vector([x.value,abs(y.value),z.value])
-                    ref_frame_r = np.array([[xx.value,yx.value,zx.value],
+                    name_2      = body.m_name
+                    cm_2        = vector([x.value,-y.value,z.value])
+                    ref_frame_2 = np.array([[xx.value,yx.value,zx.value],
                                             [-xy.value,-yy.value,-zy.value],
                                             [xz.value,yz.value,zz.value]])
-                    bod_r = rigid(body_name_r,mass,iner_tens,cm_r,ref_frame_r)
+                    body_2 = rigid(name_2,mass,iner_tens,cm_2,ref_frame_2)
                    
-                    bod_l.alignment='L'
-                    bod_r.alignment='R'
+                    body_2.alignment='RL'.replace(body.alignment,'')
                     
-                    self.bodies[body_name_l]=bod_l
-                    self.bodies[body_name_r]=bod_r
+                    self.bodies[name_1]=body_1
+                    self.bodies[name_2]=body_2
+                    
+                    print('Bodies added : \n %s \n %s' %(name_1,name_2) )
+                
                 elif alignment_v.label=='S':
-                    body_name = 'rbs_'+name_v.value
                     cm        = vector([x.value,y.value,z.value])
                     ref_frame = np.array([[xx.value,yx.value,zx.value],
                                           [xy.value,yy.value,zy.value],
                                           [xz.value,yz.value,zz.value]])
-                    bod = rigid(body_name,mass,iner_tens,cm,ref_frame)
+                    bod = rigid(body.name,mass,iner_tens,cm,ref_frame)
                     bod.alignment='S'
-                    self.bodies[body_name]=bod
+                    self.bodies[body.name]=bod
+                    print('Body added : \n %s' %body.name )
                 
-                bodies_dropdown.options=self._filter_bodies()
+                self._sort()
+                bodies_dropdown.options=dict(self.bodies)
+                
         add_inertia_button.on_click(add_inertia_click)
 
         data_block = widgets.VBox([bodies_dropdown_b,mass_b,cg_block,inertia_block,frame_block,separator50,add_inertia_button])
@@ -669,6 +720,7 @@ class model(object):
         #######################################################################
         
         accord2_out = widgets.Output()
+        feed_back_2 = widgets.Output()
 
         geometries_dict={'':'','Cylinder':circular_cylinder}
                 
@@ -709,15 +761,15 @@ class model(object):
                 body = bodies_dropdown.value
                 if body.alignment in 'RL':
                     body_1 = bodies_dropdown.value
-                    body_2 = self.bodies[body_1.mirrored]
+                    body_2 = self.bodies[body_1.m_name]
                     
                     p1_1 = self.points[p1_v.label]
-                    p1_2 = self.points[p1_v.value.mirrored]
+                    p1_2 = self.points[p1_v.value.m_name]
                     p2_1 = self.points[p2_v.label]
-                    p2_2 = self.points[p2_v.value.mirrored]
+                    p2_2 = self.points[p2_v.value.m_name]
                     
                     geo_name_1 = body.name+'_'+geo_name_v.value
-                    geo_name_2 = body.mirrored+'_'+geo_name_v.value
+                    geo_name_2 = body.m_name+'_'+geo_name_v.value
                     
                     self.geometries[geo_name_1]=geometries_dict[geometries_v.label](geo_name_1,body_1,p1_1,p2_1,outer_v.value,inner_v.value)
                     self.geometries[geo_name_2]=geometries_dict[geometries_v.label](geo_name_2,body_2,p1_2,p2_2,outer_v.value,inner_v.value)
@@ -734,6 +786,10 @@ class model(object):
                     body.update_inertia()
                     
                 geo_name_v.value=''
+            
+            feed_back_2.clear_output()
+            with feed_back_2:
+                print('Operation done at %s'%time.strftime('%I:%M:%S %p'))
                             
         assign_geometry.on_click(assign_click)
         
@@ -748,7 +804,7 @@ class model(object):
         geometries_v.observe(on_change)
                 
         
-        geometries_define_inputs = widgets.VBox([bodies_dropdown_b,geo_name_b,geometries_b,accord2_out])
+        geometries_define_inputs = widgets.VBox([bodies_dropdown_b,geo_name_b,geometries_b,accord2_out,feed_back_2])
         
                 
         main_block2 = widgets.Accordion()
@@ -765,6 +821,7 @@ class model(object):
     def add_joints(self):
         
         main_out = widgets.Output()
+        logger_out = widgets.Output()
         
         refresh_button = widgets.Button(description=' Refresh',icon='undo')
         refresh_button.layout=layout100px
@@ -846,42 +903,50 @@ class model(object):
         def creat_joint_click(dummy):
             with joint_inputs_out:
                 
-                if alignment_v.label in "RL":                    
-                    loc_1 = self.points[location_v.label]
-                    loc_2 = self.points[loc_1.mirrored]
+                if alignment_v.label in "RL":
+                    name_1 = alignment_v.value+name_v.value
+                    alignment_1 = alignment_v.label
+                    alignment_2 = 'RL'.replace(alignment_v.label,'')
+                    
+                    loc_1 = location_v.value
+                    loc_2 = self.points[loc_1.m_name]
                     
                     bodyi_1 = body_i_v.value
-                    bodyi_2 = self.bodies[bodyi_1.mirrored]
+                    bodyi_2 = self.bodies[bodyi_1.m_name]
                     
                     bodyj_1 = body_j_v.value
-                    bodyj_2 = self.bodies[bodyj_1.mirrored]
+                    bodyj_2 = self.bodies[bodyj_1.m_name]
                     
 
                     if joint_type_v.label=='Universal':
-                        axis1_1 = self.vectors[axis1_v.label]
-                        axis1_2 = self.vectors[axis1_1.mirrored+axis1_v.label[4:]]
+                        axis1_1 = axis1_v.value
+                        axis1_2 = self.vectors[axis1_1.m_name.replace('hp','ov')]
                         
-                        axis2_1 = self.vectors[axis2_v.label]
-                        axis2_2 = self.vectors[axis2_1.mirrored+axis2_v.label[4:]]
+                        axis2_1 = axis2_v.value
+                        axis2_2 = self.vectors[axis2_1.m_name.replace('hp','ov')]
                         
-                        j1=joint_type_v.value(loc_1,bodyi_1,bodyj_1,axis1_1,axis2_1)
-                        j2=joint_type_v.value(loc_2,bodyi_2,bodyj_2,axis1_2,axis2_2)
+                        j1=joint_type_v.value(name_1,loc_1,bodyi_1,bodyj_1,axis1_1,axis2_1)
+                        j1.alignment=alignment_1
+                        j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2,axis2_2)
+                        j2.alignment=alignment_2
                     
                     elif joint_type_v.label=='Spherical' :
-                        j1=joint_type_v.value(loc_1,bodyi_1,bodyj_1)
-                        j2=joint_type_v.value(loc_2,bodyi_2,bodyj_2)
+                        j1=joint_type_v.value(name_1,loc_1,bodyi_1,bodyj_1)
+                        j1.alignment=alignment_1
+                        j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2)
+                        j2.alignment=alignment_2
                     else:
-                        axis1_1 = self.vectors[axis1_v.label]
-                        axis1_2 = self.vectors[axis1_1.mirrored+axis1_v.label[4:]]
-                        j1=joint_type_v.value(loc_1,bodyi_1,bodyj_1,axis1_1)
-                        j2=joint_type_v.value(loc_2,bodyi_2,bodyj_2,axis1_2)
+                        axis1_1 = axis1_v.value
+                        axis1_2 = self.vectors[axis1_1.m_name.replace('hp','ov')]
+                        j1=joint_type_v.value(name_1,loc_1,bodyi_1,bodyj_1,axis1_1)
+                        j1.alignment=alignment_1
+                        j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2)
+                        j2.alignment=alignment_2
                     
                     j1.notes=j2.notes=notes_v.value
                     
-                    joint_name_1 = alignment_v.value+name_v.value
-                    joint_name_2 = j1.mirror+name_v.value
-                    self.joints[joint_name_1]=j1
-                    self.joints[joint_name_2]=j2
+                    self.joints[j1.name]=j1
+                    self.joints[j2.name]=j2
                 
                 elif alignment_v.label=='S':
                     joint_name = alignment_v.value+name_v.value
@@ -901,20 +966,20 @@ class model(object):
                     self.joints[joint_name]=j
 
                 
-                
-                print('Done!')
+            with logger_out:
+                print('Joint "%s" Created at %s'%(name_v.value,time.strftime('%I:%M:%S %p')))
         creat_joint_button.on_click(creat_joint_click)
         
+        out_block = widgets.HBox([widgets.VBox([field1,field2,joint_inputs_out,creat_joint_button]),logger_out])
         
-        
-        return widgets.VBox([field1,field2,joint_inputs_out,creat_joint_button])
+        return out_block
     
     
     
     def show(self):
-               
-        
-        return widgets.VBox([self.new_model(),self.save_model(),self.open_model()])
+        buttons = widgets.HBox([self.new_model(),self.open_model(),self.save_model(),self.save_model_copy()])
+        out = widgets.VBox([buttons,self.out])
+        return out
         
         
 
