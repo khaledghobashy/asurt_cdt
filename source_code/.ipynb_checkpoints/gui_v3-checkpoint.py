@@ -117,7 +117,7 @@ class model(object):
                 if f=='':
                     return
                 self.model=pd.read_pickle(f)
-                self.points,self.bodies,self.joints,self.geometries,self.vectors=self.model
+                self.points,self.bodies,self.joints,self.geometries=self.model
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
                 
@@ -165,10 +165,6 @@ class model(object):
         tab1_out = widgets.Output()
         tab2_out = widgets.Output()
         
-        tabel=qgrid.QgridWidget(df=self.points_dataframe)
-        with tab2_out:
-            ipy.display.display(tabel)
-        
         name_l = widgets.HTML('<b>Name')
         name_v = widgets.Text(placeholder='Point Name')
         name_b = widgets.VBox([name_l,name_v])
@@ -191,7 +187,7 @@ class model(object):
         x_v.layout=y_v.layout=z_v.layout=layout100px
         
         notes_l = widgets.HTML('<b>Notes')        
-        notes_v = widgets.Textarea(placeholder='Optional brief note/description.')
+        notes_v = widgets.Textarea(placeholder='Optional brief note/describtion.')
         notes_v.layout=widgets.Layout(width='350px',height='55px')
         notes_b = widgets.VBox([notes_l,notes_v])
         
@@ -235,7 +231,6 @@ class model(object):
                     p1=point(name,[x,y,z])
                     p1.alignment=alignment_v.label
                     p2 = p1.m_object
-                    p1.notes=p2.notes=notes_v.value
                     self.points[p1.name]=p1
                     self.points[p2.name]=p2
                     
@@ -256,8 +251,7 @@ class model(object):
                 points_dropdown.options=dict(self.points)
                 
             with tab2_out:
-                tabel.df=self.points_dataframe
-                ipy.display.display(tabel)
+                ipy.display.display(qgrid.QgridWidget(df=self.points_dataframe))
         add_button.on_click(add_click)
         
         
@@ -279,7 +273,7 @@ class model(object):
         
         
         tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out])
-        tab2_content = widgets.VBox([tab2_out],layout=widgets.Layout(width='550px'))
+        tab2_content = widgets.VBox([qgrid.QgridWidget(df=self.points_dataframe)],layout=widgets.Layout(width='550px'))
         
         tabs.children=[tab1_content,tab2_content]
         
@@ -289,93 +283,16 @@ class model(object):
     def add_vectors(self):
 
         vectors_out = widgets.Output()
-        vectors_sub = widgets.Output()
-                
-        name_l = widgets.HTML('<b>Vector Name')
-        name_v = widgets.Text(placeholder='vector name here')
-        name_b = widgets.VBox([name_l,name_v])
+        
+        vector_name_l = widgets.HTML('<b>Vector Name')
+        vector_name_v = widgets.Text(placeholder='vector name here')
+        vector_name_b = widgets.VBox([vector_name_l,vector_name_v])
         
         alignment_l = widgets.HTML('<b>Alignment')
         alignment_v = widgets.ToggleButtons(options={'R':'ovr_','L':'ovl_','S':'ovs_'})
         alignment_v.style.button_width='40px'
         alignment_b = widgets.VBox([alignment_l,alignment_v])
-        
-        methods  = ('User Entered Value','Relative Position','Normal to Plane')
-        method_l = widgets.HTML('<b> Creation Method')
-        method_v = widgets.Dropdown(options=methods)
-        method_b = widgets.VBox([method_l,method_v])
-        
-        notes_l = widgets.HTML('<b>Notes')        
-        notes_v = widgets.Textarea(placeholder='Optional brief note/description.')
-        notes_v.layout=widgets.Layout(width='350px',height='55px')
-        notes_b = widgets.VBox([notes_l,notes_v])
-        
-        main_data_block = widgets.VBox([name_b,alignment_b,notes_b,separator50,method_b])
-        
 
-        #######################################################################
-        # Creating Data for first method.
-        #######################################################################
-        
-        x_l = widgets.Label(value='$x$')
-        x_v = widgets.FloatText()
-        x_b = widgets.VBox([x_l,x_v])
-        
-        y_l = widgets.Label(value='$y$')
-        y_v = widgets.FloatText()
-        y_b = widgets.VBox([y_l,y_v])
-        
-        z_l = widgets.Label(value='$z$')
-        z_v = widgets.FloatText()
-        z_b = widgets.VBox([z_l,z_v])
-    
-        x_l.layout=y_l.layout=z_l.layout=layout100px
-        x_v.layout=y_v.layout=z_v.layout=layout100px
-                
-        m1_block = widgets.VBox([widgets.HBox([x_b,y_b,z_b]),vectors_sub])
-        
-        m1_button = widgets.Button(description='Apply',icon='check')
-        m1_button.layout=layout100px
-        def m1_click(dummy):
-            with vectors_sub:
-                name,x,y,z = [i.value for i in [name_v,x_v,y_v,z_v]]
-                
-                if name=='':
-                    print('Please enter a valid name in the Vector Name field')
-                    return 
-                
-                if (alignment_v.label=='R' and y<0) or (alignment_v.label=='L' and y>0):
-                    print('Inconsistent Selction of y value and symmetry!!')
-                    return
-
-                name=alignment_v.value+name
-                
-                if alignment_v.label!='S':
-                    v1=point(name,[x,y,z])
-                    v1.alignment=alignment_v.label
-                    v2 = v1.m_object
-                    v2.name=v2.name.replace('hp','ov')
-                    self.vectors[v1.name]=v1
-                    self.vectors[v2.name]=v2
-                    
-    
-                else:
-                    v=point(name,[x,y,z])
-                    v.alignment=alignment_v.label
-                    v.notes=notes_v.value
-                    self.vectors[v.name]=v
-                    
-                self._sort()
-                name_v.value=''
-                notes_v.value=''
-                print('Done')
-        m1_button.on_click(m1_click)                
-        #######################################################################
-        #######################################################################
-        
-        #######################################################################
-        # Creating method 2 data requirments.
-        #######################################################################
         
         p1_l = widgets.HTML('<b>Reference Point 1')
         p1_v = widgets.Dropdown()
@@ -387,67 +304,38 @@ class model(object):
         
         p1_v.options=p2_v.options=dict(self.points)
         
-        m2_block = widgets.VBox([p1_b,p2_b,vectors_sub])
-        
-        m2_button = widgets.Button(description='Apply',icon='check')
-        m2_button.layout=layout100px
-        def m2_click(dummy):
-            with vectors_sub:
-                if name_v.value=='':
-                    print('Please enter a valid name in the Vector Name field')
-                    return
-                
+        add_vector_button = widgets.Button(description='Apply',tooltip='add vector')
+        def add_vector_click(dummy):
+            with vectors_out:
                 if alignment_v.label in 'RL':
                     p1 = p1_v.value
                     p2 = p2_v.value
-                    name1 = alignment_v.value+name_v.value
-                    v1  = point(name1,p1-p2)
+                    name1 = alignment_v.value+vector_name_v.value
+                    v1  = p1-p2
                     v1.alignment = alignment_v.label
-                    v2 = v1.m_object
-                    v2.name=v2.name.replace('hp','ov')
+                    name2 = v1.mirrored+vector_name_v.value
+                    v2 = p1-p2
+                    v2.y*-1
                     v2.alignment='RL'.replace(alignment_v.label,'')
                     
-                    self.vectors[v1.name]=v1
-                    self.vectors[v2.name]=v2
+                    self.vectors[name1]=v1
+                    self.vectors[name2]=v2
                 elif alignment_v.label =='S':
                     p1 = p1_v.value
                     p2 = p2_v.value
-                    name = alignment_v.value+name_v.value
-                    v  = point(name,p1-p2)
+                    name = alignment_v.value+vector_name_v.value
+                    v  = p1-p2
                     v.alignment = alignment_v.label
                     self.vectors[name]=v
-                
-                self._sort()
-                name_v.value=''
-                notes_v.value=''
                 print('Done!')
-        m2_button.on_click(m2_click)
-        #######################################################################       
-        #######################################################################
-        
-        #######################################################################
-        # Defining the change behavior of methods dropdown
-        #######################################################################
-        def method_change(change):
-            if change['type'] == 'change' and change['name'] == 'value':
-                vectors_out.clear_output()
-                vectors_sub.clear_output()
-                p1_v.options=p2_v.options=dict(self.points)
-                with vectors_out:
-                    if change['new']=='User Entered Value':
-                        block = widgets.VBox([m1_block,m1_button])
-                        return ipy.display.display(block)
-                    elif change['new']=='Relative Position':
-                        block = widgets.VBox([m2_block,m2_button])
-                        return ipy.display.display(block)
-                    elif change['new']=='Normal to Plane':
-                        return ipy.display.display(m1_block)
+        add_vector_button.on_click(add_vector_click)
                 
-        method_v.observe(method_change)
-        #######################################################################
-        #######################################################################
         
-        return widgets.VBox([main_data_block,vectors_out])
+        vectors_field = widgets.VBox([separator100,vector_name_b,alignment_b,p1_b,p2_b,add_vector_button,vectors_out])
+        vectors_tab = widgets.Tab([vectors_field])
+        vectors_tab.set_title(0,'Defining Vectors')
+        
+        return vectors_field
 
     
     
@@ -486,7 +374,7 @@ class model(object):
                     print('ERROR: Please Enter a Valid Name')
                     return
                 
-                if alignment_v.label in 'RL':
+                if alignment_v.label in ['R','L']:
                     body_name_l = 'rbl_'+name_v.value
                     bod_l = rigid(body_name_l)
                     bod_l.notes=notes_v.value
