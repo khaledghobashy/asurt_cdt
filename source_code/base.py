@@ -311,14 +311,6 @@ class vector(object):
     # Defining updatable attributes as a decorated class methods
     # ===========================================================
     
-    @property    
-    def mirrored(self):
-        if self.alignment=='S':
-            return 'ovs_'
-        elif self.alignment == 'R':
-            return 'ovl_'
-        elif self.alignment == 'L':
-            return 'ovr_'
         
     @property
     def a(self):

@@ -7,6 +7,7 @@ Created on Mon Apr 16 16:57:14 2018
 
 
 import ipywidgets as widgets
+import matplotlib.pyplot as plt
 import IPython as ipy
 import qgrid
 import time
@@ -14,6 +15,7 @@ import pandas as pd
 from base import point, vector
 from bodies_inertia import rigid
 from inertia_properties import circular_cylinder
+from force_elements import air_strut
 import numpy as np
 from constraints import cylindrical, spherical, revolute, translational,\
                         universal, rotational_drive, absolute_locating
@@ -58,6 +60,7 @@ class model(object):
         self.joints     = pd.Series()
         self.geometries = pd.Series()
         self.vectors    = pd.Series()
+        self.forces     = pd.Series()
         self.model      = pd.Series()
         
         self.name = ''
@@ -86,6 +89,7 @@ class model(object):
         self.joints=self.joints.sort_index()
         self.vectors=self.vectors.sort_index()
         self.geometries=self.geometries.sort_index()
+        self.forces=self.forces.sort_index()
         
                         
     def save_model_copy(self):
@@ -98,11 +102,13 @@ class model(object):
                 f=savefile_dialog()
                 if f=='':
                     return
-                self.model['points']=self.points.sort_index()
-                self.model['bodies']=self.bodies.sort_index()
-                self.model['joints']=self.joints.sort_index()
-                self.model['geometries']=self.geometries.sort_index()
-                self.model['vectors']=self.vectors.sort_index()
+                self._sort()
+                self.model['points']=self.points
+                self.model['bodies']=self.bodies
+                self.model['joints']=self.joints
+                self.model['geometries']=self.geometries
+                self.model['vectors']=self.vectors
+                self.model['forces']=self.forces
                 
                 self.model.to_pickle(f)
                 print('Model Saved as "%s" at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -117,12 +123,13 @@ class model(object):
         save_button.layout=layout100px
         def save_click(dummy):
             with self.out:
-                
-                self.model['points']=self.points.sort_index()
-                self.model['bodies']=self.bodies.sort_index()
-                self.model['joints']=self.joints.sort_index()
-                self.model['geometries']=self.geometries.sort_index()
-                self.model['vectors']=self.vectors.sort_index()
+                self._sort()
+                self.model['points']=self.points
+                self.model['bodies']=self.bodies
+                self.model['joints']=self.joints
+                self.model['geometries']=self.geometries
+                self.model['vectors']=self.vectors
+                self.model['forces']=self.forces
                 
                 self.model.to_pickle(self.name)
                 print('Model Saved as "%s" at %s'%(self.name.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -152,11 +159,13 @@ class model(object):
                 
                 
                 fields = widgets.Accordion()
-                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints()]
+                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints(),
+                                 self.add_forces()]
                 fields.set_title(0,'SYSTEM POINTS')
                 fields.set_title(1,'SYSTEM MARKERS')
                 fields.set_title(2,'SYSTEM BODIES')
                 fields.set_title(3,'SYSTEM JOINTS')
+                fields.set_title(4,'SYSTEM FORCES')
                 print('Model "%s" Loaded at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
                 return ipy.display.display(widgets.VBox([name_l,fields]))
                 
@@ -185,11 +194,13 @@ class model(object):
                 self.model.to_pickle(f)
                 
                 fields = widgets.Accordion()
-                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints()]
+                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints(),
+                                 self.add_forces()]
                 fields.set_title(0,'SYSTEM POINTS')
                 fields.set_title(1,'SYSTEM MARKERS')
                 fields.set_title(2,'SYSTEM BODIES')
                 fields.set_title(3,'SYSTEM JOINTS')
+                fields.set_title(4,'SYSTEM FORCES')
                 print('New Model Created at %s'%time.strftime('%I:%M:%S %p'))
                 return ipy.display.display(fields)
                 
@@ -295,7 +306,7 @@ class model(object):
                 name_v.value=''
                 notes_v.value=''
                 self._sort()
-                points_dropdown.options=self._filter_points
+                points_dropdown.options=self._filter_points()
                 
             with tab2_out:
                 tabel.df=self.points_dataframe
@@ -975,6 +986,257 @@ class model(object):
         return out_block
     
     
+    
+    
+    def add_forces(self):
+        
+        #######################################################################
+        # Creating the gui for defining force elements.
+        #######################################################################
+        
+        force_elements_out = widgets.Output()
+        
+        name_l = widgets.HTML('<b>Force Element Name',layout=layout120px)
+        name_v = widgets.Text(placeholder='force element name',layout=layout200px)
+        name_b = widgets.VBox([name_l,name_v])
+        
+        alignment_l = widgets.HTML('<b>Alignment')
+        alignment_v = widgets.ToggleButtons(options={'R':'fer_','L':'fel_','S':'fes_'})
+        alignment_v.style.button_width='40px'
+        alignment_b = widgets.VBox([alignment_l,alignment_v])
+        
+        notes_l = widgets.HTML('<b>Notes')
+        notes_v = widgets.Textarea(placeholder='Brief description ...')
+        notes_v.layout=widgets.Layout(width='300px',height='55px')
+        notes_b = widgets.VBox([notes_l,notes_v])
+        
+        common_data_block = widgets.VBox([name_b,alignment_b,notes_b])
+        #######################################################################
+
+        pi_l = widgets.HTML('<b>Locaction on body i',layout=layout120px)
+        pi_v = widgets.Dropdown(options=dict(self.points),layout=layout120px)
+        pi_b = widgets.VBox([pi_l,pi_v])
+        
+        pj_l = widgets.HTML('<b>Locaction on body j',layout=layout120px)
+        pj_v = widgets.Dropdown(options=dict(self.points),layout=layout120px)
+        pj_b = widgets.VBox([pj_l,pj_v])
+        
+        body_i_l = widgets.HTML('<b>Body i',layout=layout120px)
+        body_i_v = widgets.Dropdown(layout=layout120px)
+        body_i_v.options=dict(self.bodies)
+        body_i_b = widgets.VBox([body_i_l,body_i_v])
+        
+        body_j_l = widgets.HTML('<b>Body j')
+        body_j_v = widgets.Dropdown(layout=layout120px)
+        body_j_v.options=dict(self.bodies)
+        body_j_b = widgets.VBox([body_j_l,body_j_v])
+        
+        strut_data_block  = widgets.VBox([pi_b,pj_b,body_i_b,body_j_b])
+
+        
+        #######################################################################
+        ######################### Stiffness Data GUI ##########################
+        #######################################################################
+        stiffness_label = widgets.HTML('<b><u>Stiffness Data')
+
+        stiffness_out        = widgets.Output()
+        stiffness_tabel_out  = widgets.Output()
+        stiffness_plot_out   = widgets.Output()
+
+        stiffness_df = widgets.ValueWidget()
+        stiffness_df.value = pd.DataFrame([[0,0],],columns=['Force','Deflection'])
+        stiffness_qg = qgrid.QGridWidget(df=stiffness_df.value,show_toolbar=True)
+        stiffness_qg.layout=widgets.Layout(width='400px')
+        
+        with stiffness_tabel_out:
+            ipy.display.display(stiffness_qg)
+        
+        
+        stiffness_apply_changes = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
+        def stiffness_apply_click(dummy):
+            with stiffness_tabel_out:
+                stiffness_df.value=stiffness_qg.get_changed_df()
+                print('Changes Applied at %s'%time.strftime('%I:%M:%S %p'))
+        stiffness_apply_changes.on_click(stiffness_apply_click)
+        
+        stiffness_export_button =  widgets.Button(description='Export',icon='upload',tooltip='Export to excel sheet',layout=layout100px)
+        def stiffness_export_click(dummy):
+            with stiffness_tabel_out:
+                stiffness_qg.get_changed_df().to_excel(name_v.value+'_stiffness_data.xlsx')
+                print('Data Exported as "%s"  at %s'%(name_v.value+'_stiffness_data.xlsx',time.strftime('%I:%M:%S %p')))
+        stiffness_export_button.on_click(stiffness_export_click)
+        
+        stiffness_import_button =  widgets.Button(description='Import',icon='download',tooltip='Import to excel sheet',layout=layout100px)
+        def stiffness_import_click(dummy):
+            with stiffness_tabel_out:
+                stiffness_df.value=pd.read_excel(name_v.value+'_stiffness_data.xlsx')
+                stiffness_qg.df=stiffness_df.value
+                print('Data Imported from "%s"  at %s'%(name_v.value+'_stiffness_data.xlsx',time.strftime('%I:%M:%S %p')))
+        stiffness_import_button.on_click(stiffness_import_click)
+        
+        
+        stiffness_toggle = widgets.ToggleButton(value=False,description=' Show/Edit',icon='edit',tooltip='Show and edit data',layout=layout100px)
+        def stiffness_toggle_click(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                if stiffness_toggle.value:
+                    with stiffness_out:
+                        ipy.display.display(stiffness_visual_data)
+                else:
+                    stiffness_out.clear_output()
+        stiffness_toggle.observe(stiffness_toggle_click)
+
+        stiffness_buttons = widgets.HBox([stiffness_apply_changes,stiffness_export_button,stiffness_import_button])
+        stiffness_visual_data = widgets.VBox([stiffness_tabel_out,stiffness_buttons,stiffness_plot_out])
+        
+        stiffness_visual_toggle = widgets.VBox([stiffness_label,stiffness_toggle,stiffness_out])
+        #######################################################################
+        #######################################################################
+
+        #######################################################################
+        ########################## Damping Data GUI ###########################
+        #######################################################################
+        damping_label = widgets.HTML('<b><u>Damping Data')
+        
+        damping_out        = widgets.Output()
+        damping_tabel_out  = widgets.Output()
+        damping_plot_out   = widgets.Output()
+
+        damping_df = widgets.ValueWidget()
+        damping_df.value = pd.DataFrame([[0,0],],columns=['Force','Velocity'])
+        
+        damping_qg = qgrid.QGridWidget(df=damping_df.value,show_toolbar=True)
+        damping_qg.layout=widgets.Layout(width='400px')
+        
+        with damping_tabel_out:
+            ipy.display.display(damping_qg)
+        
+        
+        damping_apply_changes = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
+        def damping_apply_click(dummy):
+            with damping_tabel_out:
+                damping_df.value=damping_qg.get_changed_df()
+                print('Changes Applied at %s'%time.strftime('%I:%M:%S %p'))
+        damping_apply_changes.on_click(damping_apply_click)
+        
+        damping_export_button =  widgets.Button(description='Export',icon='upload',tooltip='Export to excel sheet',layout=layout100px)
+        def damping_export_click(dummy):
+            with damping_tabel_out:
+                damping_qg.get_changed_df().to_excel(name_v.value+'_damping_data.xlsx')
+                print('Data Exported as "%s"  at %s'%(name_v.value+'_damping_data.xlsx',time.strftime('%I:%M:%S %p')))
+        damping_export_button.on_click(damping_export_click)
+        
+        damping_import_button =  widgets.Button(description='Import',icon='download',tooltip='Import to excel sheet',layout=layout100px)
+        def damping_import_click(dummy):
+            with damping_tabel_out:
+                damping_df.value=pd.read_excel(name_v.value+'_damping_data.xlsx')
+                damping_qg.df=damping_df.value
+                print('Data Imported as "%s"  at %s'%(name_v.value+'_damping_data.xlsx',time.strftime('%I:%M:%S %p')))
+        damping_import_button.on_click(damping_import_click)
+        
+        
+        damping_toggle = widgets.ToggleButton(value=False,description=' Show/Edit',icon='edit',tooltip='Show and edit data',layout=layout100px)
+        def damping_toggle_click(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                if damping_toggle.value:
+                    with damping_out:
+                        ipy.display.display(damping_visual_data)
+                else:
+                    damping_out.clear_output()
+        damping_toggle.observe(damping_toggle_click)
+
+        damping_buttons = widgets.HBox([damping_apply_changes,damping_export_button,damping_import_button])
+        damping_visual_data = widgets.VBox([damping_tabel_out,damping_buttons,damping_plot_out])
+        
+        damping_visual_toggle = widgets.VBox([damping_label,damping_toggle,damping_out])
+        
+        #######################################################################
+        #######################################################################
+        rh_stroke_l = widgets.HTML('<b> Stroke at Ride Hieght',layout=layout200px)
+        rh_stroke_v = widgets.FloatText(layout=layout120px)
+        rh_stroke_b = widgets.VBox([rh_stroke_l,rh_stroke_v])
+        #######################################################################
+        ###################### Adding Force Element ###########################
+        #######################################################################
+        
+        add_force_element_button = widgets.Button(description='Add',icon='check',tooltip='Add Force Element',layout=layout100px)
+        def add_force_element_click():
+            with forces_output:
+                if name_v.value=='':
+                    print('ERROR: Please Enter a Valid Name!')
+                    return
+                name = name_v.value
+                stiffness = stiffness_df.value
+                damping   = damping_df.value
+                rh_stroke = rh_stroke_v.value
+                if alignment_v.label in 'RL':
+                    body_i_1 = body_i_v.value
+                    body_i_2 = self.bodies[body_i_1.m_name]
+                    
+                    body_j_1 = body_j_v.value
+                    body_j_2 = self.bodies[body_j_1.m_name]
+                    
+                    pi_1 = self.points[pi_v.label]
+                    pi_2 = self.points[pi_v.value.m_name]
+                    pj_1 = self.points[pj_v.label]
+                    pj_2 = self.points[pj_v.value.m_name]
+                    
+                    name_1 = alignment_v.value+name
+                    strut_1 = air_strut(name_1,pi_1,body_i_1,pj_1,body_j_1,stiffness,damping,rh_stroke)
+                    strut_1.alignment = alignment_v.label
+                    
+                    name_2 = strut_1.m_name
+                    strut_2 = air_strut(name_2,pi_2,body_i_2,pj_2,body_j_2,stiffness,damping,rh_stroke)
+                    strut_2.alignment = 'RL'.replace(alignment_v.label,'')
+                    
+                    self.forces[strut_1.name]=strut_1
+                    self.forces[strut_2.name]=strut_2
+                    
+                elif  alignment_v.label=='S':
+                    name = alignment_v.value+name
+                    pi = pi_v.value
+                    pj = pj_v.value
+                    bodyi = body_i_v.value
+                    bodyj = body_j_v.value
+                    
+                    strut = air_strut(name,pi,bodyi,pj,bodyj,stiffness,damping,rh_stroke)
+                    self.forces[strut.name]=strut
+        add_force_element_button.on_click(add_force_element_click)
+        
+        
+        
+# =============================================================================
+#         show_stiffness_plot = widgets.Button(description='Show',icon='check',tooltip='Export to excel sheet',layout=layout120px)
+#         def show_stiffness_click(dummy):
+#             stiffness_plot_out.clear_output()
+#             with stiffness_plot_out:
+#                 plt.figure('Stiffness',figsize=(8,4))
+#                 plt.plot(stiffness_df.value['Deflection'],stiffness_df.value['Force'])
+#                 plt.xlabel='Deflection (mm)'
+#                 plt.ylabel='Force (N)'
+#                 plt.grid()
+#                 plt.show()
+#         show_stiffness_plot.on_click(show_stiffness_click)
+#         
+# =============================================================================
+        
+        
+        
+        
+        strut_data_tab    = widgets.VBox([strut_data_block,rh_stroke_b,
+                                          separator100,
+                                          stiffness_visual_toggle,
+                                          separator100,
+                                          damping_visual_toggle,
+                                          separator100,
+                                          add_force_element_button])
+                            
+        
+        
+        forces_output = widgets.Accordion()
+        
+        return widgets.VBox([common_data_block,separator100,strut_data_tab])
+        
+        
     
     def show(self):
         buttons = widgets.HBox([self.new_model(),self.open_model(),self.save_model(),self.save_model_copy()])
