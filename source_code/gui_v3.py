@@ -159,13 +159,19 @@ class model(object):
                 
                 
                 fields = widgets.Accordion()
-                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints(),
+                fields.children=[self.add_point(),
+                                 self.add_vectors(),
+                                 self.add_bodies(),
+                                 self.add_joints(),
+                                 self.add_actuators(),
                                  self.add_forces()]
+                
                 fields.set_title(0,'SYSTEM POINTS')
                 fields.set_title(1,'SYSTEM MARKERS')
                 fields.set_title(2,'SYSTEM BODIES')
                 fields.set_title(3,'SYSTEM JOINTS')
-                fields.set_title(4,'SYSTEM FORCES')
+                fields.set_title(4,'SYSTEM ACTUATORS')
+                fields.set_title(5,'SYSTEM FORCES')
                 print('Model "%s" Loaded at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
                 return ipy.display.display(widgets.VBox([name_l,fields]))
                 
@@ -1154,6 +1160,9 @@ class model(object):
         rh_stroke_l = widgets.HTML('<b> Stroke at Ride Hieght',layout=layout200px)
         rh_stroke_v = widgets.FloatText(layout=layout120px)
         rh_stroke_b = widgets.VBox([rh_stroke_l,rh_stroke_v])
+        
+        
+        
         #######################################################################
         ###################### Adding Force Element ###########################
         #######################################################################
@@ -1204,26 +1213,9 @@ class model(object):
                 print('Done')
         add_force_element_button.on_click(add_force_element_click)
         
-        
-        
-# =============================================================================
-#         show_stiffness_plot = widgets.Button(description='Show',icon='check',tooltip='Export to excel sheet',layout=layout120px)
-#         def show_stiffness_click(dummy):
-#             stiffness_plot_out.clear_output()
-#             with stiffness_plot_out:
-#                 plt.figure('Stiffness',figsize=(8,4))
-#                 plt.plot(stiffness_df.value['Deflection'],stiffness_df.value['Force'])
-#                 plt.xlabel='Deflection (mm)'
-#                 plt.ylabel='Force (N)'
-#                 plt.grid()
-#                 plt.show()
-#         show_stiffness_plot.on_click(show_stiffness_click)
-#         
-# =============================================================================
-        
-        
-        
-        
+        #######################################################################
+        #######################################################################
+
         strut_data_tab    = widgets.VBox([strut_data_block,rh_stroke_b,
                                           separator100,
                                           stiffness_visual_toggle,
@@ -1233,12 +1225,53 @@ class model(object):
                                           add_force_element_button,force_elements_out])
                             
         
-        
-        forces_output = widgets.Accordion()
-        
         return widgets.VBox([common_data_block,separator100,strut_data_tab])
         
+    
+    
+    
+    def add_actuators(self):
         
+        actuator_elements_out = widgets.Output()
+        
+        name_l = widgets.HTML('<b>Actuator Name',layout=layout120px)
+        name_v = widgets.Text(placeholder='actuator name',layout=layout200px)
+        name_b = widgets.VBox([name_l,name_v])
+        
+        alignment_l = widgets.HTML('<b>Alignment')
+        alignment_v = widgets.ToggleButtons(options={'R':'mcr_','L':'mcl_','S':'mcs_'})
+        alignment_v.style.button_width='40px'
+        alignment_b = widgets.VBox([alignment_l,alignment_v])
+        
+        notes_l = widgets.HTML('<b>Notes')
+        notes_v = widgets.Textarea(placeholder='Brief description ...')
+        notes_v.layout=widgets.Layout(width='300px',height='55px')
+        notes_b = widgets.VBox([notes_l,notes_v])
+        
+        common_data_block = widgets.VBox([name_b,alignment_b,notes_b])
+        #######################################################################
+        
+        actuator_type_l = widgets.HTML('<b>Actuator Type')
+        actuator_type_v = widgets.Dropdown(options={'':'','RotationalDrive':rotational_drive,'AbsoluteLocating':absolute_locating})
+        actuator_type_b = widgets.VBox([actuator_type_l,actuator_type_v])
+        
+        #######################################################################
+        #################### Rotational Drive Actuator ########################
+        #######################################################################
+        
+        
+        
+        
+        
+        
+        
+        #######################################################################
+        #######################################################################
+        def type_change(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                return
+        
+        return widgets.VBox([common_data_block,separator100,actuator_type_b,separator50])
     
     def show(self):
         buttons = widgets.HBox([self.new_model(),self.open_model(),self.save_model(),self.save_model_copy()])
