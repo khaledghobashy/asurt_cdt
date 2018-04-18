@@ -152,7 +152,7 @@ class model(object):
                 name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
 
                 self.model=pd.read_pickle(f)
-                self.points,self.bodies,self.joints,self.geometries,self.vectors=self.model
+                self.points,self.bodies,self.joints,self.geometries,self.vectors,self.forces=self.model
                 self._sort()
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
@@ -1159,8 +1159,8 @@ class model(object):
         #######################################################################
         
         add_force_element_button = widgets.Button(description='Add',icon='check',tooltip='Add Force Element',layout=layout100px)
-        def add_force_element_click():
-            with forces_output:
+        def add_force_element_click(dummy):
+            with force_elements_out:
                 if name_v.value=='':
                     print('ERROR: Please Enter a Valid Name!')
                     return
@@ -1200,6 +1200,8 @@ class model(object):
                     
                     strut = air_strut(name,pi,bodyi,pj,bodyj,stiffness,damping,rh_stroke)
                     self.forces[strut.name]=strut
+                
+                print('Done')
         add_force_element_button.on_click(add_force_element_click)
         
         
@@ -1228,7 +1230,7 @@ class model(object):
                                           separator100,
                                           damping_visual_toggle,
                                           separator100,
-                                          add_force_element_button])
+                                          add_force_element_button,force_elements_out])
                             
         
         

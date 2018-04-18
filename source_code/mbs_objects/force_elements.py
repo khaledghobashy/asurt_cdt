@@ -75,19 +75,30 @@ class tsda_linear_coeff(object):
     
 
 class air_strut(object):
-    def __init__(self,name,Pi,bodyi,Qj,bodyj,stiffness_curve,damping_curve,ride_stroke):
+    def __init__(self,name,Pi,bodyi,Qj,bodyj,stiffness_df,damping_df,ride_stroke):
         self.name=name
         self.bodyi=bodyi
         self.bodyj=bodyj
         self.u_i=bodyi.dcm.T.dot(Pi-bodyi.R)
         self.u_j=bodyj.dcm.T.dot(Qj-bodyj.R)
-        self.fs=interp1d(stiffness_curve[0],stiffness_curve[1])
-        self.fd=interp1d(damping_curve[0],damping_curve[1])
+        self.fs=interp1d(stiffness_df.Deflection,stiffness_df.Force)
+        self.fd=interp1d(damping_df.Velocity,damping_df.Force)        
         self.lf=ride_stroke+(Pi-Qj).mag
 
-        self.stiffness_array = stiffness_curve
-        self.damping_array   = damping_curve
-        
+        self.stiffness_df=stiffness_df
+        self.damping_df=damping_df
+        self.alignment = 'S'
+    
+    @property    
+    def m_name(self):
+        if self.alignment=='S':
+            return 'fes_'+self.name[4:]
+        elif self.alignment == 'R':
+            return 'fel_'+self.name[4:]
+        elif self.alignment == 'L':
+            return 'fer_'+self.name[4:]    
+    
+    
     def equation(self,q,qdot):
         qi=q[self.bodyi.dic.index]
         qj=q[self.bodyj.dic.index]
@@ -142,14 +153,14 @@ class air_strut(object):
     def spring_curve(self):
         
         plt.figure('Gas Spring Data')
-        plt.plot(np.arange(0,175,1),self.fs(np.arange(0,175,1)))
+        plt.plot(self.stiffness_df.Deflection,self.stiffness_df.Force)
         plt.grid()
         plt.show()
         
     def damping_curve(self):
         
         plt.figure('Damping Data')
-        plt.plot(np.arange(-2,2.5,0.1)*1e3,self.fd(np.arange(-2,2.5,0.1)*1e3))
+        plt.plot(self.damping_df.Velocity,self.damping_df.Force)
         plt.grid()
         plt.show()
    
