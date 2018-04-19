@@ -16,6 +16,8 @@ from base import point, vector
 from bodies_inertia import rigid
 from inertia_properties import circular_cylinder
 from force_elements import air_strut
+from solvers import kds, reactions
+from pre_processor import topology_writer
 import numpy as np
 from constraints import cylindrical, spherical, revolute, translational,\
                         universal, rotational_drive, absolute_locating
@@ -173,7 +175,7 @@ class model(object):
                 modeling.set_title(4,'SYSTEM ACTUATORS')
                 modeling.set_title(5,'SYSTEM FORCES')
                 
-                simulation = widgets.Accordion()
+                simulation = widgets.Accordion(children=[self.parallel_travel()])
                 
                 major_fields = widgets.Accordion(children=[modeling,simulation])
                 major_fields.set_title(0,'SYSTEM MODELING')
@@ -1297,7 +1299,59 @@ class model(object):
     
     
     def parallel_travel(self):
-        pass
+        parallel_out = widgets.Output()
+        
+        name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
+        name_v = widgets.Text(placeholder='name',layout=layout120px)
+        name_b = widgets.VBox([name_l,name_v])
+        
+        notes_l = widgets.HTML('<b>Notes',layout=layout120px)
+        notes_v = widgets.Textarea(placeholder='Brief description ...')
+        notes_v.layout=widgets.Layout(width='300px',height='55px')
+        notes_b = widgets.VBox([notes_l,notes_v])
+        
+        jounce_l = widgets.HTML('<b>Jounce Travel',layout=layout120px)
+        jounce_v = widgets.FloatText(layout=layout100px)
+        jounce_b = widgets.VBox([jounce_l,jounce_v])
+        
+        rebound_l = widgets.HTML('<b>Rebound Travel',layout=layout120px)
+        rebound_v = widgets.FloatText(layout=layout100px)
+        rebound_b = widgets.VBox([rebound_l,rebound_v])
+        
+        timesteps_l = widgets.HTML('<b>Simulation Time Steps',layout=layout120px)
+        timesteps_v = widgets.FloatText(layout=layout100px)
+        timesteps_b = widgets.VBox([timesteps_l,timesteps_v])
+        
+        wheel_hub_left=self.joints['jcl_hub_bearing']
+        wheel_hub_right=self.joints['jcr_hub_bearing']
+        
+        wheel_drive_left     = rotational_drive(wheel_hub_left)
+        wheel_drive_right    = rotational_drive(wheel_hub_right)
+        
+        vertical_travel_left = absolute_locating(self.bodies['rbl_wheel_hub'],'z')
+        vertical_travel_right = absolute_locating(self.bodies['rbr_wheel_hub'],'z')
+        
+        names = [i.name for i in [wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right]]
+        
+        self.actuators = pd.Series([wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right],index=names)
+        
+        
+        topology_writer(self.bodies,self.joints,self.actuators,self.forces,'ST100_datafile_kinematic')
+        q0   = pd.concat([i.dic    for i in self.bodies])
+        
+        time=np.linspace(-1*np.pi,np.pi,timesteps_v.value)
+        wheel_drive_left.pos_array=np.zeros((len(time),))
+        wheel_drive_right.pos_array=np.zeros((len(time),))
+        
+        vertical_motion=200*np.sin(time)
+        
+        vertical_travel_left.pos_array=600-vertical_motion
+        vertical_travel_right.pos_array=600-vertical_motion
+        
+        self.soln=kds(self.bodies,self.joints,self.actuators,'ST100_datafile_kinematic',time)
+        
+        common_data_block = widgets.VBox([name_b,timesteps_b,notes_b])
+        return common_data_block
     
     
     def show(self):
