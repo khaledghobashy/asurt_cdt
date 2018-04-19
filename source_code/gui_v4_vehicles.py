@@ -176,10 +176,15 @@ class model(object):
                 modeling.set_title(5,'SYSTEM FORCES')
                 
                 simulation = widgets.Accordion(children=[self.parallel_travel()])
+                simulation.set_title(0,'PARALLEL WHEEL TRAVEL')
                 
-                major_fields = widgets.Accordion(children=[modeling,simulation])
-                major_fields.set_title(0,'SYSTEM MODELING')
-                major_fields.set_title(1,'SYSTEM SIMULATIONS')
+                
+                post_processing = self.data_processing()
+                
+                major_fields = widgets.Accordion(children=[modeling,simulation,post_processing])
+                major_fields.set_title(0,'MODELING')
+                major_fields.set_title(1,'SIMULATION')
+                major_fields.set_title(2,'POST PROCESSING')
                 
                 
                 print('Model "%s" Loaded at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -1303,24 +1308,26 @@ class model(object):
         
         name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
         name_v = widgets.Text(placeholder='name',layout=layout120px)
-        name_b = widgets.VBox([name_l,name_v])
+        name_b = widgets.HBox([name_l,name_v])
         
-        notes_l = widgets.HTML('<b>Notes',layout=layout120px)
+        notes_l = widgets.HTML('<b>Notes',layout=layout200px)
         notes_v = widgets.Textarea(placeholder='Brief description ...')
         notes_v.layout=widgets.Layout(width='300px',height='55px')
         notes_b = widgets.VBox([notes_l,notes_v])
         
         jounce_l = widgets.HTML('<b>Jounce Travel',layout=layout120px)
         jounce_v = widgets.FloatText(layout=layout100px)
-        jounce_b = widgets.VBox([jounce_l,jounce_v])
+        jounce_b = widgets.HBox([jounce_l,jounce_v])
         
         rebound_l = widgets.HTML('<b>Rebound Travel',layout=layout120px)
         rebound_v = widgets.FloatText(layout=layout100px)
-        rebound_b = widgets.VBox([rebound_l,rebound_v])
+        rebound_b = widgets.HBox([rebound_l,rebound_v])
         
-        timesteps_l = widgets.HTML('<b>Simulation Time Steps',layout=layout120px)
+        timesteps_l = widgets.HTML('<b>Simulation Steps',layout=layout120px)
         timesteps_v = widgets.FloatText(layout=layout100px)
-        timesteps_b = widgets.VBox([timesteps_l,timesteps_v])
+        timesteps_b = widgets.HBox([timesteps_l,timesteps_v])
+        
+        
         
         wheel_hub_left=self.joints['jcl_hub_bearing']
         wheel_hub_right=self.joints['jcr_hub_bearing']
@@ -1333,15 +1340,6 @@ class model(object):
                 
         
         
-        t=np.linspace(-1*np.pi,np.pi,100)
-        wheel_drive_left.pos_array=np.zeros((len(t),))
-        wheel_drive_right.pos_array=np.zeros((len(t),))
-        
-        vertical_motion=200*np.sin(t)
-        
-        vertical_travel_left.pos_array=600-vertical_motion
-        vertical_travel_right.pos_array=600-vertical_motion
-        
         names = [i.name for i in [wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right]]
         
         self.actuators = pd.Series([wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right],index=names)
@@ -1351,17 +1349,94 @@ class model(object):
         run_button = widgets.Button(description='Run',icon='play',tooltip='Add Force Element',layout=layout100px)
         def run_click(dummy):
             with parallel_out:
+                total_travel = jounce_v.value+rebound_v.value
+                v_shift = (0.5*total_travel) - rebound_v.value
+                t=np.linspace(0,2*np.pi,timesteps_v.value)
+                wheel_drive_left.pos_array=np.zeros((len(t),))
+                wheel_drive_right.pos_array=np.zeros((len(t),))
+                
+                vertical_motion=0.5*total_travel*np.sin(t-np.arcsin(v_shift/(0.5*total_travel)))+v_shift
+                
+                vertical_travel_left.pos_array=600+vertical_motion
+                vertical_travel_right.pos_array=600+vertical_motion
                 self.soln=kds(self.bodies,self.joints,self.actuators,'ST100_datafile_kinematic',t)
                 print('Done!!')
         run_button.on_click(run_click)
         
         
         
-        common_data_block = widgets.VBox([name_b,timesteps_b,notes_b,run_button,parallel_out])
+        common_data_block = widgets.VBox([name_b,separator100,jounce_b,rebound_b,timesteps_b,separator100,notes_b,separator100,run_button,parallel_out])
         return common_data_block
     
     
+    
+    
+    def data_processing(self):
+        
+        plots_out = widgets.Output()
+        
+        data_type_l = widgets.HTML('<b> Select Data',layout=layout120px)
+        data_type_v = widgets.Select(options={'Position':0,'Velocity':1,'Acceleration':2},layout=layout120px)
+        data_type_b = widgets.VBox([data_type_l,data_type_v])
+        
+        in_object_selector_l = widgets.HTML('<b> Select Object',layout=layout120px)
+        in_object_selector_v = widgets.Select(options=self.bodies.index,layout=layout200px)
+        in_object_selector_b = widgets.VBox([in_object_selector_l,in_object_selector_v])
+        
+        in_attribute_selector_l = widgets.HTML('<b> Select Attribute',layout=layout120px)
+        in_attribute_selector_v = widgets.Select(options={'x':'.x','y':'.y','z':'.z'},layout=layout120px)
+        in_attribute_selector_b = widgets.VBox([in_attribute_selector_l,in_attribute_selector_v])
+        
+        independent_l = widgets.HTML('<b><u>Independent Variable')
+        dependent_l   = widgets.HTML('<b><u>Dependent Variable')
+        
+        de_object_selector_l = widgets.HTML('<b> Select Object',layout=layout120px)
+        de_object_selector_v = widgets.Select(options=self.bodies.index,layout=layout200px)
+        de_object_selector_b = widgets.VBox([de_object_selector_l,de_object_selector_v])
+        
+        de_attribute_selector_l = widgets.HTML('<b> Select Attribute',layout=layout120px)
+        de_attribute_selector_v = widgets.Select(options={'x':'.x','y':'.y','z':'.z'},layout=layout120px)
+        de_attribute_selector_b = widgets.VBox([de_attribute_selector_l,de_attribute_selector_v])
+        
+        
+        show_button = widgets.Button(description='Show',icon='image',tooltip='Show Plot',layout=layout100px)
+        def show_click(dummy):
+            plots_out.clear_output()
+            with plots_out:
+                index_ind = in_object_selector_v.value+in_attribute_selector_v.value
+                index_dep = de_object_selector_v.value+de_attribute_selector_v.value
+                indpendent_data  = self.soln[data_type_v.value][index_ind]
+                dependent_data   = self.soln[data_type_v.value][index_dep]
+                
+                plt.figure(index_ind+' vs '+index_dep,figsize=(10,4))
+                plt.title(index_ind+' vs '+index_dep,color='white')
+                plt.plot(indpendent_data,dependent_data,label=index_dep)
+                plt.legend()
+                plt.tick_params(axis='x', colors='white')
+                plt.tick_params(axis='y', colors='white')
+                plt.grid()
+                plt.show()
+        show_button.on_click(show_click)
+        
+        selectors = widgets.VBox([data_type_b,separator100,
+                                  independent_l,
+                                  widgets.HBox([in_object_selector_b,in_attribute_selector_b]),
+                                  separator100,
+                                  dependent_l,
+                                  widgets.HBox([de_object_selector_b,de_attribute_selector_b]),
+                                  separator100,
+                                  show_button])
+        
+        
+        return widgets.VBox([selectors,plots_out])
+        
+    
+    
+    
     def show(self):
+        
+        ipy.display.display(ipy.display.Markdown('## VEHICLE DYNAMICS MODELING AND SIMULATION TOOL'))
+        
         buttons = widgets.HBox([self.new_model(),self.open_model(),self.save_model(),self.save_model_copy()])
         out = widgets.VBox([buttons,self.out])
         return out

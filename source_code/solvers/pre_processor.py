@@ -171,15 +171,12 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
     file.write("Qa_s=pd.Series([%s *np.zeros((7,1))],index=%s)\n"%(len(columns),columns))
     file.write("def Qa(forces,q,qdot): \n")
     
-    print(forces)
     for f in forces:
         if isinstance(f,air_strut):
-            print('TRUE')
             file.write("\t Qi,Qj=forces['%s'].equation(q,qdot) \n" %f.name)
             file.write("\t Qa_s['%s']=Qi\n"%(f.bodyi.name))
             file.write("\t Qa_s['%s']=Qj\n"%(f.bodyj.name))
         else:
-            print('FALSE')
             file.write("\t Qa_s['%s']=forces['%s'].equation(q,qdot)\n" %(f.bodyi.name,f.name))
             
 
