@@ -1408,7 +1408,7 @@ class model(object):
                 indpendent_data  = self.soln[data_type_v.value][index_ind]
                 dependent_data   = self.soln[data_type_v.value][index_dep]
                 
-                plt.figure(index_ind+' vs '+index_dep,figsize=(10,4))
+                plt.figure('l',figsize=(10,4))
                 plt.title(index_ind+' vs '+index_dep,color='white')
                 plt.plot(indpendent_data,dependent_data,label=index_dep)
                 plt.legend()
