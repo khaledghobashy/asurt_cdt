@@ -1325,32 +1325,39 @@ class model(object):
         wheel_hub_left=self.joints['jcl_hub_bearing']
         wheel_hub_right=self.joints['jcr_hub_bearing']
         
-        wheel_drive_left     = rotational_drive(wheel_hub_left)
-        wheel_drive_right    = rotational_drive(wheel_hub_right)
+        wheel_drive_left     = rotational_drive('mcl_rotational_lock',wheel_hub_left)
+        wheel_drive_right    = rotational_drive('mcr_rotational_lock',wheel_hub_right)
         
-        vertical_travel_left = absolute_locating(self.bodies['rbl_wheel_hub'],'z')
-        vertical_travel_right = absolute_locating(self.bodies['rbr_wheel_hub'],'z')
-        
-        names = [i.name for i in [wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right]]
-        
-        self.actuators = pd.Series([wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right],index=names)
+        vertical_travel_left = absolute_locating('mcl_vertical',self.bodies['rbl_wheel_hub'],'z')
+        vertical_travel_right = absolute_locating('mcr_vertical',self.bodies['rbr_wheel_hub'],'z')
+                
         
         
-        topology_writer(self.bodies,self.joints,self.actuators,self.forces,'ST100_datafile_kinematic')
-        q0   = pd.concat([i.dic    for i in self.bodies])
+        t=np.linspace(-1*np.pi,np.pi,100)
+        wheel_drive_left.pos_array=np.zeros((len(t),))
+        wheel_drive_right.pos_array=np.zeros((len(t),))
         
-        time=np.linspace(-1*np.pi,np.pi,timesteps_v.value)
-        wheel_drive_left.pos_array=np.zeros((len(time),))
-        wheel_drive_right.pos_array=np.zeros((len(time),))
-        
-        vertical_motion=200*np.sin(time)
+        vertical_motion=200*np.sin(t)
         
         vertical_travel_left.pos_array=600-vertical_motion
         vertical_travel_right.pos_array=600-vertical_motion
         
-        self.soln=kds(self.bodies,self.joints,self.actuators,'ST100_datafile_kinematic',time)
+        names = [i.name for i in [wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right]]
         
-        common_data_block = widgets.VBox([name_b,timesteps_b,notes_b])
+        self.actuators = pd.Series([wheel_drive_left,wheel_drive_right,vertical_travel_left,vertical_travel_right],index=names)
+
+        topology_writer(self.bodies,self.joints,self.actuators,self.forces,'ST100_datafile_kinematic')
+
+        run_button = widgets.Button(description='Run',icon='play',tooltip='Add Force Element',layout=layout100px)
+        def run_click(dummy):
+            with parallel_out:
+                self.soln=kds(self.bodies,self.joints,self.actuators,'ST100_datafile_kinematic',t)
+                print('Done!!')
+        run_button.on_click(run_click)
+        
+        
+        
+        common_data_block = widgets.VBox([name_b,timesteps_b,notes_b,run_button,parallel_out])
         return common_data_block
     
     
