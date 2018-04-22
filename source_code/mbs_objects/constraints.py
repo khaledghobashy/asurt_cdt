@@ -46,8 +46,8 @@ class joint(object):
         
         # defining the basic attributes in the joint class
         self.name=name
-        self.i_body=i_body
-        self.j_body=j_body
+        self._i_body=i_body
+        self._j_body=j_body
         self.type="None" # for representing the joint type in subclasses
         
         self._loc=location
@@ -87,33 +87,33 @@ class joint(object):
         
     
     
-#    @property
-#    def i_body(self):
-#        return self._i_body
-#    
-#    @i_body.setter
-#    def i_body(self,value):
-#        self._i_body=value
-#        self.u_irf=self.i_body.dcm.T.dot(self.frame)
-#        self.u_i=self.i_body.dcm.T.dot(self.location-self.i_body.R)
-#        self.vii=vector(self.u_irf[:,0])
-#        self.vij=vector(self.u_irf[:,1])
-#        self.vik=vector(self.u_irf[:,2])
-#    
-#    
-#    
-#    @property
-#    def j_body(self):
-#        return self._j_body
-#    
-#    @j_body.setter
-#    def j_body(self,value):
-#        self._j_body=value
-#        self.u_jrf=self.j_body.dcm.T.dot(self.frame)
-#        self.u_j=self.j_body.dcm.T.dot(self.location-self.j_body.R)
-#        self.vji=vector(self.u_jrf[:,0])
-#        self.vjj=vector(self.u_jrf[:,1])
-#        self.vjk=vector(self.u_jrf[:,2])
+    @property
+    def i_body(self):
+        return self._i_body
+    
+    @i_body.setter
+    def i_body(self,value):
+        self._i_body=value
+        self.u_irf=self.i_body.dcm.T.dot(self.frame)
+        self.u_i=self.i_body.dcm.T.dot(self.location-self.i_body.R)
+        self.vii=vector(self.u_irf[:,0])
+        self.vij=vector(self.u_irf[:,1])
+        self.vik=vector(self.u_irf[:,2])
+    
+    
+    
+    @property
+    def j_body(self):
+        return self._j_body
+    
+    @j_body.setter
+    def j_body(self,value):
+        self._j_body=value
+        self.u_jrf=self.j_body.dcm.T.dot(self.frame)
+        self.u_j=self.j_body.dcm.T.dot(self.location-self.j_body.R)
+        self.vji=vector(self.u_jrf[:,0])
+        self.vjj=vector(self.u_jrf[:,1])
+        self.vjk=vector(self.u_jrf[:,2])
         
    
     @property
