@@ -361,6 +361,12 @@ class model(object):
         edit_button = widgets.Button(description='Edit',icon='edit',tooltip='apply edits to selected point')
         edit_button.layout=layout100px
         def edit_click(dummy):
+            
+            with tab1_out:
+                dependencies = nx.DiGraph(nx.edge_dfs(self.data_flow,points_dropdown.label))
+                nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
+                plt.show()
+            
             with tab1_out:
                 name,x,y,z = [i.value for i in [name_v,x_v,y_v,z_v]]
                 

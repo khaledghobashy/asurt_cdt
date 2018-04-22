@@ -63,8 +63,11 @@ class triangular_prism(object):
 
 class circular_cylinder(object):
     def __init__(self,name,body,p1,p2,do,di=0):
-        self.p1=p1
-        self.p2=p2
+        self._p1=p1
+        self._p2=p2
+        
+        self._do=do
+        self._di=di
         
         self.axis=p2-p1
         self.l=self.axis.mag
@@ -80,6 +83,81 @@ class circular_cylinder(object):
         self.C=orient_along_axis(self.axis)
         
         body.geometries[name]=(self)
+        body.update_inertia()
+        
+    
+    
+    @property
+    def p1(self):
+        return self._p1
+    @p1.setter
+    def p1(self,value):
+        self._p1=value
+        
+        self.axis=self._p2-self._p1
+        self.l=self.axis.mag
+        self.mass=7.7*np.pi*(self._do**2-self._di**2)*self.l*1e-3
+        self.cm=self._p1+0.5*self.axis
+        Jxx=Jyy=(self.mass/12)*(3*self._do**2+3*self._di**2+self.l**2)
+        Jzz=(self.mass/2)*(self._do**2+self._di**2)
+        
+        self.J=np.diag([Jxx,Jyy,Jzz])
+        self.C=orient_along_axis(self.axis)
+        
+        self.body.geometries[self.name]=(self)
+        self.body.update_inertia()
+    
+    
+    @property
+    def p2(self):
+        return self._p2
+    @p2.setter
+    def p2(self,value):
+        self._p2=value
+        
+        self.axis=self._p2-self._p1
+        self.l=self.axis.mag
+        self.mass=7.7*np.pi*(self._do**2-self._di**2)*self.l*1e-3
+        self.cm=self._p1+0.5*self.axis
+        Jxx=Jyy=(self.mass/12)*(3*self._do**2+3*self._di**2+self.l**2)
+        Jzz=(self.mass/2)*(self._do**2+self._di**2)
+        
+        self.J=np.diag([Jxx,Jyy,Jzz])
+        self.C=orient_along_axis(self.axis)
+        
+        self.body.geometries[self.name]=(self)
+        self.body.update_inertia()
+        
+    
+    @property
+    def do(self):
+        return self._do
+    @do.setter
+    def do(self,value):
+        self._do=value
+        
+        self.mass=7.7*np.pi*(self._do**2-self._di**2)*self.l*1e-3
+        Jxx=Jyy=(self.mass/12)*(3*self._do**2+3*self._di**2+self.l**2)
+        Jzz=(self.mass/2)*(self._do**2+self._di**2)
+        self.J=np.diag([Jxx,Jyy,Jzz])
+        self.body.geometries[self.name]=(self)
+        self.body.update_inertia()
+
+    @property
+    def di(self):
+        return self._di
+    @di.setter
+    def di(self,value):
+        self._di=value
+        
+        self.mass=7.7*np.pi*(self._do**2-self._di**2)*self.l*1e-3
+        Jxx=Jyy=(self.mass/12)*(3*self._do**2+3*self._di**2+self.l**2)
+        Jzz=(self.mass/2)*(self._do**2+self._di**2)
+        self.J=np.diag([Jxx,Jyy,Jzz])
+        self.body.geometries[self.name]=(self)
+        self.body.update_inertia()
+
+
 
 class composite_geometry(object):
     def __init__(self,geometries):
