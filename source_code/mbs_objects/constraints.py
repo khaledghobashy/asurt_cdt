@@ -52,7 +52,7 @@ class joint(object):
         
         self._loc=location
         # defining the joint axis which is needed for the different types of joints
-        self.axis=axis
+        self._axis=axis
         
         self.frame=orient_along_axis(axis)
         self.u_irf=i_body.dcm.T.dot(self.frame)
@@ -74,8 +74,69 @@ class joint(object):
         self.alignment='S'
         self.notes = ''
         
-#        location.body=i_body
+    
+    @property
+    def location(self):
+        return self._loc
+    
+    @location.setter
+    def location(self,value):
+        self._loc=value
+        self.u_i=self.i_body.dcm.T.dot(self._loc-self.i_body.R)
+        self.u_j=self.j_body.dcm.T.dot(self._loc-self.j_body.R)
         
+    
+    
+#    @property
+#    def i_body(self):
+#        return self._i_body
+#    
+#    @i_body.setter
+#    def i_body(self,value):
+#        self._i_body=value
+#        self.u_irf=self.i_body.dcm.T.dot(self.frame)
+#        self.u_i=self.i_body.dcm.T.dot(self.location-self.i_body.R)
+#        self.vii=vector(self.u_irf[:,0])
+#        self.vij=vector(self.u_irf[:,1])
+#        self.vik=vector(self.u_irf[:,2])
+#    
+#    
+#    
+#    @property
+#    def j_body(self):
+#        return self._j_body
+#    
+#    @j_body.setter
+#    def j_body(self,value):
+#        self._j_body=value
+#        self.u_jrf=self.j_body.dcm.T.dot(self.frame)
+#        self.u_j=self.j_body.dcm.T.dot(self.location-self.j_body.R)
+#        self.vji=vector(self.u_jrf[:,0])
+#        self.vjj=vector(self.u_jrf[:,1])
+#        self.vjk=vector(self.u_jrf[:,2])
+        
+   
+    @property
+    def axis(self):
+        return self._axis
+    
+    @axis.setter
+    def axis(self,value):
+        self._axis=value
+        self.frame=orient_along_axis(self._axis)
+        
+        self.u_irf=self.i_body.dcm.T.dot(self.frame)
+        self.u_i=self.i_body.dcm.T.dot(self.location-self.i_body.R)
+        self.vii=vector(self.u_irf[:,0])
+        self.vij=vector(self.u_irf[:,1])
+        self.vik=vector(self.u_irf[:,2])
+        
+        self.u_jrf=self.j_body.dcm.T.dot(self.frame)
+        self.u_j=self.j_body.dcm.T.dot(self.location-self.j_body.R)
+        self.vji=vector(self.u_jrf[:,0])
+        self.vjj=vector(self.u_jrf[:,1])
+        self.vjk=vector(self.u_jrf[:,2])
+   
     @property    
     def m_name(self):
         if self.alignment=='S':
@@ -89,7 +150,7 @@ class joint(object):
     @property
     def dic(self):
         name=self.name+'.'
-        loc=self.loc
+        loc=self.location
         return {name+'x':loc.x,name+'y':loc.y,name+'z':loc.z}
         
     def joint_pos(self,q):

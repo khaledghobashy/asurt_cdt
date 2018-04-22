@@ -5,7 +5,7 @@ Created on Sat Nov 18 19:59:55 2017
 @author: khale
 """
 
-from base import dcm2ep, G, orient_along_axis, vector
+from base import dcm2ep, G, vector,ep2dcm
 from inertia_properties import composite_geometry
 import scipy as sc
 import pandas as pd
@@ -54,16 +54,63 @@ class rigid(object):
     ===========================================================================
         '''
         self.name=name
-        self.mass=mass
-        self.J=inertia_tensor
-        self.R=cm
-        self.dcm=dcm
-        self.P=dcm2ep(dcm)
+        
+        self._mass=mass
+        self._J=inertia_tensor
+        self._R=cm
+        self._dcm=dcm
+        self._P=dcm2ep(dcm)
+        
         self.typ=typ
         self.nc=(7 if typ=='mount' else 1)
         self.geometries=pd.Series()
         self.alignment='S'
         self.notes=''
+    
+    
+    @property
+    def mass(self):
+        return self._mass
+    @mass.setter
+    def mass(self,value):
+        self._mass=value
+    
+    
+    @property
+    def R(self):
+        return self._R
+    @R.setter
+    def R(self,value):
+        self._R=value
+    
+    
+    
+    @property
+    def J(self):
+        return self._J
+    @J.setter
+    def J(self,value):
+        self._J=value
+    
+    
+    @property
+    def dcm(self):
+        return self._dcm
+    @dcm.setter
+    def dcm(self,value):
+        self._dcm=value
+        self._P = dcm2ep(self._dcm)
+    
+    @property
+    def P(self):
+        return self._P
+    @P.setter
+    def P(self,value):
+        self._P=value
+        self._dcm = ep2dcm(self._P)
+    
+    
+    
     
     @property    
     def m_name(self):

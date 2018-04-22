@@ -175,13 +175,13 @@ class model(object):
                 modeling.set_title(4,'SYSTEM ACTUATORS')
                 modeling.set_title(5,'SYSTEM FORCES')
                 
-                simulation = widgets.Accordion(children=[self.parallel_travel()])
-                simulation.set_title(0,'PARALLEL WHEEL TRAVEL')
+#                simulation = widgets.Accordion(children=[self.parallel_travel()])
+#                simulation.set_title(0,'PARALLEL WHEEL TRAVEL')
                 
                 
                 post_processing = self.data_processing()
                 
-                major_fields = widgets.Accordion(children=[modeling,simulation,post_processing])
+                major_fields = widgets.Accordion(children=[modeling,post_processing])
                 major_fields.set_title(0,'MODELING')
                 major_fields.set_title(1,'SIMULATION')
                 major_fields.set_title(2,'POST PROCESSING')
@@ -206,11 +206,15 @@ class model(object):
                 f=savefile_dialog()
                 if f=='':
                     return
-                self.model['points']=self.points.sort_index()
-                self.model['bodies']=self.bodies.sort_index()
-                self.model['joints']=self.joints.sort_index()
-                self.model['geometries']=self.geometries.sort_index()
-                self.model['vectors']=self.vectors.sort_index()
+                self.name=f.split("/")[-1]
+                self._sort()
+                
+                self.model['points']=self.points
+                self.model['bodies']=self.bodies
+                self.model['joints']=self.joints
+                self.model['geometries']=self.geometries
+                self.model['vectors']=self.vectors
+                self.model['forces']=self.forces
                 
                 self.model.to_pickle(f)
                 
@@ -222,7 +226,7 @@ class model(object):
                 fields.set_title(2,'SYSTEM BODIES')
                 fields.set_title(3,'SYSTEM JOINTS')
                 fields.set_title(4,'SYSTEM FORCES')
-                print('New Model Created at %s'%time.strftime('%I:%M:%S %p'))
+                print('New Model "%s" Created at %s'%(self.name,time.strftime('%I:%M:%S %p')))
                 return ipy.display.display(fields)
                 
         new_button.on_click(new_click)
@@ -278,12 +282,6 @@ class model(object):
         points_dropdown = widgets.Dropdown()
         points_dropdown.options = self._filter_points()
         points_dropdown.layout=layout120px
-        
-        
-        field1 = widgets.HBox([name_b,x_b,y_b,z_b])
-        field2 = widgets.VBox([alignment_b,notes_b])
-        field3 = widgets.VBox([edit_l,points_dropdown])
-        
         
         
         
@@ -351,6 +349,35 @@ class model(object):
         points_dropdown.observe(on_change)
         
         
+        edit_button = widgets.Button(description='Edit',icon='edit',tooltip='apply edits to selected point')
+        edit_button.layout=layout100px
+        def edit_click(dummy):
+            with tab1_out:
+                name,x,y,z = [i.value for i in [name_v,x_v,y_v,z_v]]
+                
+                if (alignment_v.label=='R' and y<0) or (alignment_v.label=='L' and y>0):
+                    print('Inconsistent Selction of y value and symmetry!!')
+                    return
+                
+                if alignment_v.label in 'RL':
+                    self.points[points_dropdown.label].x=x
+                    self.points[points_dropdown.label].y=y
+                    self.points[points_dropdown.label].z=z
+                    
+                    self.points[points_dropdown.value.m_name].x=x
+                    self.points[points_dropdown.value.m_name].y=-y
+                    self.points[points_dropdown.value.m_name].z=z
+                else:
+                    self.points[points_dropdown.label].x=x
+                    self.points[points_dropdown.label].y=y
+                    self.points[points_dropdown.label].z=z
+        edit_button.on_click(edit_click)
+        
+        
+        field1 = widgets.HBox([name_b,x_b,y_b,z_b])
+        field2 = widgets.VBox([alignment_b,notes_b])
+        field3 = widgets.VBox([edit_l,points_dropdown,edit_button])
+
         
         tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out])
         tab2_content = widgets.VBox([tab2_out],layout=widgets.Layout(width='550px'))
@@ -1002,11 +1029,11 @@ class model(object):
                     notes      = notes_v.value
                     
                     if joint_type_v.label=='Universal':
-                        j=joint_type_v.value(loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
+                        j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
                     elif joint_type_v.label=='Spherical' :
-                        j=joint_type_v.value(loc,bodyi,bodyj)
+                        j=joint_type_v.value(joint_name,loc,bodyi,bodyj)
                     else:
-                        j=joint_type_v.value(loc,bodyi,bodyj,axis1_v.value)
+                        j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value)
                     
                     j.notes=notes
                     self.joints[joint_name]=j
@@ -1442,21 +1469,3 @@ class model(object):
         return out
         
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
