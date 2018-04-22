@@ -361,6 +361,7 @@ class model(object):
         edit_button = widgets.Button(description='Edit',icon='edit',tooltip='apply edits to selected point')
         edit_button.layout=layout100px
         def edit_click(dummy):
+            tab1_out.clear_output()
             
             with tab1_out:
                 dependencies = nx.DiGraph(nx.edge_dfs(self.data_flow,points_dropdown.label))
@@ -382,6 +383,16 @@ class model(object):
                     self.points[points_dropdown.value.m_name].x=x
                     self.points[points_dropdown.value.m_name].y=-y
                     self.points[points_dropdown.value.m_name].z=z
+                    
+                    for e in nx.edge_dfs(self.data_flow,points_dropdown.label):
+                        print(e)
+                        try:
+                            self.data_flow.node[e[1]]['obj'].__setattr__(self.data_flow.edges[e]['attr'],self.data_flow.node[e[0]]['obj'])
+                            
+                        except KeyError:
+                            print('Not Found')
+                            pass
+                    
                 else:
                     self.points[points_dropdown.label].x=x
                     self.points[points_dropdown.label].y=y
@@ -532,11 +543,11 @@ class model(object):
                     self.vectors[v2.name]=v2
                     
                     self.data_flow.add_node(v1.name,obj=v1)
-                    self.data_flow.add_edge(p1.name,v1.name)
-                    self.data_flow.add_edge(p2.name,v1.name)
+                    self.data_flow.add_edge(p1.name,v1.name,attr='p1')
+                    self.data_flow.add_edge(p2.name,v1.name,attr='p2')
                     self.data_flow.add_node(v2.name,obj=v2)
-                    self.data_flow.add_edge(p1.name,v2.name)
-                    self.data_flow.add_edge(p2.name,v2.name)
+                    self.data_flow.add_edge(p1.name,v2.name,attr='p1')
+                    self.data_flow.add_edge(p2.name,v2.name,attr='p2')
 
                     
                 elif alignment_v.label =='S':
@@ -547,8 +558,8 @@ class model(object):
                     v.alignment = alignment_v.label
                     self.vectors[name]=v
                     self.data_flow.add_node(v.name,obj=v)
-                    self.data_flow.add_edge(p1.name,v.name)
-                    self.data_flow.add_edge(p2.name,v.name)
+                    self.data_flow.add_edge(p1.name,v.name,attr='p1')
+                    self.data_flow.add_edge(p2.name,v.name,attr='p2')
 
                 
                 self._sort()
@@ -900,8 +911,8 @@ class model(object):
                     self.data_flow.add_node(geo_name_1,obj=geo_1)
                     self.data_flow.add_node(geo_name_2,obj=geo_2)
                     
-                    self.data_flow.add_edge(p1_1.name,geo_name_1)
-                    self.data_flow.add_edge(p2_1.name,geo_name_1)
+                    self.data_flow.add_edge(p1_1.name,geo_name_1,attr='p1')
+                    self.data_flow.add_edge(p2_1.name,geo_name_1,attr='p2')
                     
                     self.data_flow.add_edge(geo_name_1,body.name)
                 
@@ -1097,9 +1108,9 @@ class model(object):
                     self.joints[j2.name]=j2
                     
                     self.data_flow.add_node(j1.name,obj=j1)
-                    self.data_flow.add_edge(loc_1.name,j1.name)
-                    self.data_flow.add_edge(bodyi_1.name,j1.name)
-                    self.data_flow.add_edge(bodyj_1.name,j1.name)
+                    self.data_flow.add_edge(loc_1.name,j1.name,attr='location')
+                    self.data_flow.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                    self.data_flow.add_edge(bodyj_1.name,j1.name,attr='j_body')
                 
                 elif alignment_v.label=='S':
                     joint_name = alignment_v.value+name_v.value
