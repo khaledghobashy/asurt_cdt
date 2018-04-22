@@ -69,6 +69,8 @@ class circular_cylinder(object):
         self._do=do
         self._di=di
         
+        self.body=body
+        
         self.axis=p2-p1
         self.l=self.axis.mag
         

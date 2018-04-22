@@ -288,7 +288,7 @@ class model(object):
         edit_l = widgets.HTML('<b>Edit Point')
         
         points_dropdown = widgets.Dropdown()
-        points_dropdown.options = self._filter_points()
+        points_dropdown.options = dict(self.points)
         points_dropdown.layout=layout120px
         
         
@@ -322,6 +322,9 @@ class model(object):
                     
                     self.points_dataframe.loc[p1.name]=[x,p1.y,z,p1.alignment,notes_v.value]
                     self.points_dataframe.loc[p2.name]=[x,p2.y,z,p2.alignment,notes_v.value]
+                    
+                    self.data_flow.add_node(p1.name,obj=p1)
+                    self.data_flow.add_node(p2.name,obj=p2)
     
                 else:
                     p=point(name,[x,y,z])
@@ -329,12 +332,13 @@ class model(object):
                     p.notes=notes_v.value
                     self.points[p.name]=p
                     self.points_dataframe.loc[p.name]=[x,y,z,p.alignment,notes_v.value]
+                    self.data_flow.add_node(p.name,obj=p)
                     
                 
                 name_v.value=''
                 notes_v.value=''
                 self._sort()
-                points_dropdown.options=self._filter_points()
+                points_dropdown.options=dict(self.points)
                 
             with tab2_out:
                 tabel.df=self.points_dataframe
@@ -390,7 +394,7 @@ class model(object):
                             self.data_flow.node[e[1]]['obj'].__setattr__(self.data_flow.edges[e]['attr'],self.data_flow.node[e[0]]['obj'])
                             
                         except KeyError:
-                            print('Not Found')
+                            print('Not Found \n')
                             pass
                     
                 else:
