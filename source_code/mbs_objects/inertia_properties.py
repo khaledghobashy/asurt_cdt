@@ -63,6 +63,9 @@ class triangular_prism(object):
 
 class circular_cylinder(object):
     def __init__(self,name,body,p1,p2,do,di=0):
+        
+        self.name=name
+        
         self._p1=p1
         self._p2=p2
         

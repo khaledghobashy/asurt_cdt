@@ -52,7 +52,6 @@ def savefile_dialog():
 
 
 
-
 class model(object):
     
     def __init__(self):
@@ -918,7 +917,7 @@ class model(object):
                     self.data_flow.add_edge(p1_1.name,geo_name_1,attr='p1')
                     self.data_flow.add_edge(p2_1.name,geo_name_1,attr='p2')
                     
-                    self.data_flow.add_edge(geo_name_1,body.name,attr='')
+                    self.data_flow.add_edge(geo_name_1,body.name)
                 
                 elif  body.alignment=='S':
                     p1 = self.pointsp1_v.value
@@ -1583,9 +1582,39 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Model Data Flow',figsize=(8,5))
-            nx.draw(self.data_flow,with_labels=True)
+            nx.draw_circular(self.data_flow,with_labels=True)
             plt.show()
         return out
+    
+    def object_successors(self,object_node):
+        out = widgets.Output()
+        with out:
+            plt.figure('Object Dependencies',figsize=(8,5))
+            dependencies = nx.DiGraph(nx.edge_dfs(self.data_flow,object_node))
+            nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
+            plt.show()
+        return out
+    
+    def object_predecessors(self,object_node):
+        out = widgets.Output()
+        with out:
+            plt.figure('Object Dependencies',figsize=(8,5))
+            dependencies = nx.DiGraph([(i[0],i[1]) for i in nx.edge_dfs(self.data_flow,object_node,'reverse')])
+            nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
+            plt.show()
+        return out
+    
+    def edit_node(self,node):
+        g=self.data_flow
+        
+        for e in nx.edge_dfs(g,node):
+            try:
+                g.node[e[1]]['obj'].__setattr__(g.edges[e]['attr'],g.node[e[0]]['obj'])
+                print('Editing object "%s" and updating attribute "%s" in dependency "%s" \n' %(e[0],g.edges[e]['attr'],e[1]))
+            except KeyError:
+                print('Not Found \n')
+                pass
+
     
     def show(self):
         
