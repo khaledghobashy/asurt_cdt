@@ -115,6 +115,8 @@ class model(object):
                 self.model['vectors']=self.vectors
                 self.model['forces']=self.forces
                 self.model['data_graph']=self.data_graph
+                self.model['topology']=self.topology
+
                 
                 self.model.to_pickle(f)
                 print('Model Saved as "%s" at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -137,6 +139,7 @@ class model(object):
                 self.model['vectors']=self.vectors
                 self.model['forces']=self.forces
                 self.model['data_graph']=self.data_graph
+                self.model['topology']=self.topology
 
                 
                 self.model.to_pickle(self.name)
@@ -160,7 +163,7 @@ class model(object):
                 name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
 
                 self.model=pd.read_pickle(f)
-                self.points,self.bodies,self.joints,self.geometries,self.vectors,self.forces,self.data_graph=self.model
+                self.points,self.bodies,self.joints,self.geometries,self.vectors,self.forces,self.data_graph,self.topology=self.model
                 self._sort()
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
@@ -187,7 +190,7 @@ class model(object):
                 
                 post_processing = self.data_processing()
                 
-                major_fields = widgets.Accordion(children=[modeling,post_processing])
+                major_fields = widgets.Accordion(children=[modeling,self.parallel_travel(),post_processing])
                 major_fields.set_title(0,'MODELING')
                 major_fields.set_title(1,'SIMULATION')
                 major_fields.set_title(2,'POST PROCESSING')
@@ -511,10 +514,10 @@ class model(object):
                     self.vectors[v1.name]=v1
                     self.vectors[v2.name]=v2
                     
-                    self.data_graph.add_node(v1.name,obj=v1)
+                    self.data_graph.add_node(v1.name,obj=v1,typ='vector')
                     self.data_graph.add_edge(p1.name,v1.name,attr='p1')
                     self.data_graph.add_edge(p2.name,v1.name,attr='p2')
-                    self.data_graph.add_node(v2.name,obj=v2)
+                    self.data_graph.add_node(v2.name,obj=v2,typ='vector')
                     self.data_graph.add_edge(p1.name,v2.name,attr='p1')
                     self.data_graph.add_edge(p2.name,v2.name,attr='p2')
 
@@ -526,7 +529,7 @@ class model(object):
                     v  = point(name,p1-p2)
                     v.alignment = alignment_v.label
                     self.vectors[name]=v
-                    self.data_graph.add_node(v.name,obj=v)
+                    self.data_graph.add_node(v.name,obj=v,typ='vector')
                     self.data_graph.add_edge(p1.name,v.name,attr='p1')
                     self.data_graph.add_edge(p2.name,v.name,attr='p2')
 
@@ -1129,6 +1132,9 @@ class model(object):
                     self.joints[j1.name]=j1
                     self.joints[j2.name]=j2
                     
+                    self.topology.add_edge(bodyi_1,bodyj_1,joint=j1)
+                    self.topology.add_edge(bodyi_2,bodyj_2,joint=j2)
+                    
                     
                 
                 elif alignment_v.label=='S':
@@ -1175,7 +1181,7 @@ class model(object):
                     
                     j.notes=notes
                     self.joints[joint_name]=j
-                    
+                    self.topology.add_edge(bodyi,bodyj,joint=j)
 
 
                 
@@ -1271,9 +1277,12 @@ class model(object):
         stiffness_import_button =  widgets.Button(description='Import',icon='download',tooltip='Import to excel sheet',layout=layout100px)
         def stiffness_import_click(dummy):
             with stiffness_tabel_out:
-                stiffness_df.value=pd.read_excel(name_v.value+'_stiffness_data.xlsx')
+                f = openfile_dialog()
+                if f =='':
+                    return
+                stiffness_df.value=pd.read_excel(f)
                 stiffness_qg.df=stiffness_df.value
-                print('Data Imported from "%s"  at %s'%(name_v.value+'_stiffness_data.xlsx',time.strftime('%I:%M:%S %p')))
+                print('Data Imported from "%s"  at %s'%(f.split('/')[-1],time.strftime('%I:%M:%S %p')))
         stiffness_import_button.on_click(stiffness_import_click)
         
         
@@ -1330,9 +1339,12 @@ class model(object):
         damping_import_button =  widgets.Button(description='Import',icon='download',tooltip='Import to excel sheet',layout=layout100px)
         def damping_import_click(dummy):
             with damping_tabel_out:
-                damping_df.value=pd.read_excel(name_v.value+'_damping_data.xlsx')
+                f = openfile_dialog()
+                if f =='':
+                    return
+                damping_df.value=pd.read_excel(f)
                 damping_qg.df=damping_df.value
-                print('Data Imported as "%s"  at %s'%(name_v.value+'_damping_data.xlsx',time.strftime('%I:%M:%S %p')))
+                print('Data Imported as "%s"  at %s'%(f.split('/')[-1],time.strftime('%I:%M:%S %p')))
         damping_import_button.on_click(damping_import_click)
         
         
@@ -1396,11 +1408,17 @@ class model(object):
                     self.forces[strut_1.name]=strut_1
                     self.forces[strut_2.name]=strut_2
                     
-                    self.data_graph.add_node(strut_1.name,obj=strut_1)
-                    self.data_graph.add_edge(pi_1.name,strut_1.name)
-                    self.data_graph.add_edge(pj_1.name,strut_1.name)
-                    self.data_graph.add_edge(body_i_1.name,strut_1.name)
-                    self.data_graph.add_edge(body_j_1.name,strut_1.name)
+                    self.data_graph.add_node(strut_1.name,obj=strut_1,typ='air_strut')
+                    self.data_graph.add_edge(pi_1.name,strut_1.name,attr='Pi')
+                    self.data_graph.add_edge(pj_1.name,strut_1.name,attr='Qj')
+                    self.data_graph.add_edge(body_i_1.name,strut_1.name,attr='bodyi')
+                    self.data_graph.add_edge(body_j_1.name,strut_1.name,attr='bodyj')
+                    
+                    self.data_graph.add_node(strut_2.name,obj=strut_2,typ='air_strut')
+                    self.data_graph.add_edge(pi_2.name,strut_2.name,attr='Pi')
+                    self.data_graph.add_edge(pj_2.name,strut_2.name,attr='Qj')
+                    self.data_graph.add_edge(body_i_2.name,strut_2.name,attr='bodyi')
+                    self.data_graph.add_edge(body_j_2.name,strut_2.name,attr='bodyj')
 
                     
                     
@@ -1414,11 +1432,11 @@ class model(object):
                     strut = air_strut(name,pi,bodyi,pj,bodyj,stiffness,damping,rh_stroke)
                     self.forces[strut.name]=strut
                     
-                    self.data_graph.add_node(strut.name,obj=strut)
-                    self.data_graph.add_edge(pi.name,strut.name)
-                    self.data_graph.add_edge(pj.name,strut.name)
-                    self.data_graph.add_edge(bodyi.name,strut.name)
-                    self.data_graph.add_edge(bodyj.name,strut.name)
+                    self.data_graph.add_node(strut.name,obj=strut,typ='air_strut')
+                    self.data_graph.add_edge(pi.name,strut.name,attr='Pi')
+                    self.data_graph.add_edge(pj.name,strut.name,attr='Qj')
+                    self.data_graph.add_edge(bodyi.name,strut.name,attr='bodyi')
+                    self.data_graph.add_edge(bodyj.name,strut.name,attr='bodyj')
 
                 
                 print('Done')
@@ -1550,8 +1568,7 @@ class model(object):
         common_data_block = widgets.VBox([name_b,separator100,jounce_b,rebound_b,timesteps_b,separator100,notes_b,separator100,run_button,parallel_out])
         return common_data_block
     
-    
-    
+        
     
     def data_processing(self):
         
@@ -1617,7 +1634,7 @@ class model(object):
     def show_data_flow(self):
         out = widgets.Output()
         with out:
-            plt.figure('Model Data Flow',figsize=(8,5))
+            plt.figure('Model Data Flow',figsize=(10,10))
             nx.draw_circular(self.data_graph,with_labels=True)
             plt.show()
         return out
@@ -1627,7 +1644,9 @@ class model(object):
         with out:
             plt.figure('Object Dependencies',figsize=(8,5))
             dependencies = nx.DiGraph(nx.edge_dfs(self.data_graph,object_node))
-            nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
+            layout = nx.circular_layout(dependencies)
+            nx.draw(nx.DiGraph(dependencies),pos=layout,with_labels=True,node_size=200)
+            nx.draw(nx.DiGraph(dependencies),pos=layout,nodelist=[object_node],with_labels=True,node_size=800,node_color='cyan',node_shape='p')
             plt.show()
         return out
     
@@ -1650,7 +1669,11 @@ class model(object):
             except KeyError:
                 print('Not Found \n')
                 pass
-
+    
+    def draw_topology(self):
+        plt.figure('System Topology',figsize=(10,10))
+        nx.draw_spring(self.topology,with_labels=True)
+        plt.show()
     
     def show(self):
         
