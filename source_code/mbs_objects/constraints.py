@@ -766,11 +766,11 @@ class universal(joint):
         self.name=name
         self.nc=4
         
-        self.i_rot=vector(i_rot)
-        self.j_rot=vector(j_rot)
+        self._i_rot=vector(i_rot)
+        self._j_rot=vector(j_rot)
         
-        self.i_rot_i = self.i_body.dcm.T.dot(self.i_rot)
-        self.j_rot_j = self.j_body.dcm.T.dot(self.j_rot)
+        self.i_rot_i = self.i_body.dcm.T.dot(self._i_rot)
+        self.j_rot_j = self.j_body.dcm.T.dot(self._j_rot)
         
         
         self.angle = np.sin(np.radians(vector(self.i_rot).angle_between(vector(self.j_rot))))
@@ -797,6 +797,67 @@ class universal(joint):
             self.h_i=vector(self.u_irf[:,1]).a
             self.h_j=vector(self.u_jrf[:,0]).a
         
+    
+    @property
+    def i_rot(self):
+        return self._i_rot
+    @i_rot.setter
+    def i_rot(self,value):
+        self._i_rot=value
+        self.i_rot_i = self.i_body.dcm.T.dot(self.value)
+        self.angle = np.sin(np.radians(vector(value).angle_between(vector(self.j_rot))))
+        
+        if abs(self.angle)<=1e-7:
+            # collinear axis 
+            self.u_irf=orient_along_axis(self.i_rot_i)
+            jax_j=self.j_body.dcm.T.dot(self.i_body.dcm.dot(self.u_irf[:,0]))
+            self.u_jrf=orient_along_axis(self.j_rot_j,vector(jax_j))
+            self.h_i=vector(self.u_irf[:,1]).a
+            self.h_j=vector(self.u_jrf[:,0]).a
+            
+        else:
+            # Angled axis
+            #print('angled')
+            ax=(vector(value).cross(vector(self.j_rot))).unit
+            ax_i=self.i_body.dcm.T.dot(ax)
+            ax_j=self.j_body.dcm.T.dot(ax)
+            
+            self.u_irf=orient_along_axis(self.i_rot_i,i_vector=ax_i)
+            self.u_jrf=orient_along_axis(self.j_rot_j,i_vector=ax_j)
+            
+            self.h_i=vector(self.u_irf[:,1]).a
+            self.h_j=vector(self.u_jrf[:,0]).a
+    
+    @property
+    def j_rot(self):
+        return self._j_rot
+    @j_rot.setter
+    def j_rot(self,value):
+        self._j_rot=value
+        self.j_rot_j = self.j_body.dcm.T.dot(value)
+        self.angle = np.sin(np.radians(vector(self.i_rot).angle_between(vector(value))))
+        
+        if abs(self.angle)<=1e-7:
+            # collinear axis 
+            self.u_irf=orient_along_axis(self.i_rot_i)
+            jax_j=self.j_body.dcm.T.dot(self.i_body.dcm.dot(self.u_irf[:,0]))
+            self.u_jrf=orient_along_axis(self.j_rot_j,vector(jax_j))
+            self.h_i=vector(self.u_irf[:,1]).a
+            self.h_j=vector(self.u_jrf[:,0]).a
+            
+        else:
+            # Angled axis
+            #print('angled')
+            ax=(vector(self.j_rot).cross(vector(value))).unit
+            ax_i=self.i_body.dcm.T.dot(ax)
+            ax_j=self.j_body.dcm.T.dot(ax)
+            
+            self.u_irf=orient_along_axis(self.i_rot_i,i_vector=ax_i)
+            self.u_jrf=orient_along_axis(self.j_rot_j,i_vector=ax_j)
+            
+            self.h_i=vector(self.u_irf[:,1]).a
+            self.h_j=vector(self.u_jrf[:,0]).a
+    
     
     def equations(self,q):
         

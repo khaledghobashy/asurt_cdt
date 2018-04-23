@@ -78,8 +78,8 @@ class model(object):
                                                       'xy','yy','zy',
                                                       'xz','yz','zz'])
     
-        self.topology  = nx.Graph()
-        self.data_flow = nx.DiGraph()
+        self.topology   = nx.Graph()
+        self.data_graph = nx.DiGraph()
 
     
     
@@ -114,7 +114,7 @@ class model(object):
                 self.model['geometries']=self.geometries
                 self.model['vectors']=self.vectors
                 self.model['forces']=self.forces
-                self.model['data_flow']=self.data_flow
+                self.model['data_graph']=self.data_graph
                 
                 self.model.to_pickle(f)
                 print('Model Saved as "%s" at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -136,7 +136,7 @@ class model(object):
                 self.model['geometries']=self.geometries
                 self.model['vectors']=self.vectors
                 self.model['forces']=self.forces
-                self.model['data_flow']=self.data_flow
+                self.model['data_graph']=self.data_graph
 
                 
                 self.model.to_pickle(self.name)
@@ -160,7 +160,7 @@ class model(object):
                 name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
 
                 self.model=pd.read_pickle(f)
-                self.points,self.bodies,self.joints,self.geometries,self.vectors,self.forces,self.data_flow=self.model
+                self.points,self.bodies,self.joints,self.geometries,self.vectors,self.forces,self.data_graph=self.model
                 self._sort()
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
@@ -221,7 +221,7 @@ class model(object):
                 self.model['geometries']=self.geometries
                 self.model['vectors']=self.vectors
                 self.model['forces']=self.forces
-                self.model['data_flow']=self.data_flow
+                self.model['data_graph']=self.data_graph
                 
                 self.model.to_pickle(f)
                 
@@ -310,7 +310,7 @@ class model(object):
 
                 name=alignment_v.value+name
                 
-                if alignment_v.label!='S':
+                if alignment_v.label in 'RL':
                     p1=point(name,[x,y,z])
                     p1.alignment=alignment_v.label
                     p2 = p1.m_object
@@ -322,8 +322,11 @@ class model(object):
                     self.points_dataframe.loc[p1.name]=[x,p1.y,z,p1.alignment,notes_v.value]
                     self.points_dataframe.loc[p2.name]=[x,p2.y,z,p2.alignment,notes_v.value]
                     
-                    self.data_flow.add_node(p1.name,obj=p1)
-                    self.data_flow.add_node(p2.name,obj=p2)
+                    self.data_graph.add_node(p1.name,obj=p1,typ='point')
+                    self.data_graph.add_node(p2.name,obj=p2,typ='point')
+                    
+                    self.edit_node(p1.name)
+                    self.edit_node(p2.name)
     
                 else:
                     p=point(name,[x,y,z])
@@ -331,7 +334,8 @@ class model(object):
                     p.notes=notes_v.value
                     self.points[p.name]=p
                     self.points_dataframe.loc[p.name]=[x,y,z,p.alignment,notes_v.value]
-                    self.data_flow.add_node(p.name,obj=p)
+                    self.data_graph.add_node(p.name,obj=p,typ='point')
+                    self.edit_node(p.name)
                     
                 
                 name_v.value=''
@@ -343,7 +347,6 @@ class model(object):
                 tabel.df=self.points_dataframe
                 ipy.display.display(tabel)
         add_button.on_click(add_click)
-        
         
         
         def on_change(change):
@@ -361,51 +364,10 @@ class model(object):
         points_dropdown.observe(on_change)
         
         
-        edit_button = widgets.Button(description='Edit',icon='edit',tooltip='apply edits to selected point')
-        edit_button.layout=layout100px
-        def edit_click(dummy):
-            tab1_out.clear_output()
-            
-            with tab1_out:
-                dependencies = nx.DiGraph(nx.edge_dfs(self.data_flow,points_dropdown.label))
-                nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
-                plt.show()
-            
-            with tab1_out:
-                name,x,y,z = [i.value for i in [name_v,x_v,y_v,z_v]]
-                
-                if (alignment_v.label=='R' and y<0) or (alignment_v.label=='L' and y>0):
-                    print('Inconsistent Selction of y value and symmetry!!')
-                    return
-                
-                if alignment_v.label in 'RL':
-                    self.points[points_dropdown.label].x=x
-                    self.points[points_dropdown.label].y=y
-                    self.points[points_dropdown.label].z=z
-                    
-                    self.points[points_dropdown.value.m_name].x=x
-                    self.points[points_dropdown.value.m_name].y=-y
-                    self.points[points_dropdown.value.m_name].z=z
-                    
-                    for e in nx.edge_dfs(self.data_flow,points_dropdown.label):
-                       
-                        try:
-                            self.data_flow.node[e[1]]['obj'].__setattr__(self.data_flow.edges[e]['attr'],self.data_flow.node[e[0]]['obj'])
-                            
-                        except KeyError:
-                            print('Not Found \n')
-                            pass
-                    
-                else:
-                    self.points[points_dropdown.label].x=x
-                    self.points[points_dropdown.label].y=y
-                    self.points[points_dropdown.label].z=z
-        edit_button.on_click(edit_click)
-        
         
         field1 = widgets.HBox([name_b,x_b,y_b,z_b])
         field2 = widgets.VBox([alignment_b,notes_b])
-        field3 = widgets.VBox([edit_l,points_dropdown,edit_button])
+        field3 = widgets.VBox([edit_l,points_dropdown])
 
         
         tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out])
@@ -489,8 +451,11 @@ class model(object):
                     self.vectors[v1.name]=v1
                     self.vectors[v2.name]=v2
                     
-                    self.data_flow.add_node(v1.name,obj=v1)
-                    self.data_flow.add_node(v2.name,obj=v2)
+                    self.data_graph.add_node(v1.name,obj=v1,typ='vector')
+                    self.data_graph.add_node(v2.name,obj=v2,typ='vector')
+                    
+                    self.edit_node(v1.name)
+                    self.edit_node(v2.name)
                     
     
                 else:
@@ -498,7 +463,8 @@ class model(object):
                     v.alignment=alignment_v.label
                     v.notes=notes_v.value
                     self.vectors[v.name]=v
-                    self.data_flow.add_node(v.name,obj=v)
+                    self.data_graph.add_node(v.name,obj=v,typ='vector')
+                    self.edit_node(v.name)
                     
                 self._sort()
                 name_v.value=''
@@ -545,12 +511,12 @@ class model(object):
                     self.vectors[v1.name]=v1
                     self.vectors[v2.name]=v2
                     
-                    self.data_flow.add_node(v1.name,obj=v1)
-                    self.data_flow.add_edge(p1.name,v1.name,attr='p1')
-                    self.data_flow.add_edge(p2.name,v1.name,attr='p2')
-                    self.data_flow.add_node(v2.name,obj=v2)
-                    self.data_flow.add_edge(p1.name,v2.name,attr='p1')
-                    self.data_flow.add_edge(p2.name,v2.name,attr='p2')
+                    self.data_graph.add_node(v1.name,obj=v1)
+                    self.data_graph.add_edge(p1.name,v1.name,attr='p1')
+                    self.data_graph.add_edge(p2.name,v1.name,attr='p2')
+                    self.data_graph.add_node(v2.name,obj=v2)
+                    self.data_graph.add_edge(p1.name,v2.name,attr='p1')
+                    self.data_graph.add_edge(p2.name,v2.name,attr='p2')
 
                     
                 elif alignment_v.label =='S':
@@ -560,9 +526,9 @@ class model(object):
                     v  = point(name,p1-p2)
                     v.alignment = alignment_v.label
                     self.vectors[name]=v
-                    self.data_flow.add_node(v.name,obj=v)
-                    self.data_flow.add_edge(p1.name,v.name,attr='p1')
-                    self.data_flow.add_edge(p2.name,v.name,attr='p2')
+                    self.data_graph.add_node(v.name,obj=v)
+                    self.data_graph.add_edge(p1.name,v.name,attr='p1')
+                    self.data_graph.add_edge(p2.name,v.name,attr='p2')
 
                 
                 self._sort()
@@ -663,8 +629,11 @@ class model(object):
                     self.bodies[body_name_l]=bod_l
                     self.bodies[body_name_r]=bod_r
                     
-                    self.data_flow.add_node(bod_l.name,obj=bod_l)
-                    self.data_flow.add_node(bod_r.name,obj=bod_r)
+                    self.data_graph.add_node(bod_l.name,obj=bod_l,typ='body')
+                    self.data_graph.add_node(bod_r.name,obj=bod_r,typ='body')
+                    
+                    self.edit_node(bod_l.name)
+                    self.edit_node(bod_r.name)
 
                 
                 elif alignment_v.label=='S':
@@ -672,7 +641,8 @@ class model(object):
                     bod = rigid(body_name)
                     bod.alignment='S'
                     self.bodies[body_name]=bod
-                    self.data_flow.add_node(bod.name,obj=bod)
+                    self.data_graph.add_node(bod.name,obj=bod,typ='body')
+                    self.edit_node(bod.name)
                 
                 self._sort()
                 bodies_dropdown.options=dict(self.bodies)
@@ -814,9 +784,11 @@ class model(object):
                     self.bodies[name_1]=body_1
                     self.bodies[name_2]=body_2
                     
-                    self.data_flow.add_node(body_1.name,obj=body_1)
-                    self.data_flow.add_node(body_2.name,obj=body_2)
-
+                    self.data_graph.add_node(body_1.name,obj=body_1,typ='body')
+                    self.data_graph.add_node(body_2.name,obj=body_2,typ='body')
+                    
+                    self.edit_node(body_1.name)
+                    self.edit_node(body_2.name)
 
                     
                     print('Bodies added : \n %s \n %s' %(name_1,name_2) )
@@ -829,7 +801,9 @@ class model(object):
                     bod = rigid(body.name,mass,iner_tens,cm,ref_frame)
                     bod.alignment='S'
                     self.bodies[body.name]=bod
-                    self.data_flow.add_node(bod.name,obj=bod)
+                    self.data_graph.add_node(bod.name,obj=bod,typ='body')
+                    self.edit_node(bod.name)
+                    
                     
                     print('Body added : \n %s' %body.name )
                 
@@ -911,13 +885,15 @@ class model(object):
                     body_1.update_inertia()
                     body_2.update_inertia()
                     
-                    self.data_flow.add_node(geo_name_1,obj=geo_1)
-                    self.data_flow.add_node(geo_name_2,obj=geo_2)
+                    self.data_graph.add_node(geo_name_1,obj=geo_1,typ='geo')
+                    self.data_graph.add_node(geo_name_2,obj=geo_2,typ='geo')
                     
-                    self.data_flow.add_edge(p1_1.name,geo_name_1,attr='p1')
-                    self.data_flow.add_edge(p2_1.name,geo_name_1,attr='p2')
+                    self.data_graph.add_edge(p1_1.name,geo_name_1,attr='p1')
+                    self.data_graph.add_edge(p2_1.name,geo_name_1,attr='p2')
                     
-                    self.data_flow.add_edge(geo_name_1,body.name)
+                    self.data_graph.add_edge(geo_name_1,body.name,attr='geometries')
+                    self.data_graph.add_edge(geo_name_2,body.m_name,attr='geometries')
+                    
                 
                 elif  body.alignment=='S':
                     p1 = self.pointsp1_v.value
@@ -929,11 +905,11 @@ class model(object):
                     self.geometries[geo_name] = geo
                     body.update_inertia()
                     
-                    self.data_flow.add_node(geo_name,obj=geo)
-                    self.data_flow.add_edge(p1.name,geo_name)
-                    self.data_flow.add_edge(p2.name,geo_name)
+                    self.data_graph.add_node(geo_name,obj=geo)
+                    self.data_graph.add_edge(p1.name,geo_name,typ='geo')
+                    self.data_graph.add_edge(p2.name,geo_name,typ='geo')
                     
-                    self.data_flow.add_edge(geo_name,body.name)
+                    self.data_graph.add_edge(geo_name,body.name,attr='geometries')
 
                     
                 geo_name_v.value=''
@@ -1082,8 +1058,8 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2,axis2_2)
                         j2.alignment=alignment_2
                         
-                        self.data_flow.add_edge(axis2_1.name,j1.name)
-                        self.data_flow.add_edge(axis1_1.name,j1.name)
+                        self.data_graph.add_edge(axis2_1.name,j1.name,attr='j_rot')
+                        self.data_graph.add_edge(axis1_1.name,j1.name,attr='i_rot')
 
                     
                     elif joint_type_v.label=='Spherical' :
@@ -1102,7 +1078,7 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2)
                         j2.alignment=alignment_2
                         
-                        self.data_flow.add_edge(axis1_1.name,j1.name)
+                        self.data_graph.add_edge(axis1_1.name,j1.name)
 
                     
                     j1.notes=j2.notes=notes_v.value
@@ -1110,10 +1086,10 @@ class model(object):
                     self.joints[j1.name]=j1
                     self.joints[j2.name]=j2
                     
-                    self.data_flow.add_node(j1.name,obj=j1)
-                    self.data_flow.add_edge(loc_1.name,j1.name,attr='location')
-                    self.data_flow.add_edge(bodyi_1.name,j1.name,attr='i_body')
-                    self.data_flow.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                    self.data_graph.add_node(j1.name,obj=j1)
+                    self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
+                    self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                    self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
                 
                 elif alignment_v.label=='S':
                     joint_name = alignment_v.value+name_v.value
@@ -1124,22 +1100,22 @@ class model(object):
                     
                     if joint_type_v.label=='Universal':
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
-                        self.data_flow.add_edge(axis2_v.label,j1.name)
-                        self.data_flow.add_edge(axis1_v.label,j1.name)
+                        self.data_graph.add_edge(axis2_v.label,j1.name)
+                        self.data_graph.add_edge(axis1_v.label,j1.name)
                         
                     elif joint_type_v.label=='Spherical' :
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj)
                     else:
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value)
-                        self.data_flow.add_edge(axis1_v.label,j1.name)
+                        self.data_graph.add_edge(axis1_v.label,j1.name)
                     
                     j.notes=notes
                     self.joints[joint_name]=j
                     
-                    self.data_flow.add_node(j.name,obj=j)
-                    self.data_flow.add_edge(loc.name,j.name)
-                    self.data_flow.add_edge(bodyi.name,j.name)
-                    self.data_flow.add_edge(bodyj.name,j.name)
+                    self.data_graph.add_node(j.name,obj=j)
+                    self.data_graph.add_edge(loc.name,j.name)
+                    self.data_graph.add_edge(bodyi.name,j.name)
+                    self.data_graph.add_edge(bodyj.name,j.name)
 
 
                 
@@ -1360,11 +1336,11 @@ class model(object):
                     self.forces[strut_1.name]=strut_1
                     self.forces[strut_2.name]=strut_2
                     
-                    self.data_flow.add_node(strut_1.name,obj=strut_1)
-                    self.data_flow.add_edge(pi_1.name,strut_1.name)
-                    self.data_flow.add_edge(pj_1.name,strut_1.name)
-                    self.data_flow.add_edge(body_i_1.name,strut_1.name)
-                    self.data_flow.add_edge(body_j_1.name,strut_1.name)
+                    self.data_graph.add_node(strut_1.name,obj=strut_1)
+                    self.data_graph.add_edge(pi_1.name,strut_1.name)
+                    self.data_graph.add_edge(pj_1.name,strut_1.name)
+                    self.data_graph.add_edge(body_i_1.name,strut_1.name)
+                    self.data_graph.add_edge(body_j_1.name,strut_1.name)
 
                     
                     
@@ -1378,11 +1354,11 @@ class model(object):
                     strut = air_strut(name,pi,bodyi,pj,bodyj,stiffness,damping,rh_stroke)
                     self.forces[strut.name]=strut
                     
-                    self.data_flow.add_node(strut.name,obj=strut)
-                    self.data_flow.add_edge(pi.name,strut.name)
-                    self.data_flow.add_edge(pj.name,strut.name)
-                    self.data_flow.add_edge(bodyi.name,strut.name)
-                    self.data_flow.add_edge(bodyj.name,strut.name)
+                    self.data_graph.add_node(strut.name,obj=strut)
+                    self.data_graph.add_edge(pi.name,strut.name)
+                    self.data_graph.add_edge(pj.name,strut.name)
+                    self.data_graph.add_edge(bodyi.name,strut.name)
+                    self.data_graph.add_edge(bodyj.name,strut.name)
 
                 
                 print('Done')
@@ -1582,7 +1558,7 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Model Data Flow',figsize=(8,5))
-            nx.draw_circular(self.data_flow,with_labels=True)
+            nx.draw_circular(self.data_graph,with_labels=True)
             plt.show()
         return out
     
@@ -1590,7 +1566,7 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Object Dependencies',figsize=(8,5))
-            dependencies = nx.DiGraph(nx.edge_dfs(self.data_flow,object_node))
+            dependencies = nx.DiGraph(nx.edge_dfs(self.data_graph,object_node))
             nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
             plt.show()
         return out
@@ -1599,18 +1575,18 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Object Dependencies',figsize=(8,5))
-            dependencies = nx.DiGraph([(i[0],i[1]) for i in nx.edge_dfs(self.data_flow,object_node,'reverse')])
+            dependencies = nx.DiGraph([(i[0],i[1]) for i in nx.edge_dfs(self.data_graph,object_node,'reverse')])
             nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
             plt.show()
         return out
     
     def edit_node(self,node):
-        g=self.data_flow
+        g=self.data_graph
         
         for e in nx.edge_dfs(g,node):
             try:
                 g.node[e[1]]['obj'].__setattr__(g.edges[e]['attr'],g.node[e[0]]['obj'])
-                print('Editing object "%s" and updating attribute "%s" in dependency "%s" \n' %(e[0],g.edges[e]['attr'],e[1]))
+                print('Editing node "%s" and updating attribute "%s" in dependency "%s" \n' %(e[0],g.edges[e]['attr'],e[1]))
             except KeyError:
                 print('Not Found \n')
                 pass
