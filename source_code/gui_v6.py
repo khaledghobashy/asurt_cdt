@@ -891,8 +891,11 @@ class model(object):
                     self.data_graph.add_edge(p1_1.name,geo_name_1,attr='p1')
                     self.data_graph.add_edge(p2_1.name,geo_name_1,attr='p2')
                     
-                    self.data_graph.add_edge(geo_name_1,body.name,attr='geometries')
-                    self.data_graph.add_edge(geo_name_2,body.m_name,attr='geometries')
+                    self.data_graph.add_edge(p1_2.name,geo_name_2,attr='p1')
+                    self.data_graph.add_edge(p2_2.name,geo_name_2,attr='p2')
+                    
+                    self.data_graph.add_edge(geo_name_1,body_1.name,attr='geometries')
+                    self.data_graph.add_edge(geo_name_2,body_2.name,attr='geometries')
                     
                 
                 elif  body.alignment=='S':
@@ -1058,8 +1061,21 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2,axis2_2)
                         j2.alignment=alignment_2
                         
+                        self.data_graph.add_node(j1.name,obj=j1,typ='joint')
+                        self.data_graph.add_node(j2.name,obj=j2,typ='joint')
+                        
+                        self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
+                        self.data_graph.add_edge(loc_2.name,j2.name,attr='location')
+                        
+                        self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                        self.data_graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
+                        
                         self.data_graph.add_edge(axis2_1.name,j1.name,attr='j_rot')
                         self.data_graph.add_edge(axis1_1.name,j1.name,attr='i_rot')
+                        self.data_graph.add_edge(axis2_2.name,j2.name,attr='j_rot')
+                        self.data_graph.add_edge(axis1_2.name,j2.name,attr='i_rot')
 
                     
                     elif joint_type_v.label=='Spherical' :
@@ -1068,6 +1084,18 @@ class model(object):
                         j1.alignment=alignment_1
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2)
                         j2.alignment=alignment_2
+                        
+                        self.data_graph.add_node(j1.name,obj=j1,typ='joint')
+                        self.data_graph.add_node(j2.name,obj=j2,typ='joint')
+                        
+                        self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
+                        self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                        
+                        self.data_graph.add_edge(loc_2.name,j2.name,attr='location')
+                        self.data_graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
+                        
                     
                     
                     else:
@@ -1078,7 +1106,22 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2)
                         j2.alignment=alignment_2
                         
-                        self.data_graph.add_edge(axis1_1.name,j1.name)
+                        self.data_graph.add_node(j1.name,obj=j1,typ='joint')
+                        
+                        self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
+                        self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                        
+                        self.data_graph.add_edge(axis1_1.name,j1.name,attr='axis')
+                        
+                        
+                        self.data_graph.add_node(j2.name,obj=j2,typ='joint')
+                        
+                        self.data_graph.add_edge(loc_2.name,j2.name,attr='location')
+                        self.data_graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
+                        
+                        self.data_graph.add_edge(axis1_2.name,j2.name,attr='axis')
 
                     
                     j1.notes=j2.notes=notes_v.value
@@ -1086,10 +1129,7 @@ class model(object):
                     self.joints[j1.name]=j1
                     self.joints[j2.name]=j2
                     
-                    self.data_graph.add_node(j1.name,obj=j1)
-                    self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
-                    self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
-                    self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                    
                 
                 elif alignment_v.label=='S':
                     joint_name = alignment_v.value+name_v.value
@@ -1100,22 +1140,42 @@ class model(object):
                     
                     if joint_type_v.label=='Universal':
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
-                        self.data_graph.add_edge(axis2_v.label,j1.name)
-                        self.data_graph.add_edge(axis1_v.label,j1.name)
+                        
+                        self.data_graph.add_node(j.name,obj=j,typ='joint')
+                        
+                        self.data_graph.add_edge(loc.name,j.name,attr='location')
+                        self.data_graph.add_edge(bodyi.name,j.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj.name,j.name,attr='j_body')
+                        
+                        self.data_graph.add_edge(axis2_v.value.name,j.name,attr='j_rot')
+                        self.data_graph.add_edge(axis1_v.value.name,j.name,attr='i_rot')
                         
                     elif joint_type_v.label=='Spherical' :
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj)
+                        
+                        self.data_graph.add_node(j.name,obj=j,typ='joint')
+                        
+                        self.data_graph.add_edge(loc.name,j.name,attr='location')
+                        self.data_graph.add_edge(bodyi.name,j.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj.name,j.name,attr='j_body')
+                        
+                        
                     else:
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value)
-                        self.data_graph.add_edge(axis1_v.label,j1.name)
+                        
+                        self.data_graph.add_node(j.name,obj=j,typ='joint')
+                        
+                        self.data_graph.add_edge(loc.name,j.name,attr='location')
+                        
+                        self.data_graph.add_edge(bodyi.name,j.name,attr='i_body')
+                        self.data_graph.add_edge(bodyj.name,j.name,attr='j_body')
+                        
+                        self.data_graph.add_edge(axis1_v.value.name,j.name,attr='axis')
+
                     
                     j.notes=notes
                     self.joints[joint_name]=j
                     
-                    self.data_graph.add_node(j.name,obj=j)
-                    self.data_graph.add_edge(loc.name,j.name)
-                    self.data_graph.add_edge(bodyi.name,j.name)
-                    self.data_graph.add_edge(bodyj.name,j.name)
 
 
                 
