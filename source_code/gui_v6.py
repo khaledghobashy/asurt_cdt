@@ -159,11 +159,36 @@ class model(object):
                 f=openfile_dialog()
                 if f=='':
                     return
+                
                 self.name=f
                 name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
-
+                
                 self.model=pd.read_pickle(f)
-                self.points,self.bodies,self.joints,self.geometries,self.vectors,self.forces,self.data_graph,self.topology=self.model
+
+                self.data_graph = self.model['data_graph']
+                self.topology   = self.model['topology']
+                
+                for n in self.data_graph.nodes:
+                    if self.data_graph.node[n]['typ']=='joint':
+                            self.joints[n]=self.data_graph.node[n]['obj']
+                    
+                    elif self.data_graph.node[n]['typ']=='body':
+                            self.bodies[n]=self.data_graph.node[n]['obj']
+                    
+                    elif self.data_graph.node[n]['typ']=='point':
+                            self.points[n]=self.data_graph.node[n]['obj']
+                    
+                    elif self.data_graph.node[n]['typ']=='vector':
+                            self.vectors[n]=self.data_graph.node[n]['obj']
+                    
+                    elif self.data_graph.node[n]['typ'] in ['force','air_strut']:
+                            self.forces[n]=self.data_graph.node[n]['obj']
+                            
+                    elif self.data_graph.node[n]['typ'] == 'geo':
+                            self.geometries[n]=self.data_graph.node[n]['obj']
+
+                
+                
                 self._sort()
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
@@ -190,7 +215,7 @@ class model(object):
                 
                 post_processing = self.data_processing()
                 
-                major_fields = widgets.Accordion(children=[modeling,self.parallel_travel(),post_processing])
+                major_fields = widgets.Accordion(children=[modeling,post_processing])
                 major_fields.set_title(0,'MODELING')
                 major_fields.set_title(1,'SIMULATION')
                 major_fields.set_title(2,'POST PROCESSING')
@@ -594,16 +619,16 @@ class model(object):
         notes_b = widgets.VBox([notes_l,notes_v])
         
         body_type_l = widgets.HTML('<b>Body Type')
-        body_type_v = widgets.ToggleButton(description='Float',value=False,icon='cube',layout=layout80px)
+        body_type_v = widgets.ToggleButton(description='Float',value=True,icon='cube',layout=layout80px)
         body_type_b = widgets.VBox([body_type_l,body_type_v],layout=widgets.Layout(left='50px'))
         def type_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
                 if body_type_v.value:
-                    body_type_v.description=' Mount'
-                    body_type_v.icon='plug'
-                else:
                     body_type_v.description=' Float'
                     body_type_v.icon='cube'
+                else:
+                    body_type_v.description=' Mount'
+                    body_type_v.icon='plug'
         body_type_v.observe(type_change)
         
         align_type_box = widgets.HBox([alignment_b,body_type_b])
@@ -629,6 +654,8 @@ class model(object):
                     bod_l.alignment='L'
                     bod_r.alignment='R'
                     
+                    bod_r.typ = bod_l.typ = ('floating' if body_type_v.value else 'mount')
+                    
                     self.bodies[body_name_l]=bod_l
                     self.bodies[body_name_r]=bod_r
                     
@@ -643,6 +670,7 @@ class model(object):
                     body_name = 'rbs_'+name_v.value
                     bod = rigid(body_name)
                     bod.alignment='S'
+                    bod.typ=('floating' if body_type_v.value else 'mount')
                     self.bodies[body_name]=bod
                     self.data_graph.add_node(bod.name,obj=bod,typ='body')
                     self.edit_node(bod.name)
@@ -902,8 +930,8 @@ class model(object):
                     
                 
                 elif  body.alignment=='S':
-                    p1 = self.pointsp1_v.value
-                    p2 = self.pointsp2_v.value
+                    p1 = self.points[p1_v.label]
+                    p2 = self.points[p2_v.label]
 
                     geo_name = body.name+'_'+geo_name_v.value
                     
@@ -911,9 +939,9 @@ class model(object):
                     self.geometries[geo_name] = geo
                     body.update_inertia()
                     
-                    self.data_graph.add_node(geo_name,obj=geo)
-                    self.data_graph.add_edge(p1.name,geo_name,typ='geo')
-                    self.data_graph.add_edge(p2.name,geo_name,typ='geo')
+                    self.data_graph.add_node(geo_name,obj=geo,typ='geo')
+                    self.data_graph.add_edge(p1.name,geo_name,attr='p1')
+                    self.data_graph.add_edge(p2.name,geo_name,attr='p2')
                     
                     self.data_graph.add_edge(geo_name,body.name,attr='geometries')
 
@@ -1408,13 +1436,13 @@ class model(object):
                     self.forces[strut_1.name]=strut_1
                     self.forces[strut_2.name]=strut_2
                     
-                    self.data_graph.add_node(strut_1.name,obj=strut_1,typ='air_strut')
+                    self.data_graph.add_node(strut_1.name,obj=strut_1,typ='force')
                     self.data_graph.add_edge(pi_1.name,strut_1.name,attr='Pi')
                     self.data_graph.add_edge(pj_1.name,strut_1.name,attr='Qj')
                     self.data_graph.add_edge(body_i_1.name,strut_1.name,attr='bodyi')
                     self.data_graph.add_edge(body_j_1.name,strut_1.name,attr='bodyj')
                     
-                    self.data_graph.add_node(strut_2.name,obj=strut_2,typ='air_strut')
+                    self.data_graph.add_node(strut_2.name,obj=strut_2,typ='force')
                     self.data_graph.add_edge(pi_2.name,strut_2.name,attr='Pi')
                     self.data_graph.add_edge(pj_2.name,strut_2.name,attr='Qj')
                     self.data_graph.add_edge(body_i_2.name,strut_2.name,attr='bodyi')
@@ -1432,7 +1460,7 @@ class model(object):
                     strut = air_strut(name,pi,bodyi,pj,bodyj,stiffness,damping,rh_stroke)
                     self.forces[strut.name]=strut
                     
-                    self.data_graph.add_node(strut.name,obj=strut,typ='air_strut')
+                    self.data_graph.add_node(strut.name,obj=strut,typ='force')
                     self.data_graph.add_edge(pi.name,strut.name,attr='Pi')
                     self.data_graph.add_edge(pj.name,strut.name,attr='Qj')
                     self.data_graph.add_edge(bodyi.name,strut.name,attr='bodyi')
@@ -1501,6 +1529,57 @@ class model(object):
                 return
         
         return widgets.VBox([common_data_block,separator100,actuator_type_b,separator50])
+    
+    
+    
+    
+    def system_parameters(self):
+        
+        main_out = widgets.Output()
+        
+        #######################################################################
+        #################### Steering Axis Definition  ########################
+        #######################################################################
+        
+        steering_axis_l = widgets.HTML('<b Steering Axis Definition Points')
+        
+        p1_l = widgets.HTML('<b>Point 1',layout=layout120px)
+        p1_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
+        p1_b = widgets.VBox([p1_l,p1_v])
+
+        p2_l = widgets.HTML('<b>Point 2',layout=layout120px)
+        p2_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
+        p2_b = widgets.VBox([p2_l,p2_v])
+        
+        
+        
+        camber_l = widgets.HTML('<b Camber Angle at ride hieght')
+        camber_v = widgets.BoundedFloatText(min=-10,max=10)
+        camber_b = widgets.VBox([camber_l,camber_v])
+        
+        
+        
+        toe_l = widgets.HTML('<b Toe Angle at ride hieght')
+        toe_v = widgets.BoundedFloatText(min=-10,max=10)
+        toe_b = widgets.VBox([toe_l,toe_v]) 
+        
+        
+        apply_button = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
+        def apply_click(dummy):
+            with main_out:
+                gamma = np.deg2rad(camber_v.value)
+                camber_vector = np.array([[0],[np.sin(gamma)],[np.cos(gamma)]])
+                
+                delta = np.deg2rad(toe_v.value)
+                toe_vector = np.array([[np.cos(delta)],[np.sin(delta)],[0]])
+
+        
+    
+    
+    
+    
+    
+    
     
     
     def parallel_travel(self):

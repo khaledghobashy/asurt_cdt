@@ -1203,9 +1203,9 @@ class rotational_drive(object):
         v2=Aj.dot(self.v2)
         v3=Ai.dot(self.v3)
         
-        c=float(v1.T.dot(v2))
-        s=float(v3.T.dot(v2))
-        
+#        c=float(v1.T.dot(v2))
+#        s=float(v3.T.dot(v2))
+#        
 #        print('angle: %s'%self.pos)
 #        
 ##        print("v1i = %s"%v1.T)
@@ -1214,7 +1214,7 @@ class rotational_drive(object):
 #        print("sin = %s"%s)
 ##        print("%s"%qi[3:])
 #        print("%s"%sum(qj[3:]**2))
-
+#
 #        if s>=0 and c>=0:
 #            eq=np.arcsin(s)-np.deg2rad(self.pos)
 #        if s>=0 and c<0:
@@ -1224,7 +1224,7 @@ class rotational_drive(object):
 #        if s<0 and c>=0:
 #            eq=2*np.pi+np.arcsin(s)-np.deg2rad(self.pos)
                 
-        eq=float(v3.T.dot(v2))-np.sin(np.deg2rad(self.pos))
+        eq=float(v1.T.dot(v2))-np.cos(self.pos)
         
         return np.array([eq])
     
@@ -1240,7 +1240,7 @@ class rotational_drive(object):
         
         v2=Aj.dot(self.v2)
         
-        Hiv1 = B(betai,self.v3)
+        Hiv1 = B(betai,self.v1)
         Z    = sparse.csr_matrix([[0,0,0]])
         
         jac=sparse.bmat([[Z,v2.T.dot(Hiv1)]],format='csr')
@@ -1257,7 +1257,7 @@ class rotational_drive(object):
         
         Ai=ep2dcm(betai)
         
-        v1=Ai.dot(self.v3)
+        v1=Ai.dot(self.v1)
         
         Hjv2 = B(betaj,self.v2)
         Z    = sparse.csr_matrix([[0,0,0]])
@@ -1267,7 +1267,7 @@ class rotational_drive(object):
         return jac
     
     def vel_rhs(self):
-        return np.array([[self.vel*np.cos(self.pos)]])
+        return np.array([[-self.vel*np.sin(self.pos)]])
     
     def acc_rhs(self,q,qdot):
         qi=q[self.i_body.dic.index]
@@ -1287,17 +1287,17 @@ class rotational_drive(object):
         bid=betai_dot.values.reshape((4,1))
         bjd=betaj_dot.values.reshape((4,1))
         
-        v1=self.v3
+        v1=self.v1
         v2=self.v2
         
         Biv1=B(betai,v1)
-        Bjv2=B(betaj,v1)
+        Bjv2=B(betaj,v2)
 
 
         Hiv1=B(betai_dot,v1)
         Hjv2=B(betaj_dot,v2)
         
-        rhs=acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v2,Aj,Bjv2,Hjv2,bjd)+self.acc
+        rhs=acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v2,Aj,Bjv2,Hjv2,bjd)-(np.sin(self.pos)*self.acc)+(np.cos(self.pos)*self.vel**2)
         
         return rhs
         
