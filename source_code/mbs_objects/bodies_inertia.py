@@ -61,7 +61,7 @@ class rigid(object):
         self._dcm=dcm
         self._P=dcm2ep(dcm)
         
-        self.typ=typ
+        self._typ=typ
         self.nc=(7 if typ=='mount' else 1)
         self._geometries=pd.Series()
         self.alignment='S'
@@ -117,6 +117,14 @@ class rigid(object):
     def geometries(self,value):
         self._geometries[value.name]=value
         self.update_inertia()
+    
+    @property
+    def typ(self):
+        return self._typ
+    @typ.setter
+    def typ(self,value):
+        self._typ=value
+        self.nc=(7 if value=='mount' else 1)
     
     @property    
     def m_name(self):

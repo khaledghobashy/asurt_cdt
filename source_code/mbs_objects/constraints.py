@@ -94,8 +94,8 @@ class joint(object):
     @i_body.setter
     def i_body(self,value):
         self._i_body=value
-        self.u_irf=self.i_body.dcm.T.dot(self.frame)
-        self.u_i=self.i_body.dcm.T.dot(self.location-self.i_body.R)
+        self.u_irf=self._i_body.dcm.T.dot(self.frame)
+        self.u_i=self._i_body.dcm.T.dot(self.location-self._i_body.R)
         self.vii=vector(self.u_irf[:,0])
         self.vij=vector(self.u_irf[:,1])
         self.vik=vector(self.u_irf[:,2])
@@ -109,8 +109,8 @@ class joint(object):
     @j_body.setter
     def j_body(self,value):
         self._j_body=value
-        self.u_jrf=self.j_body.dcm.T.dot(self.frame)
-        self.u_j=self.j_body.dcm.T.dot(self.location-self.j_body.R)
+        self.u_jrf=self._j_body.dcm.T.dot(self.frame)
+        self.u_j=self._j_body.dcm.T.dot(self.location-self._j_body.R)
         self.vji=vector(self.u_jrf[:,0])
         self.vjj=vector(self.u_jrf[:,1])
         self.vjk=vector(self.u_jrf[:,2])
@@ -290,9 +290,15 @@ class cylindrical(joint):
         self.type='cylindrical joint'
         self.name=name
         self.nc=4
-        self.p2=vector(location)+10*vector(axis).unit
-        self.u_j=j_body.dcm.T.dot(self.p2-j_body.R)
-        
+    
+    @property
+    def p2(self):
+        return vector(self.location)+10*vector(self.axis).unit
+    
+    @property
+    def u_j(self):
+        return self.j_body.dcm.T.dot(self.p2-self.j_body.R)
+    
 
 
     def equations(self,q):
@@ -454,10 +460,11 @@ class translational(joint):
         self.type='translational joint'
         self.name=name
         self.nc=5
-        self.p2=vector(location)+10*vector(axis).unit
-        self.u_j=j_body.dcm.T.dot(self.p2-j_body.R)
         
-
+        self._p2 = vector(self.location)+10*vector(self.axis).unit
+        self.u_j = self.j_body.dcm.T.dot(self._p2-self.j_body.R)
+            
+    
 
     def equations(self,q):
         
@@ -804,7 +811,7 @@ class universal(joint):
     @i_rot.setter
     def i_rot(self,value):
         self._i_rot=value
-        self.i_rot_i = self.i_body.dcm.T.dot(self.value)
+        self.i_rot_i = self.i_body.dcm.T.dot(value)
         self.angle = np.sin(np.radians(vector(value).angle_between(vector(self.j_rot))))
         
         if abs(self.angle)<=1e-7:
@@ -1151,6 +1158,164 @@ class bounce_roll(joint):
         return pd.Series([left,right],index=['l','r'])
 
 
+
+class translational_actuator(object):
+    def __init__(self,name,actuated_joint):
+        
+        self.name = name
+        self.typ  = 'trans_actuator'
+        self.nc   = 1
+        
+        self.joint=actuated_joint
+        
+        self.v=actuated_joint.vik
+        
+        self.i_body=actuated_joint.i_body
+        self.j_body=actuated_joint.j_body
+        
+        self.u_i = self.joint.u_i
+        self.u_j = self.joint.u_j
+        
+        self.pos=0
+        self.vel=0
+        self.acc=0
+        
+        self.pos_array=self.vel_array=self.acc_array=[]
+    
+    
+    def set_pos(self,pos,time_array):
+        self.pos_array=pos.copy()
+        self.vel_array=np.gradient(self.pos_array)/np.gradient(time_array)
+        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
+
+    
+    def set_vel(self,vel,time_array):
+        self.vel_array=vel.copy()
+        self.pos_array=sc.integrate.cumtrapz(self.vel_array,time_array,initial=0)
+        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
+    
+    
+    @property
+    def index(self):
+        name=self.name
+        indices=[name+'_eq%s'%i for i in range(self.nc)]
+        return indices
+    
+    def equations(self,q):
+        
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+                
+        Ai=ep2dcm(qi[3:])
+        Aj=ep2dcm(qj[3:])
+        
+        v  = Ai.dot(self.v)
+        Ri = qi[0:3].values.reshape((3,1))
+        Rj = qj[0:3].values.reshape((3,1))
+        
+        rij = Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
+        
+        eq = (v.T.dot(rij))-self.pos
+        
+        return eq
+    
+    def jacobian_i(self,q):
+        
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        betai=qi[3:]
+        betaj=qj[3:]
+                
+        Ai=ep2dcm(betai)
+        Aj=ep2dcm(betaj)
+        
+        v  = Ai.dot(self.v)
+        Ri = vector(qi[0:3]).a
+        Rj = vector(qj[0:3]).a
+
+        rij = Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
+        
+        Hiv=B(betai,self.v)
+        Hiup=B(betai,self.u_i)
+        
+        
+        
+        jac=sparse.bmat([[v.flatten(),(rij.T.dot(Hiv)+v.T.dot(Hiup)).flatten()]],format='csr')
+        
+        return jac
+    
+    def jacobian_j(self,q):
+        
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        betai=qi[3:]
+        betaj=qj[3:]
+        
+        Ai=ep2dcm(betai)
+        
+        v=Ai.dot(self.v)
+        
+        Hjup=B(betaj,self.u_j)
+        
+        Z=sparse.csr_matrix([[0,0,0]])
+        
+        jac=sparse.bmat([[ Z , -v.T.dot(Hjup)]],format='csr')
+        return jac
+    
+    def vel_rhs(self):
+        return np.array([[self.vel]])
+     
+    def acc_rhs(self,q,qdot):
+        qi=q[self.i_body.dic.index]
+        qj=q[self.j_body.dic.index]
+        
+        qi_dot=qdot[self.i_body.dic.index]
+        qj_dot=qdot[self.j_body.dic.index]
+        
+        betai=qi[3:]
+        betaj=qj[3:]
+        Ai=ep2dcm(betai)
+        Aj=ep2dcm(betaj)
+
+        betai_dot=qi_dot[3:]
+        betaj_dot=qj_dot[3:]
+        
+        bid=betai_dot.values.reshape((4,1))
+        bjd=betaj_dot.values.reshape((4,1))
+        
+        v  = self.v
+        Ri = vector(qi[0:3]).a
+        Rj = vector(qj[0:3]).a
+        
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
+
+        
+        Biv=B(betai,v)
+        Hiv=B(betai_dot,v)
+        
+        Ri_dot=qi_dot[0:3].values.reshape((3,1))
+        Rj_dot=qj_dot[0:3].values.reshape((3,1))
+        
+
+        
+        Bip=B(betai,self.u_i)
+        Bjp=B(betaj,self.u_j)
+
+        Hip =B(betai_dot,self.u_i)
+        Hjp =B(betaj_dot,self.u_j)
+
+        
+        rij_dot=Ri_dot+Bip.dot(bid)-Rj_dot-Bjp.dot(bjd)
+        
+        rhs=acc_dp2_rhs(v,Ai,Biv,Hiv,bid,rij,Hip,Hjp,bjd,rij_dot)+self.acc
+        
+        return rhs
+
+
+
+
 class rotational_drive(object):
     def __init__(self,name,actuated_joint):
         
@@ -1225,8 +1390,9 @@ class rotational_drive(object):
 #            eq=2*np.pi+np.arcsin(s)-np.deg2rad(self.pos)
                 
         eq=float(v1.T.dot(v2))-np.cos(self.pos)
+#        print(eq)
         
-        return np.array([eq])
+        return eq
     
     def jacobian_i(self,q):
         
@@ -1267,6 +1433,7 @@ class rotational_drive(object):
         return jac
     
     def vel_rhs(self):
+#        print('vel=%s'%self.vel)
         return np.array([[-self.vel*np.sin(self.pos)]])
     
     def acc_rhs(self,q,qdot):
@@ -1297,7 +1464,7 @@ class rotational_drive(object):
         Hiv1=B(betai_dot,v1)
         Hjv2=B(betaj_dot,v2)
         
-        rhs=acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v2,Aj,Bjv2,Hjv2,bjd)-(np.sin(self.pos)*self.acc)+(np.cos(self.pos)*self.vel**2)
+        rhs=acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v2,Aj,Bjv2,Hjv2,bjd)-(self.acc*np.sin(self.pos))-(np.cos(self.pos)*self.vel**2)
         
         return rhs
         

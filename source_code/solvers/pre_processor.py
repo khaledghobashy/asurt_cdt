@@ -207,32 +207,6 @@ def topology_writer(bodies,joints,actuators,forces,file_name):
 ###############################################################################
 ###############################################################################
 
-def mirror(model,sym='l'):
-    
-    points=model['points']
-    points_right = points.copy()
-    points_left  = points.copy()
-    points_mir_mul=np.array(len(points)*[1,-1,1])
-
-    if sym not in 'rl':
-        raise ValueError('Un-authorized type')
-    elif sym=='r':
-        r='_rt'
-        points_right.index+=r
-        points_left*=points_mir_mul
-    elif sym=='l':
-        l='_lf'
-        points_left.index+=l
-        points_right*=points_mir_mul
-        
-    return points_right, points_left
-        
-    
-    
-    
-    
-
-
 
 
 

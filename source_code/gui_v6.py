@@ -167,6 +167,9 @@ class model(object):
 
                 self.data_graph = self.model['data_graph']
                 self.topology   = self.model['topology']
+                self.model=pd.Series()
+                self.model['data_graph']=self.data_graph
+                self.model['topology']=self.topology
                 
                 for n in self.data_graph.nodes:
                     if self.data_graph.node[n]['typ']=='joint':
@@ -1561,7 +1564,11 @@ class model(object):
         
         toe_l = widgets.HTML('<b Toe Angle at ride hieght')
         toe_v = widgets.BoundedFloatText(min=-10,max=10)
-        toe_b = widgets.VBox([toe_l,toe_v]) 
+        toe_b = widgets.VBox([toe_l,toe_v])
+        
+        hub_bearing_l = widgets.HTML('<b> Wheel Hub Bearing Joint')
+        hub_bearing_v = widgets.Dropdown(options=dict(self.joints))
+        hub_bearing_b = widgets.VBox([hub_bearing_l,hub_bearing_v])
         
         
         apply_button = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
@@ -1761,5 +1768,41 @@ class model(object):
         buttons = widgets.HBox([self.new_model(),self.open_model(),self.save_model(),self.save_model_copy()])
         out = widgets.VBox([buttons,self.out])
         return out
+
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class assembly(object):
+    def __init__(self):
+        
+        self.systems  = pd.Series()
+        self.topology = nx.compose_all(self.systems)
+        
+
         
         
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+
