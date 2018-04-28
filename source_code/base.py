@@ -344,6 +344,27 @@ class vector(object):
     def z(self, value):
         self.a[2,0] = value
         
+    @property
+    def p1(self):
+        return self._p1
+    @p1.setter
+    def p1(self,value):
+        self._p1=value
+    
+    @property
+    def p2(self):
+        return self._p2
+    @p2.setter
+    def p2(self,value):
+        self._p2=value
+    
+    @property
+    def p3(self):
+        return self._p3
+    @p3.setter
+    def p3(self,value):
+        self._p3=value
+        
     
     @property
     def mag(self):
@@ -428,18 +449,53 @@ class vector(object):
         return float(np.rad2deg(np.arccos(self.dot(other)/(self.mag*other.mag))))
     
     
-    def normal(p1,p2,p3,frame=grf):
+    def _normal(name,p1,p2,p3,frame=grf):
         '''
         return a vector normal to a plane defined by 3 points.
         To be used as vector.normal(args)
         '''
-        p1=vector(p1,frame)
-        p2=vector(p2,frame)
-        p3=vector(p3,frame)
         v1=p1-p2
         v2=p1-p3
-        normal_vec=v2.cross(v1).unit
+        normal_vec=point(name,v2.cross(v1).unit)
+        
+        normal_vec._p1=p1
+        normal_vec._p2=p2
+        normal_vec._p3=p3
+        
         return normal_vec
+    
+    @property
+    def normal(self,name,p1,p2,p3):
+        return self._normal
+    
+    
+    @normal.setter
+    def normal(self,p):
+        self.p1=(p if p.name==self.p1.name else self.p1)
+        self.p2=(p if p.name==self.p2.name else self.p2)
+        self.p3=(p if p.name==self.p3.name else self.p3)
+        v1=self.p1-self.p2
+        v2=self.p1-self.p3
+        normal_vec=point(self.name,v2.cross(v1).unit)
+        self.x,self.y,self.z = normal_vec.x,normal_vec.y,normal_vec.z
+        
+   
+    def _a2b(name,p1,p2):
+        v = point(name,p2-p1)
+        v._p1=p1
+        v._p2=p2
+        return v
+    
+    @property
+    def a2b(self):
+        return self._a2b(self.name,self.p1,self.p2)
+    @a2b.setter
+    def a2b(self,p):
+        self.p1=(p if p.name==self.p1.name else self.p1)
+        self.p2=(p if p.name==self.p2.name else self.p2)
+        v = point(self.name,self.p2-self.p1)
+        self.x,self.y,self.z = v.x,v.y,v.z
+        
     
     def express(self,other_frame):
         '''

@@ -9,6 +9,7 @@ Created on Sun Apr 22 09:15:03 2018
 import ipywidgets as widgets
 import networkx as nx
 import matplotlib.pyplot as plt
+import plotly
 import IPython as ipy
 import qgrid
 import time
@@ -55,15 +56,10 @@ def savefile_dialog():
 class model(object):
     
     def __init__(self):
-        self.tab       = widgets.Tab()
+        self.tab  = widgets.Tab()
         
-        self.points     = pd.Series()
-        self.bodies     = pd.Series()
-        self.joints     = pd.Series()
-        self.geometries = pd.Series()
-        self.vectors    = pd.Series()
-        self.forces     = pd.Series()
-        self.model      = pd.Series()
+        
+        self.model = pd.Series()
         
         self.name = ''
         
@@ -79,8 +75,68 @@ class model(object):
                                                       'xz','yz','zz'])
     
         self.topology   = nx.Graph()
-        self.data_graph = nx.DiGraph()
+        
+        self.graph = nx.DiGraph()
+        self.graph.add_nodes_from(['points',
+                                   'bodies',
+                                   'vectors',
+                                   'joints',
+                                   'geometries',
+                                   'forces',
+                                   'actuators'])
 
+    
+    
+    
+    @property
+    def points(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('points')]))
+        ser.sort_index()
+        return ser
+   
+    @property
+    def bodies(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('bodies')]))
+        ser.sort_index()
+        return ser
+    
+    @property
+    def vectors(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('vectors')]))
+        ser.sort_index()
+        return ser
+    
+    @property
+    def geometries(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('geometries')]))
+        ser.sort_index()
+        return ser
+   
+    @property
+    def forces(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('forces')]))
+        ser.sort_index()
+        return ser
+    
+    @property
+    def joints(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('joints')]))
+        ser.sort_index()
+        return ser
+    
+    @property
+    def actuators(self):
+        g   = self.graph
+        ser = pd.Series(dict([(i,g.node[i]['obj']) for i in g.successors('actuators')]))
+        ser.sort_index()
+        return ser
+    
     
     
     def _filter_points(self):
@@ -88,35 +144,59 @@ class model(object):
     def _filter_bodies(self):
         return dict(pd.concat([self.bodies.filter(like='rbr_'),self.bodies.filter(like='rbs_')]))
     
-    def _sort(self):
-        self.points=self.points.sort_index()
-        self.bodies=self.bodies.sort_index()
-        self.joints=self.joints.sort_index()
-        self.vectors=self.vectors.sort_index()
-        self.geometries=self.geometries.sort_index()
-        self.forces=self.forces.sort_index()
+    
+    
+    def new_model(self):
         
+        new_button = widgets.Button(description=' New',tooltip='Creat a New Model')
+        new_button.icon='file'
+        new_button.layout=layout100px
+        def new_click(dummy):
+            self.out.clear_output()
+            with self.out:
+                f=savefile_dialog()
+                if f=='':
+                    return
+                self.name=f.split("/")[-1]
+                
+                self.model['graph']    = self.graph
+                self.model['topology'] = self.topology
+                
+                self.model.to_pickle(f)
+                
+                fields = widgets.Accordion()
+                fields.children=[self.add_point(),
+                                 self.add_vectors(),
+                                 self.add_bodies(),
+                                 self.add_joints(),
+                                 self.add_forces()]
+                
+                fields.set_title(0,'SYSTEM POINTS')
+                fields.set_title(1,'SYSTEM MARKERS')
+                fields.set_title(2,'SYSTEM BODIES')
+                fields.set_title(3,'SYSTEM JOINTS')
+                fields.set_title(4,'SYSTEM FORCES')
+                print('New Model "%s" Created at %s'%(self.name,time.strftime('%I:%M:%S %p')))
+                return ipy.display.display(fields)
+                
+        new_button.on_click(new_click)
+        
+        return widgets.VBox([new_button])
+
                         
     def save_model_copy(self):
         
         save_button = widgets.Button(description=' Save as',tooltip='Save Copy of the Model and open')
         save_button.icon='copy'
         save_button.layout=layout100px
+        
         def save_click(dummy):
             with self.out:
                 f=savefile_dialog()
                 if f=='':
                     return
-                self._sort()
-                self.model['points']=self.points
-                self.model['bodies']=self.bodies
-                self.model['joints']=self.joints
-                self.model['geometries']=self.geometries
-                self.model['vectors']=self.vectors
-                self.model['forces']=self.forces
-                self.model['data_graph']=self.data_graph
-                self.model['topology']=self.topology
-
+                self.model['graph']    = self.graph
+                self.model['topology'] = self.topology
                 
                 self.model.to_pickle(f)
                 print('Model Saved as "%s" at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -129,18 +209,12 @@ class model(object):
         save_button = widgets.Button(description=' Save',tooltip='Save Model')
         save_button.icon='save'
         save_button.layout=layout100px
+        
         def save_click(dummy):
             with self.out:
-                self._sort()
-                self.model['points']=self.points
-                self.model['bodies']=self.bodies
-                self.model['joints']=self.joints
-                self.model['geometries']=self.geometries
-                self.model['vectors']=self.vectors
-                self.model['forces']=self.forces
-                self.model['data_graph']=self.data_graph
-                self.model['topology']=self.topology
-
+                
+                self.model['graph']    = self.graph
+                self.model['topology'] = self.topology
                 
                 self.model.to_pickle(self.name)
                 print('Model Saved as "%s" at %s'%(self.name.split("/")[-1],time.strftime('%I:%M:%S %p')))
@@ -153,6 +227,7 @@ class model(object):
         open_button = widgets.Button(description=' Open',tooltip='Open Model Binary files')
         open_button.icon='folder-open'
         open_button.layout=layout100px
+        
         def open_click(dummy):
             self.out.clear_output()
             with self.out:
@@ -165,45 +240,22 @@ class model(object):
                 
                 self.model=pd.read_pickle(f)
 
-                self.data_graph = self.model['data_graph']
-                self.topology   = self.model['topology']
-                self.model=pd.Series()
-                self.model['data_graph']=self.data_graph
-                self.model['topology']=self.topology
-                
-                for n in self.data_graph.nodes:
-                    if self.data_graph.node[n]['typ']=='joint':
-                            self.joints[n]=self.data_graph.node[n]['obj']
-                    
-                    elif self.data_graph.node[n]['typ']=='body':
-                            self.bodies[n]=self.data_graph.node[n]['obj']
-                    
-                    elif self.data_graph.node[n]['typ']=='point':
-                            self.points[n]=self.data_graph.node[n]['obj']
-                    
-                    elif self.data_graph.node[n]['typ']=='vector':
-                            self.vectors[n]=self.data_graph.node[n]['obj']
-                    
-                    elif self.data_graph.node[n]['typ'] in ['force','air_strut']:
-                            self.forces[n]=self.data_graph.node[n]['obj']
-                            
-                    elif self.data_graph.node[n]['typ'] == 'geo':
-                            self.geometries[n]=self.data_graph.node[n]['obj']
-
+                self.graph    = self.model['graph']
+                self.topology = self.model['topology']
                 
                 
-                self._sort()
+                
                 for i in self.points:
                     self.points_dataframe.loc[i.name]=[i.x,i.y,i.z,i.alignment,i.notes]
                 
                 
                 modeling = widgets.Accordion()
                 modeling.children=[self.add_point(),
-                                 self.add_vectors(),
-                                 self.add_bodies(),
-                                 self.add_joints(),
-                                 self.add_actuators(),
-                                 self.add_forces()]
+                                   self.add_vectors(),
+                                   self.add_bodies(),
+                                   self.add_joints(),
+                                   self.add_actuators(),
+                                   self.add_forces()]
                 
                 modeling.set_title(0,'SYSTEM POINTS')
                 modeling.set_title(1,'SYSTEM MARKERS')
@@ -232,44 +284,6 @@ class model(object):
         
         return widgets.VBox([open_button])
     
-    def new_model(self):
-        
-        new_button = widgets.Button(description=' New',tooltip='Creat a New Model')
-        new_button.icon='file'
-        new_button.layout=layout100px
-        def new_click(dummy):
-            self.out.clear_output()
-            with self.out:
-                f=savefile_dialog()
-                if f=='':
-                    return
-                self.name=f.split("/")[-1]
-                self._sort()
-                
-                self.model['points']=self.points
-                self.model['bodies']=self.bodies
-                self.model['joints']=self.joints
-                self.model['geometries']=self.geometries
-                self.model['vectors']=self.vectors
-                self.model['forces']=self.forces
-                self.model['data_graph']=self.data_graph
-                
-                self.model.to_pickle(f)
-                
-                fields = widgets.Accordion()
-                fields.children=[self.add_point(),self.add_vectors(),self.add_bodies(),self.add_joints(),
-                                 self.add_forces()]
-                fields.set_title(0,'SYSTEM POINTS')
-                fields.set_title(1,'SYSTEM MARKERS')
-                fields.set_title(2,'SYSTEM BODIES')
-                fields.set_title(3,'SYSTEM JOINTS')
-                fields.set_title(4,'SYSTEM FORCES')
-                print('New Model "%s" Created at %s'%(self.name,time.strftime('%I:%M:%S %p')))
-                return ipy.display.display(fields)
-                
-        new_button.on_click(new_click)
-        
-        return widgets.VBox([new_button])
         
     def add_point(self):
         
@@ -315,10 +329,10 @@ class model(object):
         alignment_v = widgets.ToggleButtons(options={'R':'hpr_','L':'hpl_','S':'hps_'})
         alignment_v.style.button_width='40px'
         alignment_b = widgets.VBox([alignment_l,alignment_v])        
-        edit_l = widgets.HTML('<b>Edit Point')
         
+        select_l = widgets.HTML('<b>Select Point')
         points_dropdown = widgets.Dropdown()
-        points_dropdown.options = dict(self.points)
+        points_dropdown.options = {**{'':None},**dict(self.points)}
         points_dropdown.layout=layout120px
         
         
@@ -347,14 +361,13 @@ class model(object):
                     p2 = p1.m_object
                     p1.notes=p2.notes=notes_v.value
                     
-                    self.points[p1.name]=p1
-                    self.points[p2.name]=p2
                     
                     self.points_dataframe.loc[p1.name]=[x,p1.y,z,p1.alignment,notes_v.value]
                     self.points_dataframe.loc[p2.name]=[x,p2.y,z,p2.alignment,notes_v.value]
                     
-                    self.data_graph.add_node(p1.name,obj=p1,typ='point')
-                    self.data_graph.add_node(p2.name,obj=p2,typ='point')
+                    self.graph.add_node(p1.name,obj=p1,typ='point')
+                    self.graph.add_node(p2.name,obj=p2,typ='point')
+                    self.graph.add_edges_from([('points',p1.name)('points',p2.name)])
                     
                     self.edit_node(p1.name)
                     self.edit_node(p2.name)
@@ -363,16 +376,16 @@ class model(object):
                     p=point(name,[x,y,z])
                     p.alignment=alignment_v.label
                     p.notes=notes_v.value
-                    self.points[p.name]=p
                     self.points_dataframe.loc[p.name]=[x,y,z,p.alignment,notes_v.value]
-                    self.data_graph.add_node(p.name,obj=p,typ='point')
+                    self.graph.add_node(p.name,obj=p,typ='point')
+                    self.graph.add_edge('points',p.name)
                     self.edit_node(p.name)
                     
                 
                 name_v.value=''
                 notes_v.value=''
-                self._sort()
-                points_dropdown.options=dict(self.points)
+                
+                points_dropdown.options={**{'':None},**dict(self.points)}
                 
             with tab2_out:
                 tabel.df=self.points_dataframe
@@ -383,7 +396,10 @@ class model(object):
         def on_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
                 with tab1_out:
-                    if points_dropdown.label==None:
+                    if points_dropdown.value==None:
+                        name_v.value=''
+                        notes_v.value=''
+                        x_v.value=y_v.value=z_v.value=0
                         return
                     
                     name_v.value=points_dropdown.label[4:]
@@ -398,7 +414,7 @@ class model(object):
         
         field1 = widgets.HBox([name_b,x_b,y_b,z_b])
         field2 = widgets.VBox([alignment_b,notes_b])
-        field3 = widgets.VBox([edit_l,points_dropdown])
+        field3 = widgets.VBox([select_l,points_dropdown])
 
         
         tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out])
@@ -423,7 +439,7 @@ class model(object):
         alignment_v.style.button_width='40px'
         alignment_b = widgets.VBox([alignment_l,alignment_v])
         
-        methods  = ('User Entered Value','Relative Position','Normal to Plane')
+        methods  = ('','User Entered Value','Relative Position','Normal to Plane')
         method_l = widgets.HTML('<b> Creation Method')
         method_v = widgets.Dropdown(options=methods)
         method_b = widgets.VBox([method_l,method_v])
@@ -432,11 +448,36 @@ class model(object):
         notes_v = widgets.Textarea(placeholder='Optional brief note/description.')
         notes_v.layout=widgets.Layout(width='350px',height='55px')
         notes_b = widgets.VBox([notes_l,notes_v])
+
         
-        main_data_block = widgets.VBox([name_b,alignment_b,notes_b,separator50,method_b])
         
-#        vectors_dropdown_l = widgets.HTML('<b> Select Vector')
-#        vectors_dropdown_v = widgets.Dropdown(options=self._filter)
+        select_l = widgets.HTML('<b>Select Vector')
+        select_dropdown = widgets.Dropdown()
+        select_dropdown.options = {**{'':None},**dict(self.vectors)}
+        select_dropdown.layout=layout120px
+        select_b = widgets.VBox([select_l,select_dropdown])
+        
+        def on_change(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                with vectors_out:
+                    if select_dropdown.value==None:
+                        name_v.value=''
+                        notes_v.value=''
+                        x_v.value=y_v.value=z_v.value=0
+                        return
+                    
+                    name_v.value=select_dropdown.label[4:]
+                    x_v.value=select_dropdown.value.x
+                    y_v.value=select_dropdown.value.y
+                    z_v.value=select_dropdown.value.z
+                    alignment_v.label=select_dropdown.value.alignment
+                    notes_v.value=select_dropdown.value.notes
+        select_dropdown.observe(on_change)
+
+        
+        
+        main_data_block = widgets.VBox([name_b,alignment_b,notes_b,select_b,separator50,method_b])
+        
         #######################################################################
         # Creating Data for first method.
         #######################################################################
@@ -479,12 +520,13 @@ class model(object):
                     v1.alignment=alignment_v.label
                     v2 = v1.m_object
                     v2.name=v2.name.replace('hp','ov')
-                    self.vectors[v1.name]=v1
-                    self.vectors[v2.name]=v2
                     
-                    self.data_graph.add_node(v1.name,obj=v1,typ='vector')
-                    self.data_graph.add_node(v2.name,obj=v2,typ='vector')
+                    self.graph.add_node(v1.name,obj=v1,typ='vector')
+                    self.graph.add_node(v2.name,obj=v2,typ='vector')
                     
+                    self.graph.add_edge('vectors',v1.name)
+                    self.graph.add_edge('vectors',v2.name)                    
+                   
                     self.edit_node(v1.name)
                     self.edit_node(v2.name)
                     
@@ -493,11 +535,11 @@ class model(object):
                     v=point(name,[x,y,z])
                     v.alignment=alignment_v.label
                     v.notes=notes_v.value
-                    self.vectors[v.name]=v
-                    self.data_graph.add_node(v.name,obj=v,typ='vector')
+                    self.graph.add_node(v.name,obj=v,typ='vector')
+                    self.graph.add_edge('vectors',v.name)
                     self.edit_node(v.name)
                     
-                self._sort()
+                select_dropdown.options = {**{'':None},**dict(self.vectors)}
                 name_v.value=''
                 notes_v.value=''
                 print('Done')
@@ -533,36 +575,39 @@ class model(object):
                     p1 = p1_v.value
                     p2 = p2_v.value
                     name1 = alignment_v.value+name_v.value
-                    v1  = point(name1,p1-p2)
+                    v1  = vector._a2b(name1,p1,p2)
                     v1.alignment = alignment_v.label
-                    v2 = v1.m_object
+                    v2 = vector._a2b(v1.m_name,p1,p2)
+                    v2.y=-v1.y
                     v2.name=v2.name.replace('hp','ov')
                     v2.alignment='RL'.replace(alignment_v.label,'')
                     
-                    self.vectors[v1.name]=v1
-                    self.vectors[v2.name]=v2
                     
-                    self.data_graph.add_node(v1.name,obj=v1,typ='vector')
-                    self.data_graph.add_edge(p1.name,v1.name,attr='p1')
-                    self.data_graph.add_edge(p2.name,v1.name,attr='p2')
-                    self.data_graph.add_node(v2.name,obj=v2,typ='vector')
-                    self.data_graph.add_edge(p1.name,v2.name,attr='p1')
-                    self.data_graph.add_edge(p2.name,v2.name,attr='p2')
+                    self.graph.add_node(v1.name,obj=v1,typ='vector')
+                    self.graph.add_edge('vectors',v1.name)
+                    self.graph.add_edge(p1.name,v1.name,attr='a2b')
+                    self.graph.add_edge(p2.name,v1.name,attr='a2b')
+                    
+                    self.graph.add_node(v2.name,obj=v2,typ='vector')
+                    self.graph.add_edge('vectors',v2.name)
+                    self.graph.add_edge(p1.name,v2.name,attr='a2b')
+                    self.graph.add_edge(p2.name,v2.name,attr='a2b')
 
                     
                 elif alignment_v.label =='S':
                     p1 = p1_v.value
                     p2 = p2_v.value
                     name = alignment_v.value+name_v.value
-                    v  = point(name,p1-p2)
+                    v  = vector._a2b(name,p1,p2)
                     v.alignment = alignment_v.label
                     self.vectors[name]=v
-                    self.data_graph.add_node(v.name,obj=v,typ='vector')
-                    self.data_graph.add_edge(p1.name,v.name,attr='p1')
-                    self.data_graph.add_edge(p2.name,v.name,attr='p2')
+                    self.graph.add_node(v.name,obj=v,typ='vector')
+                    self.graph.add_edge('vectors',v.name)
+                    self.graph.add_edge(p1.name,v.name,attr='a2b')
+                    self.graph.add_edge(p2.name,v.name,attr='a2b')
 
                 
-                self._sort()
+                select_dropdown.options = {**{'':None},**dict(self.vectors)}
                 name_v.value=''
                 notes_v.value=''
                 print('Done!')
@@ -571,13 +616,83 @@ class model(object):
         #######################################################################
         
         #######################################################################
+        # Creating method 3 data requirments.
+        #######################################################################
+        
+        p3_l = widgets.HTML('<b>Reference Point 3')
+        p3_v = widgets.Dropdown()
+        p3_b = widgets.VBox([p3_l,p3_v])
+                
+        p1_v.options=p2_v.options=p3_v.options=dict(self.points)
+        
+        m3_block = widgets.VBox([p1_b,p2_b,p3_b,vectors_sub])
+        
+        m3_button = widgets.Button(description='Apply',icon='check')
+        m3_button.layout=layout100px
+        def m3_click(dummy):
+            with vectors_sub:
+                if name_v.value=='':
+                    print('Please enter a valid name in the Vector Name field')
+                    return
+                
+                if alignment_v.label in 'RL':
+                    p1 = p1_v.value
+                    p2 = p2_v.value
+                    p3 = p3_v.value
+                    name1 = alignment_v.value+name_v.value
+                    v1  = vector._normal(name1,p1,p2,p3)
+                    v1.alignment = alignment_v.label
+                    v2 = vector._normal(v1.m_name,p1,p2,p3)
+                    v2.y=-v1.y
+                    v2.name=v2.name.replace('hp','ov')
+                    v2.alignment='RL'.replace(alignment_v.label,'')
+                    
+                    
+                    self.graph.add_node(v1.name,obj=v1,typ='vector')
+                    self.graph.add_edge('vectors',v1.name)
+                    self.graph.add_edge(p1.name,v1.name,attr='normal')
+                    self.graph.add_edge(p2.name,v1.name,attr='normal')
+                    self.graph.add_edge(p3.name,v1.name,attr='normal')
+                    
+                    self.graph.add_node(v2.name,obj=v2,typ='vector')
+                    self.graph.add_edge('vectors',v2.name)
+                    self.graph.add_edge(p1.name,v2.name,attr='normal')
+                    self.graph.add_edge(p2.name,v2.name,attr='normal')
+                    self.graph.add_edge(p3.name,v2.name,attr='normal')
+
+                    
+                elif alignment_v.label =='S':
+                    p1 = p1_v.value
+                    p2 = p2_v.value
+                    p3 = p3_v.value
+                    name = alignment_v.value+name_v.value
+                    v  = vector._normal(name,p1,p2,p3)
+                    v.alignment = alignment_v.label
+                    self.vectors[name]=v
+                    self.graph.add_node(v.name,obj=v,typ='vector')
+                    self.graph.add_edge('vectors',v.name)
+                    self.graph.add_edge(p1.name,v.name,attr='normal')
+                    self.graph.add_edge(p2.name,v.name,attr='normal')
+                    self.graph.add_edge(p3.name,v.name,attr='normal')
+
+                
+                select_dropdown.options = {**{'':None},**dict(self.vectors)}
+                name_v.value=''
+                notes_v.value=''
+                print('Done!')
+        m3_button.on_click(m3_click)
+        #######################################################################       
+        #######################################################################
+        
+        
+        #######################################################################
         # Defining the change behavior of methods dropdown
         #######################################################################
         def method_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
                 vectors_out.clear_output()
                 vectors_sub.clear_output()
-                p1_v.options=p2_v.options=dict(self.points)
+                p1_v.options=p2_v.options=p3_v.options=dict(self.points)
                 with vectors_out:
                     if change['new']=='User Entered Value':
                         block = widgets.VBox([m1_block,m1_button])
@@ -586,7 +701,8 @@ class model(object):
                         block = widgets.VBox([m2_block,m2_button])
                         return ipy.display.display(block)
                     elif change['new']=='Normal to Plane':
-                        return ipy.display.display(m1_block)
+                        block = widgets.VBox([m3_block,m3_button])
+                        return ipy.display.display(block)
                 
         method_v.observe(method_change)
         #######################################################################
@@ -658,12 +774,12 @@ class model(object):
                     bod_r.alignment='R'
                     
                     bod_r.typ = bod_l.typ = ('floating' if body_type_v.value else 'mount')
+                                        
+                    self.graph.add_node(bod_l.name,obj=bod_l,typ='body')
+                    self.graph.add_node(bod_r.name,obj=bod_r,typ='body')
                     
-                    self.bodies[body_name_l]=bod_l
-                    self.bodies[body_name_r]=bod_r
-                    
-                    self.data_graph.add_node(bod_l.name,obj=bod_l,typ='body')
-                    self.data_graph.add_node(bod_r.name,obj=bod_r,typ='body')
+                    self.graph.add_edge('bodies',bod_l.name)
+                    self.graph.add_edge('bodies',bod_r.name)
                     
                     self.edit_node(bod_l.name)
                     self.edit_node(bod_r.name)
@@ -674,11 +790,11 @@ class model(object):
                     bod = rigid(body_name)
                     bod.alignment='S'
                     bod.typ=('floating' if body_type_v.value else 'mount')
-                    self.bodies[body_name]=bod
-                    self.data_graph.add_node(bod.name,obj=bod,typ='body')
+                    self.graph.add_node(bod.name,obj=bod,typ='body')
+                    self.graph.add_edge('bodies',bod.name)
                     self.edit_node(bod.name)
                 
-                self._sort()
+                
                 bodies_dropdown.options=dict(self.bodies)
         create_default_button.on_click(create_default_click)
         
@@ -815,11 +931,12 @@ class model(object):
                    
                     body_2.alignment='RL'.replace(body.alignment,'')
                     
-                    self.bodies[name_1]=body_1
-                    self.bodies[name_2]=body_2
                     
-                    self.data_graph.add_node(body_1.name,obj=body_1,typ='body')
-                    self.data_graph.add_node(body_2.name,obj=body_2,typ='body')
+                    self.graph.add_node(body_1.name,obj=body_1,typ='body')
+                    self.graph.add_node(body_2.name,obj=body_2,typ='body')
+                    
+                    self.graph.add_edge('bodies',body_1.name)
+                    self.graph.add_edge('bodies',body_2.name)
                     
                     self.edit_node(body_1.name)
                     self.edit_node(body_2.name)
@@ -834,14 +951,14 @@ class model(object):
                                           [xz.value,yz.value,zz.value]])
                     bod = rigid(body.name,mass,iner_tens,cm,ref_frame)
                     bod.alignment='S'
-                    self.bodies[body.name]=bod
-                    self.data_graph.add_node(bod.name,obj=bod,typ='body')
+                    self.graph.add_node(bod.name,obj=bod,typ='body')
+                    self.graph.add_edge('bodies',bod.name)
                     self.edit_node(bod.name)
                     
                     
                     print('Body added : \n %s' %body.name )
                 
-                self._sort()
+                
                 bodies_dropdown.options=dict(self.bodies)
                 
         add_inertia_button.on_click(add_inertia_click)
@@ -897,6 +1014,10 @@ class model(object):
                 if bodies_dropdown.value==None:
                     print('ERROR: Please Chose a Body Object')
                     return 
+                if geo_name_v.value=='':
+                    print('ERROR: Please Enter a Valid Name for The Geometry')
+                    return
+                
                 body = bodies_dropdown.value
                 if body.alignment in 'RL':
                     body_1 = bodies_dropdown.value
@@ -912,24 +1033,24 @@ class model(object):
                     
                     geo_1 = geometries_dict[geometries_v.label](geo_name_1,body_1,p1_1,p2_1,outer_v.value,inner_v.value)
                     geo_2 = geometries_dict[geometries_v.label](geo_name_2,body_2,p1_2,p2_2,outer_v.value,inner_v.value)
-                    
-                    self.geometries[geo_name_1] = geo_1
-                    self.geometries[geo_name_2] = geo_2
-                    
+                                        
                     body_1.update_inertia()
                     body_2.update_inertia()
                     
-                    self.data_graph.add_node(geo_name_1,obj=geo_1,typ='geo')
-                    self.data_graph.add_node(geo_name_2,obj=geo_2,typ='geo')
+                    self.graph.add_node(geo_name_1,obj=geo_1,typ='geo')
+                    self.graph.add_node(geo_name_2,obj=geo_2,typ='geo')
                     
-                    self.data_graph.add_edge(p1_1.name,geo_name_1,attr='p1')
-                    self.data_graph.add_edge(p2_1.name,geo_name_1,attr='p2')
+                    self.graph.add_edge('geometries',geo_name_1)
+                    self.graph.add_edge('geometries',geo_name_1)
                     
-                    self.data_graph.add_edge(p1_2.name,geo_name_2,attr='p1')
-                    self.data_graph.add_edge(p2_2.name,geo_name_2,attr='p2')
+                    self.graph.add_edge(p1_1.name,geo_name_1,attr='p1')
+                    self.graph.add_edge(p2_1.name,geo_name_1,attr='p2')
                     
-                    self.data_graph.add_edge(geo_name_1,body_1.name,attr='geometries')
-                    self.data_graph.add_edge(geo_name_2,body_2.name,attr='geometries')
+                    self.graph.add_edge(p1_2.name,geo_name_2,attr='p1')
+                    self.graph.add_edge(p2_2.name,geo_name_2,attr='p2')
+                    
+                    self.graph.add_edge(geo_name_1,body_1.name,attr='geometries')
+                    self.graph.add_edge(geo_name_2,body_2.name,attr='geometries')
                     
                 
                 elif  body.alignment=='S':
@@ -939,14 +1060,14 @@ class model(object):
                     geo_name = body.name+'_'+geo_name_v.value
                     
                     geo = geometries_dict[geometries_v.label](geo_name,body,p1,p2,outer_v.value,inner_v.value)
-                    self.geometries[geo_name] = geo
                     body.update_inertia()
                     
-                    self.data_graph.add_node(geo_name,obj=geo,typ='geo')
-                    self.data_graph.add_edge(p1.name,geo_name,attr='p1')
-                    self.data_graph.add_edge(p2.name,geo_name,attr='p2')
+                    self.graph.add_node(geo_name,obj=geo,typ='geo')
+                    self.graph.add_edge('geometries',geo_name)
+                    self.graph.add_edge(p1.name,geo_name,attr='p1')
+                    self.graph.add_edge(p2.name,geo_name,attr='p2')
                     
-                    self.data_graph.add_edge(geo_name,body.name,attr='geometries')
+                    self.graph.add_edge(geo_name,body.name,attr='geometries')
 
                     
                 geo_name_v.value=''
@@ -995,11 +1116,11 @@ class model(object):
                 axis1_v.options=axis2_v.options=dict(self.vectors)
         refresh_button.on_click(refresh_click)
 
-        joints_dict = {'Spherical': spherical,
-                       'Revolute' : revolute,
+        joints_dict = {'Spherical'    : spherical,
+                       'Revolute'     : revolute,
                        'Translational': translational,
-                       'Cylinderical':cylindrical,
-                       'Universal': universal}
+                       'Cylinderical' : cylindrical,
+                       'Universal'    : universal}
         
         joint_type_l = widgets.HTML('<b>Joint Type')
         joint_type_v = widgets.Dropdown(options=joints_dict)
@@ -1095,21 +1216,21 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2,axis2_2)
                         j2.alignment=alignment_2
                         
-                        self.data_graph.add_node(j1.name,obj=j1,typ='joint')
-                        self.data_graph.add_node(j2.name,obj=j2,typ='joint')
+                        self.graph.add_node(j1.name,obj=j1,typ='joint')
+                        self.graph.add_node(j2.name,obj=j2,typ='joint')
+                                                
+                        self.graph.add_edge(loc_1.name,j1.name,attr='location')
+                        self.graph.add_edge(loc_2.name,j2.name,attr='location')
                         
-                        self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
-                        self.data_graph.add_edge(loc_2.name,j2.name,attr='location')
+                        self.graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                        self.graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                        self.graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
+                        self.graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
                         
-                        self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
-                        self.data_graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
-                        
-                        self.data_graph.add_edge(axis2_1.name,j1.name,attr='j_rot')
-                        self.data_graph.add_edge(axis1_1.name,j1.name,attr='i_rot')
-                        self.data_graph.add_edge(axis2_2.name,j2.name,attr='j_rot')
-                        self.data_graph.add_edge(axis1_2.name,j2.name,attr='i_rot')
+                        self.graph.add_edge(axis2_1.name,j1.name,attr='j_rot')
+                        self.graph.add_edge(axis1_1.name,j1.name,attr='i_rot')
+                        self.graph.add_edge(axis2_2.name,j2.name,attr='j_rot')
+                        self.graph.add_edge(axis1_2.name,j2.name,attr='i_rot')
 
                     
                     elif joint_type_v.label=='Spherical' :
@@ -1119,16 +1240,16 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2)
                         j2.alignment=alignment_2
                         
-                        self.data_graph.add_node(j1.name,obj=j1,typ='joint')
-                        self.data_graph.add_node(j2.name,obj=j2,typ='joint')
+                        self.graph.add_node(j1.name,obj=j1,typ='joint')
+                        self.graph.add_node(j2.name,obj=j2,typ='joint')
                         
-                        self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
-                        self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                        self.graph.add_edge(loc_1.name,j1.name,attr='location')
+                        self.graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                        self.graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
                         
-                        self.data_graph.add_edge(loc_2.name,j2.name,attr='location')
-                        self.data_graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
+                        self.graph.add_edge(loc_2.name,j2.name,attr='location')
+                        self.graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
+                        self.graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
                         
                     
                     
@@ -1140,28 +1261,28 @@ class model(object):
                         j2=joint_type_v.value(j1.m_name,loc_2,bodyi_2,bodyj_2,axis1_2)
                         j2.alignment=alignment_2
                         
-                        self.data_graph.add_node(j1.name,obj=j1,typ='joint')
+                        self.graph.add_node(j1.name,obj=j1,typ='joint')
                         
-                        self.data_graph.add_edge(loc_1.name,j1.name,attr='location')
-                        self.data_graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
+                        self.graph.add_edge(loc_1.name,j1.name,attr='location')
+                        self.graph.add_edge(bodyi_1.name,j1.name,attr='i_body')
+                        self.graph.add_edge(bodyj_1.name,j1.name,attr='j_body')
                         
-                        self.data_graph.add_edge(axis1_1.name,j1.name,attr='axis')
+                        self.graph.add_edge(axis1_1.name,j1.name,attr='axis')
                         
                         
-                        self.data_graph.add_node(j2.name,obj=j2,typ='joint')
+                        self.graph.add_node(j2.name,obj=j2,typ='joint')
                         
-                        self.data_graph.add_edge(loc_2.name,j2.name,attr='location')
-                        self.data_graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
+                        self.graph.add_edge(loc_2.name,j2.name,attr='location')
+                        self.graph.add_edge(bodyi_2.name,j2.name,attr='i_body')
+                        self.graph.add_edge(bodyj_2.name,j2.name,attr='j_body')
                         
-                        self.data_graph.add_edge(axis1_2.name,j2.name,attr='axis')
+                        self.graph.add_edge(axis1_2.name,j2.name,attr='axis')
 
                     
                     j1.notes=j2.notes=notes_v.value
                     
-                    self.joints[j1.name]=j1
-                    self.joints[j2.name]=j2
+                    self.graph.add_edge('joints',j1.name)
+                    self.graph.add_edge('joints',j2.name)
                     
                     self.topology.add_edge(bodyi_1,bodyj_1,joint=j1)
                     self.topology.add_edge(bodyi_2,bodyj_2,joint=j2)
@@ -1178,40 +1299,40 @@ class model(object):
                     if joint_type_v.label=='Universal':
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value,axis2_v.value)
                         
-                        self.data_graph.add_node(j.name,obj=j,typ='joint')
+                        self.graph.add_node(j.name,obj=j,typ='joint')
                         
-                        self.data_graph.add_edge(loc.name,j.name,attr='location')
-                        self.data_graph.add_edge(bodyi.name,j.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj.name,j.name,attr='j_body')
+                        self.graph.add_edge(loc.name,j.name,attr='location')
+                        self.graph.add_edge(bodyi.name,j.name,attr='i_body')
+                        self.graph.add_edge(bodyj.name,j.name,attr='j_body')
                         
-                        self.data_graph.add_edge(axis2_v.value.name,j.name,attr='j_rot')
-                        self.data_graph.add_edge(axis1_v.value.name,j.name,attr='i_rot')
+                        self.graph.add_edge(axis2_v.value.name,j.name,attr='j_rot')
+                        self.graph.add_edge(axis1_v.value.name,j.name,attr='i_rot')
                         
                     elif joint_type_v.label=='Spherical' :
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj)
                         
-                        self.data_graph.add_node(j.name,obj=j,typ='joint')
+                        self.graph.add_node(j.name,obj=j,typ='joint')
                         
-                        self.data_graph.add_edge(loc.name,j.name,attr='location')
-                        self.data_graph.add_edge(bodyi.name,j.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj.name,j.name,attr='j_body')
+                        self.graph.add_edge(loc.name,j.name,attr='location')
+                        self.graph.add_edge(bodyi.name,j.name,attr='i_body')
+                        self.graph.add_edge(bodyj.name,j.name,attr='j_body')
                         
                         
                     else:
                         j=joint_type_v.value(joint_name,loc,bodyi,bodyj,axis1_v.value)
                         
-                        self.data_graph.add_node(j.name,obj=j,typ='joint')
+                        self.graph.add_node(j.name,obj=j,typ='joint')
                         
-                        self.data_graph.add_edge(loc.name,j.name,attr='location')
+                        self.graph.add_edge(loc.name,j.name,attr='location')
                         
-                        self.data_graph.add_edge(bodyi.name,j.name,attr='i_body')
-                        self.data_graph.add_edge(bodyj.name,j.name,attr='j_body')
+                        self.graph.add_edge(bodyi.name,j.name,attr='i_body')
+                        self.graph.add_edge(bodyj.name,j.name,attr='j_body')
                         
-                        self.data_graph.add_edge(axis1_v.value.name,j.name,attr='axis')
+                        self.graph.add_edge(axis1_v.value.name,j.name,attr='axis')
 
                     
                     j.notes=notes
-                    self.joints[joint_name]=j
+                    self.graph.add_edge('joints',j.name)
                     self.topology.add_edge(bodyi,bodyj,joint=j)
 
 
@@ -1436,20 +1557,20 @@ class model(object):
                     strut_2 = air_strut(name_2,pi_2,body_i_2,pj_2,body_j_2,stiffness,damping,rh_stroke)
                     strut_2.alignment = 'RL'.replace(alignment_v.label,'')
                     
-                    self.forces[strut_1.name]=strut_1
-                    self.forces[strut_2.name]=strut_2
+                    self.graph.add_edge('forces',name_1)
+                    self.graph.add_edge('forces',name_2)
                     
-                    self.data_graph.add_node(strut_1.name,obj=strut_1,typ='force')
-                    self.data_graph.add_edge(pi_1.name,strut_1.name,attr='Pi')
-                    self.data_graph.add_edge(pj_1.name,strut_1.name,attr='Qj')
-                    self.data_graph.add_edge(body_i_1.name,strut_1.name,attr='bodyi')
-                    self.data_graph.add_edge(body_j_1.name,strut_1.name,attr='bodyj')
+                    self.graph.add_node(strut_1.name,obj=strut_1,typ='force')
+                    self.graph.add_edge(pi_1.name,strut_1.name,attr='Pi')
+                    self.graph.add_edge(pj_1.name,strut_1.name,attr='Qj')
+                    self.graph.add_edge(body_i_1.name,strut_1.name,attr='bodyi')
+                    self.graph.add_edge(body_j_1.name,strut_1.name,attr='bodyj')
                     
-                    self.data_graph.add_node(strut_2.name,obj=strut_2,typ='force')
-                    self.data_graph.add_edge(pi_2.name,strut_2.name,attr='Pi')
-                    self.data_graph.add_edge(pj_2.name,strut_2.name,attr='Qj')
-                    self.data_graph.add_edge(body_i_2.name,strut_2.name,attr='bodyi')
-                    self.data_graph.add_edge(body_j_2.name,strut_2.name,attr='bodyj')
+                    self.graph.add_node(strut_2.name,obj=strut_2,typ='force')
+                    self.graph.add_edge(pi_2.name,strut_2.name,attr='Pi')
+                    self.graph.add_edge(pj_2.name,strut_2.name,attr='Qj')
+                    self.graph.add_edge(body_i_2.name,strut_2.name,attr='bodyi')
+                    self.graph.add_edge(body_j_2.name,strut_2.name,attr='bodyj')
 
                     
                     
@@ -1461,13 +1582,13 @@ class model(object):
                     bodyj = body_j_v.value
                     
                     strut = air_strut(name,pi,bodyi,pj,bodyj,stiffness,damping,rh_stroke)
-                    self.forces[strut.name]=strut
+                    self.graph.add_edge('forces',name)
                     
-                    self.data_graph.add_node(strut.name,obj=strut,typ='force')
-                    self.data_graph.add_edge(pi.name,strut.name,attr='Pi')
-                    self.data_graph.add_edge(pj.name,strut.name,attr='Qj')
-                    self.data_graph.add_edge(bodyi.name,strut.name,attr='bodyi')
-                    self.data_graph.add_edge(bodyj.name,strut.name,attr='bodyj')
+                    self.graph.add_node(strut.name,obj=strut,typ='force')
+                    self.graph.add_edge(pi.name,strut.name,attr='Pi')
+                    self.graph.add_edge(pj.name,strut.name,attr='Qj')
+                    self.graph.add_edge(bodyi.name,strut.name,attr='bodyi')
+                    self.graph.add_edge(bodyj.name,strut.name,attr='bodyj')
 
                 
                 print('Done')
@@ -1721,7 +1842,7 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Model Data Flow',figsize=(10,10))
-            nx.draw_circular(self.data_graph,with_labels=True)
+            nx.draw_circular(self.graph,with_labels=True)
             plt.show()
         return out
     
@@ -1729,7 +1850,7 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Object Dependencies',figsize=(8,5))
-            dependencies = nx.DiGraph(nx.edge_dfs(self.data_graph,object_node))
+            dependencies = nx.DiGraph(nx.edge_dfs(self.graph,object_node))
             layout = nx.circular_layout(dependencies)
             nx.draw(nx.DiGraph(dependencies),pos=layout,with_labels=True,node_size=200)
             nx.draw(nx.DiGraph(dependencies),pos=layout,nodelist=[object_node],with_labels=True,node_size=800,node_color='cyan',node_shape='p')
@@ -1740,26 +1861,105 @@ class model(object):
         out = widgets.Output()
         with out:
             plt.figure('Object Dependencies',figsize=(8,5))
-            dependencies = nx.DiGraph([(i[0],i[1]) for i in nx.edge_dfs(self.data_graph,object_node,'reverse')])
+            dependencies = nx.DiGraph([(i[0],i[1]) for i in nx.edge_dfs(self.graph,object_node,'reverse')])
             nx.draw_circular(nx.DiGraph(dependencies),with_labels=True)
             plt.show()
         return out
     
     def edit_node(self,node):
-        g=self.data_graph
+        g=self.graph
         
         for e in nx.edge_dfs(g,node):
             try:
-                g.node[e[1]]['obj'].__setattr__(g.edges[e]['attr'],g.node[e[0]]['obj'])
                 print('Editing node "%s" and updating attribute "%s" in dependency "%s" \n' %(e[0],g.edges[e]['attr'],e[1]))
+                g.node[e[1]]['obj'].__setattr__(g.edges[e]['attr'],g.node[e[0]]['obj'])
             except KeyError:
-                print('Not Found \n')
+                print('Attribute Not Found \n')
                 pass
+    
+    
+    def remove_node(self,node):
+        g=self.graph
+        if g.node[node]['obj'].alignment in 'RL':
+            g.remove_node(g.node[node]['obj'].m_name)
+            g.remove_node(node)
+        else:
+            g.remove_node(node)
+    
     
     def draw_topology(self):
         plt.figure('System Topology',figsize=(10,10))
         nx.draw_spring(self.topology,with_labels=True)
         plt.show()
+        
+    
+    def model_tree(self):
+        objects_out = widgets.Output()
+        graph_out = widgets.Output()
+        
+        objects_menue = widgets.Select(layout=widgets.Layout(width='120px',height='150px'))
+        objects_menue.options={'Points':dict(self.points),
+                               'Vectors':dict(self.vectors),
+                               'Bodies':dict(self.bodies),
+                               'Geometries':dict(self.geometries),
+                               'Joints':dict(self.joints),
+                               'Forces':dict(self.forces)}
+        sub_menue = widgets.Select(layout=widgets.Layout(width='150px',height='300px'))
+        
+        
+        def object_select(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                with objects_out:
+                    if objects_menue.label==None:
+                        return
+                    sub_menue.options=objects_menue.value
+        objects_menue.observe(object_select)
+        objects_menue.label=None
+        
+        succ_button = widgets.Button(description='Succ.',icon='image',tooltip='Show Successors',layout=layout100px)
+        def succ_click(dummy):
+            graph_out.clear_output()
+            with graph_out:
+                node=sub_menue.label
+                g = self.graph.subgraph(list(self.graph.successors(node))+[node])
+                fig = plt.figure(figsize=(8,8))
+                layout = nx.circular_layout(g)
+                nx.draw(g,with_labels=True,pos=layout)
+                nx.draw(g,with_labels=True,nodelist=[node],pos=layout,node_color='cyan',node_size=500)
+                plt.show()
+        succ_button.on_click(succ_click)
+        
+        pred_button = widgets.Button(description='Pred.',icon='image',tooltip='Show Predecessors',layout=layout100px)
+        def pred_click(dummy):
+            graph_out.clear_output()
+            with graph_out:
+                node=sub_menue.label
+                g = self.graph.subgraph(list(self.graph.predecessors(node))+[node])
+                fig = plt.figure(figsize=(8,8))
+                layout = nx.circular_layout(g)
+                nx.draw(g,with_labels=True,pos=layout)
+                nx.draw(g,with_labels=True,nodelist=[node],pos=layout,node_color='cyan',node_size=500)
+                plt.show()
+        pred_button.on_click(pred_click)
+        
+        remove_button = widgets.Button(description=' Remove',icon='times',tooltip='Remove Object',layout=layout100px)
+        def remove_click(dummy):
+            graph_out.clear_output()
+            with graph_out:
+                self.remove_node(sub_menue.label)
+                objects_menue.label=None
+                print('Node Removed!')
+        remove_button.on_click(remove_click)
+        
+        
+        
+        tree_b = widgets.HBox([objects_menue,sub_menue,objects_out])
+        buttons = widgets.VBox([succ_button,pred_button,remove_button])
+        top_window = widgets.HBox([tree_b,buttons])
+        output = widgets.VBox([top_window,graph_out])
+        return output
+            
+    
     
     def show(self):
         
