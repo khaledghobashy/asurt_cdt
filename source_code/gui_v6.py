@@ -265,13 +265,15 @@ class model(object):
                 modeling.set_title(4,'SYSTEM ACTUATORS')
                 modeling.set_title(5,'SYSTEM FORCES')
                 
-#                simulation = widgets.Accordion(children=[self.parallel_travel()])
-#                simulation.set_title(0,'PARALLEL WHEEL TRAVEL')
+                simulation = widgets.Accordion(children=[self.kds()])
+                simulation.set_title(0,'Kinematically Driven Systems Simulation')
+                
                 
                 
                 post_processing = self.data_processing()
                 
-                major_fields = widgets.Accordion(children=[modeling,post_processing])
+                
+                major_fields = widgets.Accordion(children=[modeling,simulation,post_processing])
                 major_fields.set_title(0,'MODELING')
                 major_fields.set_title(1,'SIMULATION')
                 major_fields.set_title(2,'POST PROCESSING')
@@ -1698,104 +1700,10 @@ class model(object):
     
     
     def add_actuators(self):
-        
-        actuator_elements_out = widgets.Output()
-        
-        name_l = widgets.HTML('<b>Actuator Name',layout=layout120px)
-        name_v = widgets.Text(placeholder='actuator name',layout=layout200px)
-        name_b = widgets.VBox([name_l,name_v])
-        
-        alignment_l = widgets.HTML('<b>Alignment')
-        alignment_v = widgets.ToggleButtons(options={'R':'mcr_','L':'mcl_','S':'mcs_'})
-        alignment_v.style.button_width='40px'
-        alignment_b = widgets.VBox([alignment_l,alignment_v])
-        
-        notes_l = widgets.HTML('<b>Notes')
-        notes_v = widgets.Textarea(placeholder='Brief description ...')
-        notes_v.layout=widgets.Layout(width='300px',height='55px')
-        notes_b = widgets.VBox([notes_l,notes_v])
-        
-        common_data_block = widgets.VBox([name_b,alignment_b,notes_b])
-        #######################################################################
-        
-        actuator_type_l = widgets.HTML('<b>Actuator Type')
-        actuator_type_v = widgets.Dropdown(options={'':'','RotationalDrive':rotational_actuator,'AbsoluteLocating':absolute_locating})
-        actuator_type_b = widgets.VBox([actuator_type_l,actuator_type_v])
-        
-        #######################################################################
-        #################### Rotational Drive Actuator ########################
-        #######################################################################
-        
-        
-        
-        
-        
-        
-        
-        #######################################################################
-        #######################################################################
-        def type_change(change):
-            if change['type'] == 'change' and change['name'] == 'value':
-                return
-        
-        return widgets.VBox([common_data_block,separator100,actuator_type_b,separator50])
-    
-    
-    
-    
-    def system_parameters(self):
-        
-        main_out = widgets.Output()
-        
-        #######################################################################
-        #################### Steering Axis Definition  ########################
-        #######################################################################
-        
-        steering_axis_l = widgets.HTML('<b Steering Axis Definition Points')
-        
-        p1_l = widgets.HTML('<b>Point 1',layout=layout120px)
-        p1_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
-        p1_b = widgets.VBox([p1_l,p1_v])
-
-        p2_l = widgets.HTML('<b>Point 2',layout=layout120px)
-        p2_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
-        p2_b = widgets.VBox([p2_l,p2_v])
-        
-        
-        
-        camber_l = widgets.HTML('<b Camber Angle at ride hieght')
-        camber_v = widgets.BoundedFloatText(min=-10,max=10)
-        camber_b = widgets.VBox([camber_l,camber_v])
-        
-        
-        
-        toe_l = widgets.HTML('<b Toe Angle at ride hieght')
-        toe_v = widgets.BoundedFloatText(min=-10,max=10)
-        toe_b = widgets.VBox([toe_l,toe_v])
-        
-        hub_bearing_l = widgets.HTML('<b> Wheel Hub Bearing Joint')
-        hub_bearing_v = widgets.Dropdown(options=dict(self.joints))
-        hub_bearing_b = widgets.VBox([hub_bearing_l,hub_bearing_v])
-        
-        
-        apply_button = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
-        def apply_click(dummy):
-            with main_out:
-                gamma = np.deg2rad(camber_v.value)
-                camber_vector = np.array([[0],[np.sin(gamma)],[np.cos(gamma)]])
-                
-                delta = np.deg2rad(toe_v.value)
-                toe_vector = np.array([[np.cos(delta)],[np.sin(delta)],[0]])
-
-        
-    
-    
-    
-    def kds(self):
         main_out = widgets.Output()
         sub1_out = widgets.Output()
         
-        name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
+        name_l = widgets.HTML('<b>Actuator Name',layout=layout120px)
         name_v = widgets.Text(placeholder='name',layout=layout120px)
         name_b = widgets.VBox([name_l,name_v])
         
@@ -1922,6 +1830,67 @@ class model(object):
                                     actuation_t,actuation_b,sub1_out,add_act_button,main_out])                                     
         
         return common_data
+    
+    
+    def system_parameters(self):
+        
+        main_out = widgets.Output()
+        
+        #######################################################################
+        #################### Steering Axis Definition  ########################
+        #######################################################################
+        
+        steering_axis_l = widgets.HTML('<b Steering Axis Definition Points')
+        
+        p1_l = widgets.HTML('<b>Point 1',layout=layout120px)
+        p1_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
+        p1_b = widgets.VBox([p1_l,p1_v])
+
+        p2_l = widgets.HTML('<b>Point 2',layout=layout120px)
+        p2_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
+        p2_b = widgets.VBox([p2_l,p2_v])
+        
+        
+        
+        camber_l = widgets.HTML('<b Camber Angle at ride hieght')
+        camber_v = widgets.BoundedFloatText(min=-10,max=10)
+        camber_b = widgets.VBox([camber_l,camber_v])
+        
+        
+        
+        toe_l = widgets.HTML('<b Toe Angle at ride hieght')
+        toe_v = widgets.BoundedFloatText(min=-10,max=10)
+        toe_b = widgets.VBox([toe_l,toe_v])
+        
+        hub_bearing_l = widgets.HTML('<b> Wheel Hub Bearing Joint')
+        hub_bearing_v = widgets.Dropdown(options=dict(self.joints))
+        hub_bearing_b = widgets.VBox([hub_bearing_l,hub_bearing_v])
+        
+        
+        apply_button = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
+        def apply_click(dummy):
+            with main_out:
+                gamma = np.deg2rad(camber_v.value)
+                camber_vector = np.array([[0],[np.sin(gamma)],[np.cos(gamma)]])
+                
+                delta = np.deg2rad(toe_v.value)
+                toe_vector = np.array([[np.cos(delta)],[np.sin(delta)],[0]])
+
+        
+    
+    
+    
+    def kds(self):
+        main_out = widgets.Output()
+        sub1_out = widgets.Output()
+        
+        sim_name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
+        sim_name_v = widgets.Text(placeholder='name',layout=layout120px)
+        sim_name_b = widgets.HBox([sim_name_l,sim_name_v])
+        
+        return widgets.VBox([sim_name_b,self.add_actuators()])
+        
+        
     
     
     
