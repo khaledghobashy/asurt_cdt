@@ -60,6 +60,7 @@ class model(object):
         
         
         self.model = pd.Series()
+        self.simulations=pd.Series()
         
         self.name = ''
         
@@ -328,12 +329,13 @@ class model(object):
         alignment_l = widgets.HTML('<b>Alignment')
         alignment_v = widgets.ToggleButtons(options={'R':'hpr_','L':'hpl_','S':'hps_'})
         alignment_v.style.button_width='40px'
-        alignment_b = widgets.VBox([alignment_l,alignment_v])        
+        alignment_b = widgets.VBox([alignment_l,alignment_v])
         
         select_l = widgets.HTML('<b>Select Point')
-        points_dropdown = widgets.Dropdown()
-        points_dropdown.options = {**{'':None},**dict(self.points)}
-        points_dropdown.layout=layout120px
+        select_dropdown = widgets.Dropdown()
+        select_dropdown.options = {**{'':None},**dict(self.points)}
+        select_dropdown.layout=layout120px
+        select_b = widgets.VBox([select_l,select_dropdown])
         
         
         
@@ -367,7 +369,8 @@ class model(object):
                     
                     self.graph.add_node(p1.name,obj=p1,typ='point')
                     self.graph.add_node(p2.name,obj=p2,typ='point')
-                    self.graph.add_edges_from([('points',p1.name)('points',p2.name)])
+                    self.graph.add_edge('points',p1.name)
+                    self.graph.add_edge('points',p2.name)
                     
                     self.edit_node(p1.name)
                     self.edit_node(p2.name)
@@ -385,7 +388,7 @@ class model(object):
                 name_v.value=''
                 notes_v.value=''
                 
-                points_dropdown.options={**{'':None},**dict(self.points)}
+                select_dropdown.options={**{'':None},**dict(self.points)}
                 
             with tab2_out:
                 tabel.df=self.points_dataframe
@@ -393,31 +396,114 @@ class model(object):
         add_button.on_click(add_click)
         
         
+        #######################################################################
+        # Creating method 2 data requirments - midpoint.
+        #######################################################################
+        mid_point_out = widgets.Output()
+        
+        mid_point_toggle = widgets.ToggleButton(description='MidPoint',icon='expand',value=False)
+        mid_point_toggle.layout=layout100px
+        def mid_toggle(change):
+             if change['type'] == 'change' and change['name'] == 'value':
+                 with mid_point_out:
+                     if mid_point_toggle.value:
+                         ipy.display.display(m2_block)
+                         mid_point_toggle.icon='collapse'
+                     else:
+                         mid_point_out.clear_output()
+                         mid_point_toggle.icon='expand'
+        mid_point_toggle.observe(mid_toggle)
+        
+        p1_l = widgets.HTML('<b>Reference Point 1')
+        p1_v = widgets.Dropdown()
+        p1_b = widgets.VBox([p1_l,p1_v])
+        
+        p2_l = widgets.HTML('<b>Reference Point 2')
+        p2_v = widgets.Dropdown()
+        p2_b = widgets.VBox([p2_l,p2_v])
+        
+        p1_v.options=p2_v.options=dict(self.points)
+        
+        
+        m2_button = widgets.Button(description='Apply',icon='check')
+        m2_button.layout=layout100px
+        def m2_click(dummy):
+            with mid_point_out:
+                if name_v.value=='':
+                    print('Please enter a valid name in the Vector Name field')
+                    return
+                
+                if alignment_v.label in 'RL':
+                    p1 = p1_v.value
+                    p2 = p2_v.value
+                    name1 = alignment_v.value+name_v.value
+                    v1  = point._mid_point(name1,p1,p2)
+                    v1.alignment = alignment_v.label
+                    v2 = point._mid_point(v1.m_name,p1,p2)
+                    v2.y=-v1.y
+                    v2.alignment='RL'.replace(alignment_v.label,'')
+                    
+                    
+                    self.graph.add_node(v1.name,obj=v1,typ='point')
+                    self.graph.add_edge('points',v1.name)
+                    self.graph.add_edge(p1.name,v1.name,attr='mid_point')
+                    self.graph.add_edge(p2.name,v1.name,attr='mid_point')
+                    
+                    self.graph.add_node(v2.name,obj=v2,typ='point')
+                    self.graph.add_edge('points',v2.name)
+                    self.graph.add_edge(p1.name,v2.name,attr='mid_point')
+                    self.graph.add_edge(p2.name,v2.name,attr='mid_point')
+
+                    
+                elif alignment_v.label =='S':
+                    p1 = p1_v.value
+                    p2 = p2_v.value
+                    name = alignment_v.value+name_v.value
+                    v  = point._mid_point(name,p1,p2)
+                    v.alignment = alignment_v.label
+                    self.vectors[name]=v
+                    self.graph.add_node(v.name,obj=v,typ='point')
+                    self.graph.add_edge('points',v.name)
+                    self.graph.add_edge(p1.name,v.name,attr='mid_point')
+                    self.graph.add_edge(p2.name,v.name,attr='mid_point')
+
+                
+                select_dropdown.options = {**{'':None},**dict(self.points)}
+                name_v.value=''
+                notes_v.value=''
+                print('Done!')
+        m2_button.on_click(m2_click)
+        m2_block = widgets.VBox([p1_b,p2_b,m2_button])
+
+        #######################################################################       
+        #######################################################################
+
+        
         def on_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
                 with tab1_out:
-                    if points_dropdown.value==None:
+                    if select_dropdown.value==None:
                         name_v.value=''
                         notes_v.value=''
                         x_v.value=y_v.value=z_v.value=0
                         return
                     
-                    name_v.value=points_dropdown.label[4:]
-                    x_v.value=points_dropdown.value.x
-                    y_v.value=points_dropdown.value.y
-                    z_v.value=points_dropdown.value.z
-                    alignment_v.label=points_dropdown.value.alignment
-                    notes_v.value=points_dropdown.value.notes
-        points_dropdown.observe(on_change)
+                    name_v.value=select_dropdown.label[4:]
+                    x_v.value=select_dropdown.value.x
+                    y_v.value=select_dropdown.value.y
+                    z_v.value=select_dropdown.value.z
+                    alignment_v.label=select_dropdown.value.alignment
+                    notes_v.value=select_dropdown.value.notes
+        select_dropdown.observe(on_change)
         
         
         
         field1 = widgets.HBox([name_b,x_b,y_b,z_b])
         field2 = widgets.VBox([alignment_b,notes_b])
-        field3 = widgets.VBox([select_l,points_dropdown])
+        field3 = widgets.VBox([select_l,select_dropdown,separator100])
 
         
-        tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out])
+        tab1_content = widgets.VBox([field1,field2,add_button,separator100,field3,tab1_out,mid_point_toggle,mid_point_out])
         tab2_content = widgets.VBox([tab2_out],layout=widgets.Layout(width='550px'))
         
         tabs.children=[tab1_content,tab2_content]
@@ -1633,7 +1719,7 @@ class model(object):
         #######################################################################
         
         actuator_type_l = widgets.HTML('<b>Actuator Type')
-        actuator_type_v = widgets.Dropdown(options={'':'','RotationalDrive':rotational_drive,'AbsoluteLocating':absolute_locating})
+        actuator_type_v = widgets.Dropdown(options={'':'','RotationalDrive':rotational_actuator,'AbsoluteLocating':absolute_locating})
         actuator_type_b = widgets.VBox([actuator_type_l,actuator_type_v])
         
         #######################################################################
@@ -1707,10 +1793,16 @@ class model(object):
     
     def kds(self):
         main_out = widgets.Output()
+        sub1_out = widgets.Output()
         
         name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
         name_v = widgets.Text(placeholder='name',layout=layout120px)
-        name_b = widgets.HBox([name_l,name_v])
+        name_b = widgets.VBox([name_l,name_v])
+        
+        alignment_l = widgets.HTML('<b>Alignment')
+        alignment_v = widgets.ToggleButtons(options={'R':'mcr_','L':'mcl_','S':'mcs_'})
+        alignment_v.style.button_width='40px'
+        alignment_b = widgets.VBox([alignment_l,alignment_v])
         
         notes_l = widgets.HTML('<b>Notes',layout=layout200px)
         notes_v = widgets.Textarea(placeholder='Brief description ...')
@@ -1722,10 +1814,114 @@ class model(object):
         actuation_l = widgets.HTML('<b>Actuator Type')
         actuation_v = widgets.Dropdown(layout=layout120px)
         actuation_v.options={'Absolute Locating':absolute_locating,'Rotational':rotational_actuator,'Translational':translational_actuator}
-        actuation_b = widgets.VBox([actuation_l,actuation_v])
+        actuation_b = widgets.VBox([actuation_l,actuation_v,separator50])
         
         
-    
+        def actuation_change(change):
+            if change['type'] == 'change' and change['name'] == 'value':
+                sub1_out.clear_output()
+                with sub1_out:
+                    if actuation_v.label in ['Rotational','Translational']:
+                        ipy.display.display(joints_b)
+                    elif actuation_v.label in ['Absolute Locating']:
+                        ipy.display.display(widgets.HBox([bodies_b,coordinate_b]))
+        actuation_v.observe(actuation_change)      
+        
+        joints_l = widgets.HTML('<b>Actuated Joint')
+        joints_v = widgets.Dropdown(options=dict(self.joints),layout=layout120px)
+        joints_b = widgets.VBox([joints_l,joints_v])
+        
+        bodies_l = widgets.HTML('<b>Actuated Body')
+        bodies_v = widgets.Dropdown(options=dict(self.bodies),layout=layout120px)
+        bodies_b = widgets.VBox([bodies_l,bodies_v])
+        
+        coordinate_l = widgets.HTML('<b>Actuated Coordinate')
+        coordinate_v = widgets.Select(options=['x','y','z'],layout=layout120px)
+        coordinate_b = widgets.VBox([coordinate_l,coordinate_v])
+        
+        add_act_button = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
+        def add_act_click(dummy):
+            with main_out:
+                if name_v.value=='':
+                    print('Please enter a valid name in the Point Name field')
+                    return
+                if alignment_v.label in 'RL':
+                    if actuation_v.label in ['Rotational','Translational']:
+                        name1  = name_v.value+alignment_v.value
+                        j1 = joints_v.value
+                        act1 = actuation_v.value(name1,j1)
+                        act1.alignment=alignment_v.label
+                        
+                        name2  = act1.m_name
+                        j2 = self.joints[j1.m_name]
+                        act2   = actuation_v.value(name2,j2)
+                        act2.alignment='RL'.replace(alignment_v.label,'')
+                        
+                        self.graph.add_node(act1.name,obj=act1,typ='actuator')
+                        self.graph.add_node(act2.name,obj=act2,typ='actuator')
+                        
+                        
+                        self.graph.add_edge(j1.name,act1.name,attr='joint')
+                        self.graph.add_edge(j2.name,act2.name,attr='joint')
+                
+                    
+                    elif actuation_v.label in ['Absolute Locating']:
+                        name1  = name_v.value+alignment_v.value
+                        b1 = bodies_v.value
+                        c1 = coordinate_v.value
+                        act1 = actuation_v.value(name1,b1,c1)
+                        act1.alignment=alignment_v.label
+                        
+                        name2 = act1.m_name
+                        b2    = self.joints[b1.m_name]
+                        act2  = actuation_v.value(name2,b2,c1)
+                        act2.alignment='RL'.replace(alignment_v.label,'')
+                        
+                        self.graph.add_node(act1.name,obj=act1,typ='actuator')
+                        self.graph.add_node(act2.name,obj=act2,typ='actuator')
+                        
+                        self.graph.add_edge(b1.name,act1.name,attr='body')
+                        self.graph.add_edge(b2.name,act2.name,attr='body')
+                
+                    act1.notes=act2.notes=notes_v.value
+                    self.graph.add_edge('actuators',act1.name)
+                    self.graph.add_edge('actuators',act2.name)
+
+                    
+                else:
+                    if actuation_v.label in ['Rotational','Translational']:
+                        name  = name_v.value+alignment_v.value
+                        j = joints_v.value
+                        act = actuation_v.value(name,j)
+                        act.alignment=alignment_v.label
+                        
+                        self.graph.add_node(act.name,obj=act,typ='actuator')
+                        self.graph.add_edge(j.name,act.name,attr='joint')
+                                        
+                    
+                    elif actuation_v.label in ['Absolute Locating']:
+                        name  = name_v.value+alignment_v.value
+                        b = bodies_v.value
+                        c = coordinate_v.value
+                        act = actuation_v.value(name,b,c)
+                        act.alignment=alignment_v.label
+                        
+                        self.graph.add_node(act.name,obj=act,typ='actuator')
+                        self.graph.add_edge(b.name,act.name,attr='body')
+                        
+                    act.notes=notes_v.value
+                    self.graph.add_edge('actuators',act.name)
+                
+                name_v.value=''
+                notes_v.value=''
+                print('Done!')
+                
+        add_act_button.on_click(add_act_click)
+        
+        common_data = widgets.VBox([name_b,alignment_b,notes_b,separator100,
+                                    actuation_t,actuation_b,sub1_out,add_act_button,main_out])                                     
+        
+        return common_data
     
     
     

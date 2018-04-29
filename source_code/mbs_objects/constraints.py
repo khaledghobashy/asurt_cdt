@@ -290,14 +290,11 @@ class cylindrical(joint):
         self.type='cylindrical joint'
         self.name=name
         self.nc=4
+        
+        self._p2 = vector(self.location)+10*vector(self.axis).unit
+        self.u_j = self.j_body.dcm.T.dot(self._p2-self.j_body.R)
+
     
-    @property
-    def p2(self):
-        return vector(self.location)+10*vector(self.axis).unit
-    
-    @property
-    def u_j(self):
-        return self.j_body.dcm.T.dot(self.p2-self.j_body.R)
     
 
 
@@ -1157,24 +1154,11 @@ class bounce_roll(joint):
         
         return pd.Series([left,right],index=['l','r'])
 
-
-
-class translational_actuator(object):
-    def __init__(self,name,actuated_joint):
-        
-        self.name = name
-        self.typ  = 'trans_actuator'
-        self.nc   = 1
-        
-        self.joint=actuated_joint
-        
-        self.v=actuated_joint.vik
-        
-        self.i_body=actuated_joint.i_body
-        self.j_body=actuated_joint.j_body
-        
-        self.u_i = self.joint.u_i
-        self.u_j = self.joint.u_j
+class actuators(object):
+    def __init__(self,name):
+        self.name=name
+        self.alignment='S'
+        self.notes=''
         
         self.pos=0
         self.vel=0
@@ -1195,11 +1179,56 @@ class translational_actuator(object):
         self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
     
     
+    @property    
+    def m_name(self):
+        if self.alignment=='S':
+            return 'mcs_'+self.name[4:]
+        elif self.alignment == 'R':
+            return 'mcl_'+self.name[4:]
+        elif self.alignment == 'L':
+            return 'mcr_'+self.name[4:]
+        
+    
     @property
     def index(self):
         name=self.name
         indices=[name+'_eq%s'%i for i in range(self.nc)]
         return indices
+
+
+
+class translational_actuator(actuators):
+    def __init__(self,name,actuated_joint):
+        super().__init__(name)
+        
+        self.typ  = 'trans_actuator'
+        self.nc   = 1
+        
+        self._joint=actuated_joint
+        
+        self.v=self._joint.vik
+        
+        self.i_body=self._joint.i_body
+        self.j_body=self._joint.j_body
+        
+        self.u_i = self._joint.u_i
+        self.u_j = self._joint.u_j
+        
+    
+    @property
+    def joint(self):
+        return self._joint
+    @joint.setter
+    def joint(self,value):
+        self._joint=value
+        self.v=self._joint.vik
+        
+        self.i_body=self._joint.i_body
+        self.j_body=self._joint.j_body
+        
+        self.u_i = self._joint.u_i
+        self.u_j = self._joint.u_j
+        
     
     def equations(self,q):
         
@@ -1316,46 +1345,36 @@ class translational_actuator(object):
 
 
 
-class rotational_actuator(object):
+class rotational_actuator(actuators):
     def __init__(self,name,actuated_joint):
+        super().__init__(name)
         
         self.type='driving constraint'
-        self.name=name
-
-        self.joint=actuated_joint
-        self.v1=actuated_joint.vii
-        self.v2=actuated_joint.vji
-        self.v3=actuated_joint.vij
-        self.i_body=actuated_joint.i_body
-        self.j_body=actuated_joint.j_body
-        
         self.nc=1
-        
-        self.pos=0
-        self.vel=0
-        self.acc=0
-        
-        self.pos_array=self.vel_array=self.acc_array=[]
-    
-    
-    def set_pos(self,pos,time_array):
-        self.pos_array=pos.copy()
-        self.vel_array=np.gradient(self.pos_array)/np.gradient(time_array)
-        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
 
-    
-    def set_vel(self,vel,time_array):
-        self.vel_array=vel.copy()
-        self.pos_array=sc.integrate.cumtrapz(self.vel_array,time_array,initial=0)
-        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
+
+        self._joint=actuated_joint
+        self.v1=self._joint.vii
+        self.v2=self._joint.vji
+        self.v3=self._joint.vij
+        self.i_body=self._joint.i_body
+        self.j_body=self._joint.j_body
+        
 
     @property
-    def index(self):
-        name=self.name
-        indices=[name+'_eq%s'%i for i in range(self.nc)]
-        return indices
+    def joint(self):
+        return self._joint
+    @joint.setter
+    def joint(self,value):
+        self._joint=value
+        self.v1=self._joint.vii
+        self.v2=self._joint.vji
+        self.v3=self._joint.vij
+        self.i_body=self._joint.i_body
+        self.j_body=self._joint.j_body
     
-    
+
+        
     def equations(self,q):
         
         qi=q[self.i_body.dic.index]
@@ -1471,36 +1490,21 @@ class rotational_actuator(object):
     
 class absolute_locating(object):
     def __init__(self,name,body,coordinate):
+        super().__init__(name)
+        
         self.type='driving constraint'
-        self.name=name
-        self.body=body
-        self.coordinate=body.name+'.'+coordinate
+        self._body=body
+        self.coordinate=self._body.name+'.'+coordinate
         self.coo_index=list('xyz').index(coordinate)
         self.nc=1
         
-        self.pos=0
-        self.vel=0
-        self.acc=0
-        
-        self.pos_array=self.vel_array=self.acc_array=[]
-    
-    def set_pos(self,pos,time_array):
-        self.pos_array=pos.copy()
-        self.vel_array=np.gradient(self.pos_array)/np.gradient(time_array)
-        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
-
-    
-    def set_vel(self,vel,time_array):
-        self.vel_array=vel.copy()
-        self.pos_array=sc.integrate.cumtrapz(self.vel_array,time_array,initial=0)
-        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
-
     @property
-    def index(self):
-        name=self.name
-        indices=[name+'_eq%s'%i for i in range(self.nc)]
-        return indices
-    
+    def body(self):
+        return self._body
+    @body.setter
+    def body(self,value):
+        self._body=value
+        self.coordinate=self._body.name+'.'+self.coordinate[-1]
     
     def equations(self,q):
         ind=q[self.coordinate]

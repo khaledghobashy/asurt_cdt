@@ -575,16 +575,25 @@ class point(vector):
         name=self.name+'.'
         return {name+'x':self.x,name+'y':self.y,name+'z':self.z}
     
-    def mid_point(self,other,name):
-        
-        other_typ = isinstance(other,point)
-        if not other_typ : raise TypeError('the given object is not a point')
-        
-        loc=((self-other).mag/2)*(self-other).unit
-        loc=loc+other
-        mid=point(name,loc,self.frame)
+    def _mid_point(name,p1,p2):
+                
+        loc=((p2-p1).mag/2)*(p2-p1).unit
+        loc=loc+p1
+        mid=point(name,loc)
+        mid._p1=p1
+        mid._p2=p2
         
         return mid
+    
+    @property
+    def mid_point(self):
+        return self._mid_point(self.name,self.p1,self.p2)
+    @mid_point.setter
+    def mid_point(self,p):
+        self.p1=(p if p.name==self.p1.name else self.p1)
+        self.p2=(p if p.name==self.p2.name else self.p2)
+        v = point(self.name,self.p2-self.p1)
+        self.x,self.y,self.z = v.x,v.y,v.z
     
     def point_pos(self,R,rod_param):
         R=vector(R)
