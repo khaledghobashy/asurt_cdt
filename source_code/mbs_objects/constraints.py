@@ -1316,7 +1316,7 @@ class translational_actuator(object):
 
 
 
-class rotational_drive(object):
+class rotational_actuator(object):
     def __init__(self,name,actuated_joint):
         
         self.type='driving constraint'

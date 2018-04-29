@@ -22,7 +22,7 @@ from solvers import kds, reactions
 from pre_processor import topology_writer
 import numpy as np
 from constraints import cylindrical, spherical, revolute, translational,\
-                        universal, rotational_drive, absolute_locating
+                        universal, rotational_actuator, absolute_locating, translational_actuator
 
 layout80px  = widgets.Layout(width='80px')
 layout100px = widgets.Layout(width='100px')
@@ -1705,7 +1705,26 @@ class model(object):
     
     
     
-    
+    def kds(self):
+        main_out = widgets.Output()
+        
+        name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
+        name_v = widgets.Text(placeholder='name',layout=layout120px)
+        name_b = widgets.HBox([name_l,name_v])
+        
+        notes_l = widgets.HTML('<b>Notes',layout=layout200px)
+        notes_v = widgets.Textarea(placeholder='Brief description ...')
+        notes_v.layout=widgets.Layout(width='300px',height='55px')
+        notes_b = widgets.VBox([notes_l,notes_v])
+        
+        actuation_t = widgets.HTML('<b>Motion Actuators')
+        
+        actuation_l = widgets.HTML('<b>Actuator Type')
+        actuation_v = widgets.Dropdown(layout=layout120px)
+        actuation_v.options={'Absolute Locating':absolute_locating,'Rotational':rotational_actuator,'Translational':translational_actuator}
+        actuation_b = widgets.VBox([actuation_l,actuation_v])
+        
+        
     
     
     
@@ -1739,8 +1758,8 @@ class model(object):
         wheel_hub_left=self.joints['jcl_hub_bearing']
         wheel_hub_right=self.joints['jcr_hub_bearing']
         
-        wheel_drive_left     = rotational_drive('mcl_rotational_lock',wheel_hub_left)
-        wheel_drive_right    = rotational_drive('mcr_rotational_lock',wheel_hub_right)
+        wheel_drive_left     = rotational_actuator('mcl_rotational_lock',wheel_hub_left)
+        wheel_drive_right    = rotational_actuator('mcr_rotational_lock',wheel_hub_right)
         
         vertical_travel_left = absolute_locating('mcl_vertical',self.bodies['rbl_wheel_hub'],'z')
         vertical_travel_right = absolute_locating('mcr_vertical',self.bodies['rbr_wheel_hub'],'z')
@@ -1838,7 +1857,7 @@ class model(object):
         
     
     
-    def show_data_flow(self):
+    def draw_graph(self):
         out = widgets.Output()
         with out:
             plt.figure('Model Data Flow',figsize=(10,10))
