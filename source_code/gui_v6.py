@@ -11,6 +11,7 @@ import networkx as nx
 import dill
 import matplotlib.pyplot as plt
 import plotly
+import plotly.graph_objs as go
 import IPython as ipy
 import qgrid
 import time
@@ -2047,14 +2048,15 @@ class model(object):
                 indpendent_data  = results[data_type_v.value][index_ind]
                 dependent_data   = results[data_type_v.value][index_dep]
                 
-                fig = plt.figure('l',figsize=(10,4))
-                plt.title(index_ind+' vs '+index_dep,color='white')
-                plt.plot(indpendent_data,dependent_data,label=index_dep)
-                plt.legend()
-                plt.tick_params(axis='x', colors='white')
-                plt.tick_params(axis='y', colors='white')
-                plt.grid()
-                plotly.offline.iplot_mpl(fig)
+                xaxis  = dict(nticks=10,mirror='all',showline=True,linewidth=2,linecolor='#cdc0b0')
+                yaxis  = dict(nticks=10,mirror='all',showline=True,linewidth=2,linecolor='#cdc0b0')
+                margin = dict(l=50,r=50,b=50,t=50,pad=4)
+                
+                layout = go.Layout(xaxis=xaxis,yaxis=yaxis,margin=margin,width=700,height=300,paper_bgcolor='#f8f8ff',plot_bgcolor='#f5f5f5')
+                data = go.Scatter(x=indpendent_data,y=dependent_data)
+                fig = go.Figure(data=[data], layout=layout)
+                plotly.offline.iplot(fig)
+                
         show_button.on_click(show_click)
         
         selectors = widgets.VBox([data_type_b,separator100,
