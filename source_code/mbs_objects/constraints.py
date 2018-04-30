@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from base import vector, ep2dcm, B, orient_along_axis, vec2skew, E
 from scipy import sparse
-import scipy as sc
+from scipy.misc import derivative
 
 
 def acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v2,Aj,Bjv2,Hjv2,bjd):
@@ -1159,25 +1159,46 @@ class actuators(object):
         self.name=name
         self.alignment='S'
         self.notes=''
+                
+        self._pos_f = lambda t : 0
+        self._vel_f = lambda t : 0
+        self._acc_f = lambda t : 0
         
-        self.pos=0
-        self.vel=0
-        self.acc=0
+        self.t = 0
         
-        self.pos_array=self.vel_array=self.acc_array=[]
     
+    @property
+    def pos_f(self):
+        return self._pos_f
+    @pos_f.setter
+    def pos_f(self,value):
+        self._pos_f = value
+        self._vel_f = lambda t : derivative(self._pos_f,t)
+        self._acc_f = lambda t : derivative(self._vel_f,t)
+    @property
+    def pos(self):
+        return self.pos_f(self.t)
+        
+    @property
+    def vel_f(self):
+        return self._vel_f
+    @vel_f.setter
+    def vel_f(self,value):
+        pass
+    @property
+    def vel(self):
+        return self.vel_f(self.t)
     
-    def set_pos(self,pos,time_array):
-        self.pos_array=pos.copy()
-        self.vel_array=np.gradient(self.pos_array)/np.gradient(time_array)
-        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
-
-    
-    def set_vel(self,vel,time_array):
-        self.vel_array=vel.copy()
-        self.pos_array=sc.integrate.cumtrapz(self.vel_array,time_array,initial=0)
-        self.acc_array=np.gradient(self.vel_array)/np.gradient(time_array)
-    
+    @property
+    def acc_f(self):
+        return self._acc_f
+    @acc_f.setter
+    def acc_f(self,value):
+        pass
+    @property
+    def acc(self):
+        return self.acc_f(self.t)
+        
     
     @property    
     def m_name(self):

@@ -8,6 +8,7 @@ Created on Sun Apr 22 09:15:03 2018
 
 import ipywidgets as widgets
 import networkx as nx
+import dill
 import matplotlib.pyplot as plt
 import plotly
 import IPython as ipy
@@ -163,7 +164,9 @@ class model(object):
                 self.model['graph']    = self.graph
                 self.model['topology'] = self.topology
                 
-                self.model.to_pickle(f)
+                with open(self.name,'wb') as d:
+                    dill.dump(self.model,d)
+                d.close()
                 
                 fields = widgets.Accordion()
                 fields.children=[self.add_point(),
@@ -216,8 +219,11 @@ class model(object):
                 
                 self.model['graph']    = self.graph
                 self.model['topology'] = self.topology
+                self.model['simulations'] = self.simulations
                 
-                self.model.to_pickle(self.name)
+                with open(self.name,'wb') as d:
+                    dill.dump(self.model,d)
+                d.close()
                 print('Model Saved as "%s" at %s'%(self.name.split("/")[-1],time.strftime('%I:%M:%S %p')))
         save_button.on_click(save_click)
         
@@ -239,10 +245,12 @@ class model(object):
                 self.name=f
                 name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
                 
-                self.model=pd.read_pickle(f)
+                with open(self.name,'rb') as d:
+                    self.model=dill.load(d)
 
                 self.graph    = self.model['graph']
                 self.topology = self.model['topology']
+                self.simulations =  self.model['simulations']
                 
                 
                 
@@ -265,7 +273,7 @@ class model(object):
                 modeling.set_title(4,'SYSTEM ACTUATORS')
                 modeling.set_title(5,'SYSTEM FORCES')
                 
-                simulation = widgets.Accordion(children=[self.kds()])
+                simulation = widgets.Accordion(children=[self.kds_sim()])
                 simulation.set_title(0,'Kinematically Driven Systems Simulation')
                 
                 
@@ -1717,13 +1725,11 @@ class model(object):
         notes_v.layout=widgets.Layout(width='300px',height='55px')
         notes_b = widgets.VBox([notes_l,notes_v])
         
-        actuation_t = widgets.HTML('<b>Motion Actuators')
         
         actuation_l = widgets.HTML('<b>Actuator Type')
         actuation_v = widgets.Dropdown(layout=layout120px)
-        actuation_v.options={'Absolute Locating':absolute_locating,'Rotational':rotational_actuator,'Translational':translational_actuator}
+        actuation_v.options={'':None,'Absolute Locating':absolute_locating,'Rotational':rotational_actuator,'Translational':translational_actuator}
         actuation_b = widgets.VBox([actuation_l,actuation_v,separator50])
-        
         
         def actuation_change(change):
             if change['type'] == 'change' and change['name'] == 'value':
@@ -1747,6 +1753,14 @@ class model(object):
         coordinate_v = widgets.Select(options=['x','y','z'],layout=layout120px)
         coordinate_b = widgets.VBox([coordinate_l,coordinate_v])
         
+        
+        actuation_fun_l = widgets.HTML('<b> Actuation Function')
+        actuation_fun_v = widgets.Textarea(placeholder='write a python script here defining the actuation function that takes in t variable')
+        actuation_fun_v.layout=widgets.Layout(width='400px',height='55px')
+        actuation_fun_b = widgets.VBox([actuation_fun_l,actuation_fun_v])
+        
+        
+        
         add_act_button = widgets.Button(description='Apply',icon='check',tooltip='Apply Changes',layout=layout100px)
         def add_act_click(dummy):
             with main_out:
@@ -1755,7 +1769,7 @@ class model(object):
                     return
                 if alignment_v.label in 'RL':
                     if actuation_v.label in ['Rotational','Translational']:
-                        name1  = name_v.value+alignment_v.value
+                        name1  = alignment_v.value+name_v.value
                         j1 = joints_v.value
                         act1 = actuation_v.value(name1,j1)
                         act1.alignment=alignment_v.label
@@ -1774,7 +1788,7 @@ class model(object):
                 
                     
                     elif actuation_v.label in ['Absolute Locating']:
-                        name1  = name_v.value+alignment_v.value
+                        name1  = alignment_v.value+name_v.value
                         b1 = bodies_v.value
                         c1 = coordinate_v.value
                         act1 = actuation_v.value(name1,b1,c1)
@@ -1792,13 +1806,14 @@ class model(object):
                         self.graph.add_edge(b2.name,act2.name,attr='body')
                 
                     act1.notes=act2.notes=notes_v.value
+                    act1.pos_f=act2.pos_f=eval('lambda t: '+actuation_fun_v.value)
                     self.graph.add_edge('actuators',act1.name)
                     self.graph.add_edge('actuators',act2.name)
 
                     
                 else:
                     if actuation_v.label in ['Rotational','Translational']:
-                        name  = name_v.value+alignment_v.value
+                        name  = alignment_v.value+name_v.value
                         j = joints_v.value
                         act = actuation_v.value(name,j)
                         act.alignment=alignment_v.label
@@ -1818,6 +1833,7 @@ class model(object):
                         self.graph.add_edge(b.name,act.name,attr='body')
                         
                     act.notes=notes_v.value
+                    act.pos_f=eval('lambda t: '+actuation_fun_v.value)
                     self.graph.add_edge('actuators',act.name)
                 
                 name_v.value=''
@@ -1826,10 +1842,12 @@ class model(object):
                 
         add_act_button.on_click(add_act_click)
         
-        common_data = widgets.VBox([name_b,alignment_b,notes_b,separator100,
-                                    actuation_t,actuation_b,sub1_out,add_act_button,main_out])                                     
+        common_data = widgets.VBox([name_b,alignment_b,notes_b,separator100])
+        detail_data = widgets.VBox([actuation_b,sub1_out,actuation_fun_b,add_act_button,separator100])
         
-        return common_data
+        output = widgets.VBox([common_data,detail_data])
+        
+        return output
     
     
     def system_parameters(self):
@@ -1880,15 +1898,42 @@ class model(object):
     
     
     
-    def kds(self):
+    def kds_sim(self):
         main_out = widgets.Output()
-        sub1_out = widgets.Output()
         
-        sim_name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
-        sim_name_v = widgets.Text(placeholder='name',layout=layout120px)
-        sim_name_b = widgets.HBox([sim_name_l,sim_name_v])
+        name_l = widgets.HTML('<b>Simulation Name',layout=layout120px)
+        name_v = widgets.Text(placeholder='name',layout=layout120px)
+        name_b = widgets.HBox([name_l,name_v])
         
-        return widgets.VBox([sim_name_b,self.add_actuators()])
+        notes_l = widgets.HTML('<b>Notes',layout=layout200px)
+        notes_v = widgets.Textarea(placeholder='Brief description ...')
+        notes_v.layout=widgets.Layout(width='300px',height='55px')
+        notes_b = widgets.VBox([notes_l,notes_v])
+        
+        sim_time_l = widgets.HTML('<b>Simulation Time')
+        sim_time_v = widgets.FloatText()
+        sim_time_b = widgets.VBox([sim_time_l,sim_time_v])
+        
+        sim_step_l = widgets.HTML('<b>Time Steps')
+        sim_step_v = widgets.FloatText()
+        sim_step_b = widgets.VBox([sim_step_l,sim_step_v])
+        
+        sim_param = widgets.VBox([name_b,notes_b,separator100,sim_time_b,sim_step_b])
+        
+        run_button = widgets.Button(description=' Run',icon='play',tooltip='Run Simulation',layout=layout100px)
+        def run_click(dummy):
+            with main_out:
+                name = name_v.value
+                t = sim_time_v.value
+                steps = sim_step_v.value
+                time_array = np.linspace(0,t,steps)
+                topology_writer(self.bodies,self.joints,self.actuators,self.forces,'_datafile')
+                self.simulations[name]=kds(self.bodies,self.joints,self.actuators,'_datafile',time_array)
+                print('\nDone!')
+        run_button.on_click(run_click)
+        
+        
+        return widgets.VBox([sim_param,run_button,main_out])
         
         
     
@@ -1988,24 +2033,28 @@ class model(object):
         de_attribute_selector_v = widgets.Select(options={'x':'.x','y':'.y','z':'.z'},layout=layout120px)
         de_attribute_selector_b = widgets.VBox([de_attribute_selector_l,de_attribute_selector_v])
         
+        sim_results_l = widgets.HTML('<b>Simulations')
+        sim_results_v = widgets.Dropdown(options=dict(self.simulations),layout=layout120px)
+        sim_results_b = widgets.VBox([sim_results_l,sim_results_v])
         
         show_button = widgets.Button(description='Show',icon='image',tooltip='Show Plot',layout=layout100px)
         def show_click(dummy):
             plots_out.clear_output()
             with plots_out:
+                results = sim_results_v.value
                 index_ind = in_object_selector_v.value+in_attribute_selector_v.value
                 index_dep = de_object_selector_v.value+de_attribute_selector_v.value
-                indpendent_data  = self.soln[data_type_v.value][index_ind]
-                dependent_data   = self.soln[data_type_v.value][index_dep]
+                indpendent_data  = results[data_type_v.value][index_ind]
+                dependent_data   = results[data_type_v.value][index_dep]
                 
-                plt.figure('l',figsize=(10,4))
+                fig = plt.figure('l',figsize=(10,4))
                 plt.title(index_ind+' vs '+index_dep,color='white')
                 plt.plot(indpendent_data,dependent_data,label=index_dep)
                 plt.legend()
                 plt.tick_params(axis='x', colors='white')
                 plt.tick_params(axis='y', colors='white')
                 plt.grid()
-                plt.show()
+                plotly.offline.iplot_mpl(fig)
         show_button.on_click(show_click)
         
         selectors = widgets.VBox([data_type_b,separator100,
@@ -2018,7 +2067,7 @@ class model(object):
                                   show_button])
         
         
-        return widgets.VBox([selectors,plots_out])
+        return widgets.VBox([sim_results_b,separator100,selectors,plots_out])
         
     
     

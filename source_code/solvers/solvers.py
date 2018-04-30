@@ -90,16 +90,6 @@ def kds(bodies,joints,actuators,topology_file,time_array):
     vel=eq_file.vel_rhs
     acc=eq_file.acc_rhs
     
-    # setting the actuatorts time history arrays
-    for ac in actuators:
-            
-        if len(ac.pos_array)!=0:
-            #print('Position Input')
-            ac.vel_array=np.gradient(ac.pos_array)/np.gradient(time_array)
-            ac.acc_array=np.gradient(ac.vel_array)/np.gradient(time_array)
-        elif len(ac.vel_array)!=0:
-            ac.pos_array=sc.integrate.cumtrapz(ac.vel_array,time_array,initial=0)
-            ac.acc_array=np.gradient(ac.vel_array)/np.gradient(time_array)
     
     # checking the system jacobian for singularities and small pivots
     
@@ -121,9 +111,7 @@ def kds(bodies,joints,actuators,topology_file,time_array):
         progress_bar(len(time_array),i)
         
         for ac in actuators:
-            ac.pos=ac.pos_array[i]
-            ac.vel=ac.vel_array[i]
-            ac.acc=ac.acc_array[i]
+            ac.t=step
         
         if i==0:
             g=position_df.loc[i]
