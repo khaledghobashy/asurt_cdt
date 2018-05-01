@@ -728,8 +728,60 @@ def ep2dcm(p):
     ===========================================================================
     '''
     return E(p).dot(G(p).T)
-    
+
 def dcm2ep(dcm):
+    ''' 
+    extracting euler parameters from a transformation matrix
+    Note: this is not fully developed. The special case of e0=0 is not dealt 
+    with yet.
+    ===========================================================================
+    inputs  : 
+        A   : The transofrmation matrix
+    ===========================================================================
+    outputs : 
+        p   : set containing the four parameters
+    ===========================================================================
+    '''
+    trA = dcm.trace()
+    e0s=(trA+1)/4
+    
+    e1s=(2*dcm[0,0]-trA+1)/4
+    e2s=(2*dcm[1,1]-trA+1)/4
+    e3s=(2*dcm[2,2]-trA+1)/4
+    
+    
+    # Case 1 : e0 != zero
+    if e0s==max([e0s,e1s,e2s,e2s,e3s]):
+        e0=abs(np.sqrt(e0s))
+        
+        e1=(dcm[2,1]-dcm[1,2])/(4*e0)
+        e2=(dcm[0,2]-dcm[2,0])/(4*e0)
+        e3=(dcm[0,1]-dcm[1,0])/(4*e0)
+        
+    elif e1s==max([e0s,e1s,e2s,e2s,e3s]):
+        e1=abs(np.sqrt(e1s))
+        
+        e0=(dcm[2,1]-dcm[1,2])/(4*e1)
+        e2=(dcm[0,1]+dcm[1,0])/(4*e1)
+        e3=(dcm[0,2]+dcm[2,0])/(4*e1)
+    
+    elif e2s==max([e0s,e1s,e2s,e2s,e3s]):
+        e2=abs(np.sqrt(e2s))
+        
+        e0=(dcm[0,2]-dcm[2,0])/(4*e2)
+        e1=(dcm[0,1]+dcm[1,0])/(4*e2)
+        e3=(dcm[2,1]+dcm[1,2])/(4*e2)
+    
+    elif e3s==max([e0s,e1s,e2s,e2s,e3s]):
+        e3=abs(np.sqrt(e3s))
+        
+        e0=(dcm[0,1]-dcm[1,0])/(4*e3)
+        e1=(dcm[0,2]+dcm[2,0])/(4*e3)
+        e2=(dcm[2,1]+dcm[1,2])/(4*e3)
+        
+    return e0,e1,e2,e3
+    
+def dcm2ep1(dcm):
     ''' 
     extracting euler parameters from a transformation matrix
     Note: this is not fully developed. The special case of e0=0 is not dealt 

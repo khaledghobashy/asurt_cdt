@@ -12,6 +12,7 @@ from scipy import sparse
 from scipy.misc import derivative
 
 
+
 def acc_dp1_rhs(v1,Ai,Biv1,Hiv1,bid,v2,Aj,Bjv2,Hjv2,bjd):
         
     rhs=-2*np.linalg.multi_dot([bid.T,Biv1.T,Bjv2,bjd])-\
@@ -37,7 +38,7 @@ def acc_sph_rhs(betai_dot,Hip,Hjp,betaj_dot):
     H  = np.concatenate((Hip,-Hjp),axis=1)
     qd = np.concatenate((betai_dot,betaj_dot)).reshape((8,1))
     
-    return -H.dot(qd)    
+    return H.dot(qd)    
 
 
 
@@ -1509,7 +1510,7 @@ class rotational_actuator(actuators):
         return rhs
         
     
-class absolute_locating(object):
+class absolute_locating(actuators):
     def __init__(self,name,body,coordinate):
         super().__init__(name)
         

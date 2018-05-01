@@ -1796,7 +1796,7 @@ class model(object):
                         act1.alignment=alignment_v.label
                         
                         name2 = act1.m_name
-                        b2    = self.joints[b1.m_name]
+                        b2    = self.bodies[b1.m_name]
                         act2  = actuation_v.value(name2,b2,c1)
                         act2.alignment='RL'.replace(alignment_v.label,'')
                         
@@ -1846,7 +1846,7 @@ class model(object):
         common_data = widgets.VBox([name_b,alignment_b,notes_b,separator100])
         detail_data = widgets.VBox([actuation_b,sub1_out,actuation_fun_b,add_act_button,separator100])
         
-        output = widgets.VBox([common_data,detail_data])
+        output = widgets.VBox([common_data,detail_data,main_out])
         
         return output
     
@@ -2011,6 +2011,11 @@ class model(object):
         
         plots_out = widgets.Output()
         
+        sim_results_l = widgets.HTML('<b>Simulations')
+        sim_results_v = widgets.Dropdown(options=dict(self.simulations),layout=layout120px)
+        sim_results_b = widgets.VBox([sim_results_l,sim_results_v])
+
+        
         data_type_l = widgets.HTML('<b> Select Data',layout=layout120px)
         data_type_v = widgets.Select(options={'Position':0,'Velocity':1,'Acceleration':2},layout=layout120px)
         data_type_b = widgets.VBox([data_type_l,data_type_v])
@@ -2034,15 +2039,12 @@ class model(object):
         de_attribute_selector_v = widgets.Select(options={'x':'.x','y':'.y','z':'.z'},layout=layout120px)
         de_attribute_selector_b = widgets.VBox([de_attribute_selector_l,de_attribute_selector_v])
         
-        sim_results_l = widgets.HTML('<b>Simulations')
-        sim_results_v = widgets.Dropdown(options=dict(self.simulations),layout=layout120px)
-        sim_results_b = widgets.VBox([sim_results_l,sim_results_v])
         
         show_button = widgets.Button(description='Show',icon='image',tooltip='Show Plot',layout=layout100px)
         def show_click(dummy):
             plots_out.clear_output()
             with plots_out:
-                results = sim_results_v.value
+                results = self.simulations[sim_results_v.label]
                 index_ind = in_object_selector_v.value+in_attribute_selector_v.value
                 index_dep = de_object_selector_v.value+de_attribute_selector_v.value
                 indpendent_data  = results[data_type_v.value][index_ind]

@@ -99,10 +99,12 @@ def kds(bodies,joints,actuators,topology_file,time_array):
     position_df.loc[0]=assm_config
     
     velocity_df=pd.DataFrame(columns=assm_config.index)
-    velocity_df.loc[0]=np.zeros((len(assm_config,)))
+    jac=cq(assm_config,bodies,joints,actuators)
+    velocity_df.loc[0]=sc.sparse.linalg.spsolve(jac,vel(actuators))
     
     acceleration_df=pd.DataFrame(columns=assm_config.index)
-    acceleration_df.loc[0]=np.zeros((len(assm_config,)))
+    acceleration_df.loc[0]=sc.sparse.linalg.spsolve(jac,acc(assm_config,velocity_df.loc[0],bodies,joints,actuators))
+
     
     convergence_df=pd.DataFrame(columns=['iteration'])
     
@@ -276,10 +278,11 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
     # the integration
     t=np.arange(0,sim_time,stepsize)
     for i,dt in enumerate(t):
-        print('time_step: '+str(i))
+#        print('time_step: '+str(i))
+        progress_bar(len(t),i)
 
         r.integrate(dt)
-        print(r.y)
+#        print(r.y)
 #        if not r.successful():
 #            print("BREAKING SOLVER")
 #            return position_df,velocity_df,acceleration_df,JR_df
@@ -305,6 +308,7 @@ def dds(q0,qd0,bodies,joints,actuators,forces,file,sim_time,stepsize):
         
         # Evaluating the new coeff matrix bloks of the system NE equations
         M  = M_f(q,bodies)
+        Cq = Cq_f(q,bodies,joints,actuators)
         Qa = Qa_f(forces,q,qd)
         Qv = Qv_f(bodies,q,qd)
         Qg = Qg_f(bodies)
