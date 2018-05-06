@@ -234,8 +234,7 @@ class rigid(object):
         return np.array([[-2*((e0**2)+(e1**2)+(e2**2)+(e3**2))]])
     
     def mount_acc_rhs(self,qdot):
-        e0,e1,e2,e3=qdot[self.dic.index[3:]]
-        return np.concatenate([np.zeros((6,1)),np.array([[-2*((e0**2)+(e1**2)+(e2**2)+(e3**2))]])])
+        return np.zeros((7,1))
 
     
     def mount_equation(self,q):
@@ -243,23 +242,24 @@ class rigid(object):
         qi=q[self.dic.index]
         
         eq1,eq2,eq3=qi[0:3]
-        eq4,eq5,eq6=qi[4:]
-        e0,e1,e2,e3=qi[self.dic.index[3:]]
-        eq7=(e0**2)+(e1**2)+(e2**2)+(e3**2)-1
+        eq4=qi[3]-1
+        eq5,eq6,eq7=qi[4:]
+#        e0,e1,e2,e3=qi[self.dic.index[3:]]
+#        eq7=(e0**2)+(e1**2)+(e2**2)+(e3**2)-1
         
         
         return np.array([[eq1],[eq2],[eq3],[eq4],[eq5],[eq6],[eq7]])
     
     def mount_jacobian(self,q):
         e0,e1,e2,e3=q[self.dic.index[3:]]
-        b=np.array([[1,0,0,0,0,0,0],
-                    [0,1,0,0,0,0,0],
-                    [0,0,1,0,0,0,0],
-                    [0,0,0,0,1,0,0],
-                    [0,0,0,0,0,1,0],
-                    [0,0,0,0,0,0,1],
-                    [0,0,0,2*e0,2*e1,2*e2,2*e3]])
-        jac=sc.sparse.csc_matrix(b)
+#        b=np.array([[1,0,0,0,0,0,0],
+#                    [0,1,0,0,0,0,0],
+#                    [0,0,1,0,0,0,0],
+#                    [0,0,0,0,1,0,0],
+#                    [0,0,0,0,0,1,0],
+#                    [0,0,0,0,0,0,1],
+#                    [0,0,0,2*e0,2*e1,2*e2,2*e3]])
+        jac=sc.sparse.csc_matrix(np.eye(7))
         return jac
         
     def __repr__(self):
