@@ -1420,32 +1420,9 @@ class rotational_actuator(actuators):
         
         v1=Ai.dot(self.v1)
         v2=Aj.dot(self.v2)
-        v3=Ai.dot(self.v3)
         
-        c=float(v1.T.dot(v2))
-        s=float(v3.T.dot(v2))
         
-        print('angle: %s'%self.pos)
-        
-#        print("v1i = %s"%v1.T)
-#        print("v2j = %s"%v2.T)
-        print("cos = %s"%c)
-        print("sin = %s"%s)
-#        print("%s"%qi[3:])
-        print("%s"%sum(qj[3:]**2))
-
-        if s>=0 and c>=0:
-            eq=np.arcsin(s)-self.pos
-        if s>=0 and c<0:
-            eq=np.pi-np.arcsin(s)-self.pos
-        if s<0 and c<0:
-            eq=np.pi-np.arcsin(s)-self.pos
-        if s<0 and c>=0:
-            eq=2*np.pi+np.arcsin(s)-self.pos
-                
-#        print(eq)
-        
-        return eq
+        return v1.T.dot(v2)-np.cos(self.pos)
     
     def jacobian_i(self,q):
         

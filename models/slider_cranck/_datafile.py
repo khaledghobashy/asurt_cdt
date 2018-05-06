@@ -3,103 +3,76 @@ import pandas as pd
 from scipy import sparse 
 
 
-jac_df=pd.DataFrame([4 *[None]],columns=['rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider'],index=['jcs_A_sph', 'jcs_B_uni', 'jcs_C_trans', 'jcs_O_rev', 'rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider', 'mcs_slider_act'])
+jac_df=pd.DataFrame([2 *[None]],columns=['rbs_ground', 'rbs_link'],index=['jcs_rev', 'rbs_ground', 'rbs_link', 'mcs_rot'])
 def cq(q,bodies,joints,actuators): 
-	 jac_df.loc['jcs_A_sph','rbs_crank']=joints['jcs_A_sph'].jacobian_i(q)
-	 jac_df.loc['jcs_A_sph','rbs_connecting']=joints['jcs_A_sph'].jacobian_j(q)
-	 jac_df.loc['jcs_B_uni','rbs_connecting']=joints['jcs_B_uni'].jacobian_i(q)
-	 jac_df.loc['jcs_B_uni','rbs_slider']=joints['jcs_B_uni'].jacobian_j(q)
-	 jac_df.loc['jcs_C_trans','rbs_slider']=joints['jcs_C_trans'].jacobian_i(q)
-	 jac_df.loc['jcs_C_trans','rbs_ground']=joints['jcs_C_trans'].jacobian_j(q)
-	 jac_df.loc['jcs_O_rev','rbs_ground']=joints['jcs_O_rev'].jacobian_i(q)
-	 jac_df.loc['jcs_O_rev','rbs_crank']=joints['jcs_O_rev'].jacobian_j(q)
-	 jac_df.loc['rbs_connecting','rbs_connecting']=bodies['rbs_connecting'].unity_jacobian(q)
-	 jac_df.loc['rbs_crank','rbs_crank']=bodies['rbs_crank'].unity_jacobian(q)
+	 jac_df.loc['jcs_rev','rbs_ground']=joints['jcs_rev'].jacobian_i(q)
+	 jac_df.loc['jcs_rev','rbs_link']=joints['jcs_rev'].jacobian_j(q)
 	 jac_df.loc['rbs_ground','rbs_ground']=bodies['rbs_ground'].mount_jacobian(q)
-	 jac_df.loc['rbs_slider','rbs_slider']=bodies['rbs_slider'].unity_jacobian(q)
-	 jac_df.loc['mcs_slider_act','rbs_slider']=actuators['mcs_slider_act'].jacobian_i(q)
-	 jac_df.loc['mcs_slider_act','rbs_ground']=actuators['mcs_slider_act'].jacobian_j(q)
+	 jac_df.loc['rbs_link','rbs_link']=bodies['rbs_link'].unity_jacobian(q)
+	 jac_df.loc['mcs_rot','rbs_ground']=actuators['mcs_rot'].jacobian_i(q)
+	 jac_df.loc['mcs_rot','rbs_link']=actuators['mcs_rot'].jacobian_j(q)
 	 jac=sparse.bmat(jac_df,format='csc') 
 	 return jac 
 
 
-eq_s=pd.Series([9 *[None]],index=['jcs_A_sph', 'jcs_B_uni', 'jcs_C_trans', 'jcs_O_rev', 'rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider', 'mcs_slider_act'])
+eq_s=pd.Series([4 *[None]],index=['jcs_rev', 'rbs_ground', 'rbs_link', 'mcs_rot'])
 def eq(q,bodies,joints,actuators): 
-	 eq_s['jcs_A_sph']=joints['jcs_A_sph'].equations(q)
-	 eq_s['jcs_B_uni']=joints['jcs_B_uni'].equations(q)
-	 eq_s['jcs_C_trans']=joints['jcs_C_trans'].equations(q)
-	 eq_s['jcs_O_rev']=joints['jcs_O_rev'].equations(q)
-	 eq_s['rbs_connecting']=bodies['rbs_connecting'].unity_equation(q)
-	 eq_s['rbs_crank']=bodies['rbs_crank'].unity_equation(q)
+	 eq_s['jcs_rev']=joints['jcs_rev'].equations(q)
 	 eq_s['rbs_ground']=bodies['rbs_ground'].mount_equation(q)
-	 eq_s['rbs_slider']=bodies['rbs_slider'].unity_equation(q)
-	 eq_s['mcs_slider_act']=actuators['mcs_slider_act'].equations(q)
-	 system=sparse.bmat(eq_s.values.reshape((9,1)),format='csc') 
-	 return system.A.reshape((28,)) 
+	 eq_s['rbs_link']=bodies['rbs_link'].unity_equation(q)
+	 eq_s['mcs_rot']=actuators['mcs_rot'].equations(q)
+	 system=sparse.bmat(eq_s.values.reshape((4,1)),format='csc') 
+	 return system.A.reshape((14,)) 
 
 
-vel_rhs_s=pd.Series([9 *[None]],index=['jcs_A_sph', 'jcs_B_uni', 'jcs_C_trans', 'jcs_O_rev', 'rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider', 'mcs_slider_act'])
+vel_rhs_s=pd.Series([4 *[None]],index=['jcs_rev', 'rbs_ground', 'rbs_link', 'mcs_rot'])
 def vel_rhs(actuators): 
-	 vrhs=np.zeros((27,1))
-	 vrhs=np.concatenate([vrhs,actuators['mcs_slider_act'].vel_rhs()]) 
+	 vrhs=np.zeros((13,1))
+	 vrhs=np.concatenate([vrhs,actuators['mcs_rot'].vel_rhs()]) 
 	 return vrhs 
-acc_rhs_s=pd.Series([9 *[None]],index=['jcs_A_sph', 'jcs_B_uni', 'jcs_C_trans', 'jcs_O_rev', 'rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider', 'mcs_slider_act'])
+acc_rhs_s=pd.Series([4 *[None]],index=['jcs_rev', 'rbs_ground', 'rbs_link', 'mcs_rot'])
 def acc_rhs(q,qdot,bodies,joints,actuators): 
-	 acc_rhs_s['jcs_A_sph']=joints['jcs_A_sph'].acc_rhs(q,qdot)
-	 acc_rhs_s['jcs_B_uni']=joints['jcs_B_uni'].acc_rhs(q,qdot)
-	 acc_rhs_s['jcs_C_trans']=joints['jcs_C_trans'].acc_rhs(q,qdot)
-	 acc_rhs_s['jcs_O_rev']=joints['jcs_O_rev'].acc_rhs(q,qdot)
-	 acc_rhs_s['rbs_connecting']=bodies['rbs_connecting'].acc_rhs(qdot)
-	 acc_rhs_s['rbs_crank']=bodies['rbs_crank'].acc_rhs(qdot)
+	 acc_rhs_s['jcs_rev']=joints['jcs_rev'].acc_rhs(q,qdot)
 	 acc_rhs_s['rbs_ground']=bodies['rbs_ground'].mount_acc_rhs(qdot)
-	 acc_rhs_s['rbs_slider']=bodies['rbs_slider'].acc_rhs(qdot)
-	 acc_rhs_s['mcs_slider_act']=actuators['mcs_slider_act'].acc_rhs(q,qdot)
-	 system=sparse.bmat(acc_rhs_s.values.reshape((9,1)),format='csc') 
-	 return system.A.reshape((28,)) 
+	 acc_rhs_s['rbs_link']=bodies['rbs_link'].acc_rhs(qdot)
+	 acc_rhs_s['mcs_rot']=actuators['mcs_rot'].acc_rhs(q,qdot)
+	 system=sparse.bmat(acc_rhs_s.values.reshape((4,1)),format='csc') 
+	 return system.A.reshape((14,)) 
 
 
-mass_matrix_df=pd.DataFrame([4 *[None]],columns=['rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider'],index=['rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider'])
+mass_matrix_df=pd.DataFrame([2 *[None]],columns=['rbs_ground', 'rbs_link'],index=['rbs_ground', 'rbs_link'])
 def mass_matrix(q,bodies): 
-	 mass_matrix_df.loc['rbs_connecting','rbs_connecting']=bodies['rbs_connecting'].mass_matrix(q)
-	 mass_matrix_df.loc['rbs_crank','rbs_crank']=bodies['rbs_crank'].mass_matrix(q)
 	 mass_matrix_df.loc['rbs_ground','rbs_ground']=bodies['rbs_ground'].mass_matrix(q)
-	 mass_matrix_df.loc['rbs_slider','rbs_slider']=bodies['rbs_slider'].mass_matrix(q)
+	 mass_matrix_df.loc['rbs_link','rbs_link']=bodies['rbs_link'].mass_matrix(q)
 	 mass_matrix=sparse.bmat(mass_matrix_df,format='csc') 
 	 return mass_matrix 
 
 
-Qg_s=pd.Series([4 *np.zeros((7,1))],index=['rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider'])
+Qg_s=pd.Series([2 *np.zeros((7,1))],index=['rbs_ground', 'rbs_link'])
 def Qg(bodies): 
-	 Qg_s['rbs_connecting']=bodies['rbs_connecting'].gravity()
-	 Qg_s['rbs_crank']=bodies['rbs_crank'].gravity()
 	 Qg_s['rbs_ground']=bodies['rbs_ground'].gravity()
-	 Qg_s['rbs_slider']=bodies['rbs_slider'].gravity()
-	 system=sparse.bmat(Qg_s.values.reshape((4,1)),format='csc') 
-	 return system.A.reshape((28,)) 
+	 Qg_s['rbs_link']=bodies['rbs_link'].gravity()
+	 system=sparse.bmat(Qg_s.values.reshape((2,1)),format='csc') 
+	 return system.A.reshape((14,)) 
 
 
-Qv_s=pd.Series([4 *np.zeros((7,1))],index=['rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider'])
+Qv_s=pd.Series([2 *np.zeros((7,1))],index=['rbs_ground', 'rbs_link'])
 def Qv(bodies,q,qdot): 
-	 Qv_s['rbs_connecting']=bodies['rbs_connecting'].centrifugal(q,qdot)
-	 Qv_s['rbs_crank']=bodies['rbs_crank'].centrifugal(q,qdot)
 	 Qv_s['rbs_ground']=bodies['rbs_ground'].centrifugal(q,qdot)
-	 Qv_s['rbs_slider']=bodies['rbs_slider'].centrifugal(q,qdot)
-	 system=sparse.bmat(Qv_s.values.reshape((4,1)),format='csc') 
-	 return system.A.reshape((28,)) 
+	 Qv_s['rbs_link']=bodies['rbs_link'].centrifugal(q,qdot)
+	 system=sparse.bmat(Qv_s.values.reshape((2,1)),format='csc') 
+	 return system.A.reshape((14,)) 
 
 
-Qa_s=pd.Series([4 *np.zeros((7,1))],index=['rbs_connecting', 'rbs_crank', 'rbs_ground', 'rbs_slider'])
+Qa_s=pd.Series([2 *np.zeros((7,1))],index=['rbs_ground', 'rbs_link'])
 def Qa(forces,q,qdot): 
-	 system=sparse.bmat(Qa_s.values.reshape((4,1)),format='csc') 
-	 return system.A.reshape((28,)) 
+	 system=sparse.bmat(Qa_s.values.reshape((2,1)),format='csc') 
+	 return system.A.reshape((14,)) 
 
 
-JR_s=pd.Series(np.zeros((24)),index=['jcs_A_sph_Fx', 'jcs_A_sph_Fy', 'jcs_A_sph_Fz', 'jcs_A_sph_Mx', 'jcs_A_sph_My', 'jcs_A_sph_Mz', 'jcs_B_uni_Fx', 'jcs_B_uni_Fy', 'jcs_B_uni_Fz', 'jcs_B_uni_Mx', 'jcs_B_uni_My', 'jcs_B_uni_Mz', 'jcs_C_trans_Fx', 'jcs_C_trans_Fy', 'jcs_C_trans_Fz', 'jcs_C_trans_Mx', 'jcs_C_trans_My', 'jcs_C_trans_Mz', 'jcs_O_rev_Fx', 'jcs_O_rev_Fy', 'jcs_O_rev_Fz', 'jcs_O_rev_Mx', 'jcs_O_rev_My', 'jcs_O_rev_Mz'])
+JR_s=pd.Series(np.zeros((6)),index=['jcs_rev_Fx', 'jcs_rev_Fy', 'jcs_rev_Fz', 'jcs_rev_Mx', 'jcs_rev_My', 'jcs_rev_Mz'])
 def JR(joints,q,lamda): 
-	 JR_s[['jcs_A_sph_Fx', 'jcs_A_sph_Fy', 'jcs_A_sph_Fz', 'jcs_A_sph_Mx', 'jcs_A_sph_My', 'jcs_A_sph_Mz']]=joints['jcs_A_sph'].reactions(q,lamda)
-	 JR_s[['jcs_B_uni_Fx', 'jcs_B_uni_Fy', 'jcs_B_uni_Fz', 'jcs_B_uni_Mx', 'jcs_B_uni_My', 'jcs_B_uni_Mz']]=joints['jcs_B_uni'].reactions(q,lamda)
-	 JR_s[['jcs_C_trans_Fx', 'jcs_C_trans_Fy', 'jcs_C_trans_Fz', 'jcs_C_trans_Mx', 'jcs_C_trans_My', 'jcs_C_trans_Mz']]=joints['jcs_C_trans'].reactions(q,lamda)
-	 JR_s[['jcs_O_rev_Fx', 'jcs_O_rev_Fy', 'jcs_O_rev_Fz', 'jcs_O_rev_Mx', 'jcs_O_rev_My', 'jcs_O_rev_Mz']]=joints['jcs_O_rev'].reactions(q,lamda)
+	 JR_s[['jcs_rev_Fx', 'jcs_rev_Fy', 'jcs_rev_Fz', 'jcs_rev_Mx', 'jcs_rev_My', 'jcs_rev_Mz']]=joints['jcs_rev'].reactions(q,lamda)
 	 return JR_s 
 
 
