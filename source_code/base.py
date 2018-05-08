@@ -519,7 +519,7 @@ class point(vector):
     for further use in the MBS analysis
     '''
     
-    def __init__(self,name,components,frame=grf,body=None):
+    def __init__(self,name,components,frame=grf,body=None,alignment='S'):
         super().__init__(components,frame)
         
         # Checking input type and size
@@ -530,7 +530,7 @@ class point(vector):
         
         
         self.name=name
-        self.alignment='S'
+        self.alignment=alignment
         self._body=body
         self.u_i=(None if body==None else vector(self-body.loc).express(body))
         self.notes=''
