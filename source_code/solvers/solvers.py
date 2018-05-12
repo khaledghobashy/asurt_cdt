@@ -102,8 +102,8 @@ def kds(bodies,joints,actuators,topology_file,time_array):
     jac=cq(assm_config,bodies,joints,actuators)
     velocity_df.loc[0]=sc.sparse.linalg.spsolve(jac,vel(actuators))
     
-    acceleration_df=pd.DataFrame(columns=assm_config.index)
-    acceleration_df.loc[0]=sc.sparse.linalg.spsolve(jac,acc(assm_config,velocity_df.loc[0],bodies,joints,actuators))
+#    acceleration_df=pd.DataFrame(columns=assm_config.index)
+#    acceleration_df.loc[0]=sc.sparse.linalg.spsolve(jac,acc(assm_config,velocity_df.loc[0],bodies,joints,actuators))
 
     
     convergence_df=pd.DataFrame(columns=['iteration'])
@@ -119,8 +119,8 @@ def kds(bodies,joints,actuators,topology_file,time_array):
             g=position_df.loc[i]
         else:
             dt=time_array[i]-time_array[i-1]
-            g=position_df.loc[i]+velocity_df.loc[i]*dt+acceleration_df.loc[i]*(0.5*dt**2)
-#        g=position_df.loc[i]  
+#            g=position_df.loc[i]+velocity_df.loc[i]*dt+acceleration_df.loc[i]*(0.5*dt**2)
+        g=position_df.loc[i]  
         position_df.loc[i+1],jac,itr=nr_kds(eq,cq,g,bodies,joints,actuators)
         velocity_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,vel(actuators))
         
@@ -128,11 +128,11 @@ def kds(bodies,joints,actuators,topology_file,time_array):
         
         q=position_df.loc[i+1]
         qdot=velocity_df.loc[i+1]
-        acceleration_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,acc(q,qdot,bodies,joints,actuators))
+#        acceleration_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,acc(q,qdot,bodies,joints,actuators))
         
         i+=1
         
-    return position_df,velocity_df, acceleration_df, convergence_df
+    return position_df,velocity_df, convergence_df
     
 
 def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):

@@ -17,7 +17,7 @@ import qgrid
 import time
 import pandas as pd
 from base import point, vector
-from bodies_inertia import rigid
+from bodies_inertia import rigid,mount
 from inertia_properties import circular_cylinder
 from force_elements import air_strut
 from solvers import kds, reactions
@@ -77,7 +77,7 @@ class model(object):
                                                       'xy','yy','zy',
                                                       'xz','yz','zz'])
     
-        self.topology   = nx.Graph()
+        self.topology   = nx.MultiDiGraph()
         
         self.graph = nx.DiGraph()
         self.graph.add_nodes_from(['points',
@@ -858,19 +858,20 @@ class model(object):
                     print('ERROR: Please Enter a Valid Name')
                     return
                 
+                typ = (rigid if body_type_v.value else mount)
+                
                 if alignment_v.label in 'RL':
                     body_name_l = 'rbl_'+name_v.value
-                    bod_l = rigid(body_name_l)
+                    bod_l = typ(body_name_l)
                     bod_l.notes=notes_v.value
                     
                     body_name_r = 'rbr_'+name_v.value
-                    bod_r = rigid(body_name_r)
+                    bod_r = typ(body_name_r)
                     bod_r.notes=notes_v.value
                    
                     bod_l.alignment='L'
                     bod_r.alignment='R'
                     
-                    bod_r.typ = bod_l.typ = ('floating' if body_type_v.value else 'mount')
                                         
                     self.graph.add_node(bod_l.name,obj=bod_l,typ='body')
                     self.graph.add_node(bod_r.name,obj=bod_r,typ='body')
@@ -884,9 +885,8 @@ class model(object):
                 
                 elif alignment_v.label=='S':
                     body_name = 'rbs_'+name_v.value
-                    bod = rigid(body_name)
+                    bod = typ(body_name)
                     bod.alignment='S'
-                    bod.typ=('floating' if body_type_v.value else 'mount')
                     self.graph.add_node(bod.name,obj=bod,typ='body')
                     self.graph.add_edge('bodies',bod.name)
                     self.edit_node(bod.name)

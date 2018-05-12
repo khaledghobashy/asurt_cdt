@@ -38,7 +38,7 @@ def principle_inertia(J):
 class rigid(object):
     
     
-    def __init__(self,name,mass=1,inertia_tensor=np.eye(3),cm=vector([0,0,0]),dcm=np.eye(3),typ='floating'):
+    def __init__(self,name,mass=1,inertia_tensor=np.eye(3),cm=vector([0,0,0]),dcm=np.eye(3)):
         '''
     A class representing the rigid body in space.
     ===========================================================================
@@ -61,8 +61,7 @@ class rigid(object):
         self._dcm=dcm
         self._P=dcm2ep(dcm)
         
-        self._typ=typ
-        self.nc=(7 if typ=='mount' else 1)
+        self.nc= 1
         self._geometries=pd.Series()
         self.alignment='S'
         self.notes=''
@@ -157,7 +156,7 @@ class rigid(object):
             self.J    = geo.J
         
     @property
-    def dic(self):
+    def q0(self):
         n  = self.name+'.'
         R  = self.R
         P  = self.P
@@ -219,52 +218,48 @@ class rigid(object):
         Qg[2,0]=-self.mass*9.81*1e3
         return Qg
     
-    def unity_equation(self,q):
-        e0,e1,e2,e3=q[self.dic.index[3:]]
+    def equations(self,qi):
+        e0,e1,e2,e3=qi[3:]
         eq=(e0**2)+(e1**2)+(e2**2)+(e3**2)-1
         return np.array([[eq]])
     
-    def unity_jacobian(self,q):
-        e0,e1,e2,e3=q[self.dic.index[3:]]
-        jac=[0,0,0,2*e0,2*e1,2*e2,2*e3]
-        return jac
+    def jac(self,qi):
+        e0,e1,e2,e3=qi[3:]
+        m=[0,0,0,2*e0,2*e1,2*e2,2*e3]
+        return m
     
     def acc_rhs(self,qdot):
         e0,e1,e2,e3=qdot[self.dic.index[3:]]
         return np.array([[-2*((e0**2)+(e1**2)+(e2**2)+(e3**2))]])
     
-    def mount_acc_rhs(self,qdot):
-        return np.zeros((7,1))
-
     
-    def mount_equation(self,q):
-        
-        qi=q[self.dic.index]
-        
-        eq1,eq2,eq3=qi[0:3]
-        eq4=qi[3]-1
-        eq5,eq6,eq7=qi[4:]
-#        e0,e1,e2,e3=qi[self.dic.index[3:]]
-#        eq7=(e0**2)+(e1**2)+(e2**2)+(e3**2)-1
-        
-        
-        return np.array([[eq1],[eq2],[eq3],[eq4],[eq5],[eq6],[eq7]])
-    
-    def mount_jacobian(self,q):
-        e0,e1,e2,e3=q[self.dic.index[3:]]
-#        b=np.array([[1,0,0,0,0,0,0],
-#                    [0,1,0,0,0,0,0],
-#                    [0,0,1,0,0,0,0],
-#                    [0,0,0,0,1,0,0],
-#                    [0,0,0,0,0,1,0],
-#                    [0,0,0,0,0,0,1],
-#                    [0,0,0,2*e0,2*e1,2*e2,2*e3]])
-        jac=sc.sparse.csc_matrix(np.eye(7))
-        return jac
         
     def __repr__(self):
         return self.name
     
     def __str__(self):
         return self.name
+
+
+
+class mount(rigid):
+    def __init__(self,name):
+        super().__init__(name)
+        
+        self.nc=7
+    
+    def equations(self,qi):
+                
+        eq1,eq2,eq3=qi[0:3]
+        eq4=qi[3]-1
+        eq5,eq6,eq7=qi[4:]
+                
+        return np.array([[eq1],[eq2],[eq3],[eq4],[eq5],[eq6],[eq7]])
+    
+    def jac(self,qi):
+        jac=sc.sparse.csc_matrix(np.eye(7))
+        return jac
+    
+    def acc_rhs(self,*dummy):
+        return np.zeros((7,1))
 

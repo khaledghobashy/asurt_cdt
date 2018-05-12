@@ -14,25 +14,6 @@ from scipy.misc import derivative
 
 I  = sparse.eye(3,format='csr')
 
-class dp1(object):
-    def __init__(self,qi,qj,ui,uj):
-        
-        Ri=vector(qi[0:3]).a
-        Rj=vector(qj[0:3]).a
-        
-        betai=qi[3:]
-        betaj=qj[3:]
-        
-        Ai=ep2dcm(qi[3:])
-        Aj=ep2dcm(qj[3:])
-        
-        self.equation = Ri+Ai.dot(ui)-Rj-Aj.dot(uj)
-        
-        self.jac_i = sparse.bmat([[ I, B(betai,ui)]],format='csr')
-        self.jac_j = sparse.bmat([[-I,-B(betaj,uj)]],format='csr')
-        
-
-    
     
 def acc_dp1_rhs(v1i,pi,pid,v2j,pj,pjd):
     
@@ -48,7 +29,7 @@ def acc_dp1_rhs(v1i,pi,pid,v2j,pj,pjd):
     
     eq = (2*v1d.T.dot(v2d)) + (v1.T.dot(Bjda).dot(pjd)) + (v2.T.dot(Bida).dot(pid))
         
-    return -eq
+    return np.array([[float(-eq)]])
 
 
 def acc_dp2_rhs(v1,Ai,Biv1,Hiv1,bid,rij,Hip,Hjp,bjd,rij_dot):
@@ -204,7 +185,7 @@ class joint(object):
         
         F=-jacR.T.dot(l)
         T=-jacP.T.dot(l)
-        cartesian_moment=0.5*E(betai).dot(T)
+#        cartesian_moment=0.5*E(betai).dot(T)
         joint_torque=0.5*E(betai).dot(T)-vec2skew(ui).dot(F)
         
 #        print('Force   = %s'%F)
@@ -250,11 +231,8 @@ class spherical(joint):
 
     
        
-    def equations(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def equations(self,qi,qj):
+                
         Ri=vector(qi[0:3]).a
         Rj=vector(qj[0:3]).a
         
@@ -267,10 +245,8 @@ class spherical(joint):
         r_p=Ri+Ai.dot(ui)-Rj-Aj.dot(uj)
         return r_p
     
-    def jacobian_i(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        
+    def jacobian_i(self,qi,qj):
+                
         betai=qi[3:]
         Hp = B(betai,self.u_i)
         I  = sparse.eye(3,format='csr')
@@ -278,10 +254,8 @@ class spherical(joint):
         jac = sparse.bmat([[I,Hp]],format='csr')
         return jac
     
-    def jacobian_j(self,q):
-        
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_j(self,qi,qj):
+                
         betaj=qj[3:]
         Hp = B(betaj,self.u_j)
         I  = sparse.eye(3,format='csr')
@@ -289,28 +263,15 @@ class spherical(joint):
         jac = sparse.bmat([[-I,-Hp]],format='csr')
         return jac
     
-    def acc_rhs(self,q,qdot):
-        qi_dot=qdot[self.i_body.dic.index]
-        qj_dot=qdot[self.j_body.dic.index]
+    def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
         pi_d=qi_dot[3:].reshape((4,1))
         pj_d=qj_dot[3:].reshape((4,1))
                 
         eq=B(pi_d,self.u_i).dot(pi_d)-B(pj_d,self.u_j).dot(pj_d)
         
-        return -eq
+        return eq
         
-
-    def mir(location,i_body,j_body,axis=[0,0,1]):
-        
-        loc_l, loc_r = location
-        ibody_l, ibody_r = i_body
-        jbody_l, jbody_r = j_body
-        
-        left  = spherical(loc_l,ibody_l,jbody_l)
-        right = spherical(loc_r,ibody_r,jbody_r)
-        
-        return pd.Series([left,right],index=['l','r'])
         
 
 class cylindrical(joint):
@@ -327,11 +288,8 @@ class cylindrical(joint):
     
 
 
-    def equations(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def equations(self,qi,qj):
+                
         Ri=vector(qi[0:3]).a
         Rj=vector(qj[0:3]).a
         
@@ -354,11 +312,8 @@ class cylindrical(joint):
         return np.array([c]).reshape((4,1))
     
     
-    def jacobian_i(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_i(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
         
@@ -386,11 +341,8 @@ class cylindrical(joint):
         
         return jac
     
-    def jacobian_j(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_j(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
         
@@ -412,12 +364,7 @@ class cylindrical(joint):
         return jac
     
     
-    def acc_rhs(self,q,qdot):
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
-        qi_dot=qdot[self.i_body.dic.index]
-        qj_dot=qdot[self.j_body.dic.index]
+    def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
         Ri=qi[0:3].values.reshape((3,1))
         Rj=qj[0:3].values.reshape((3,1))
@@ -464,20 +411,6 @@ class cylindrical(joint):
         return np.concatenate([rhs1,rhs2,rhs3,rhs4])
     
 
-    
-    def mir(location,i_body,j_body,axis):
-        
-        loc_l, loc_r = location
-        ibody_l, ibody_r = i_body
-        jbody_l, jbody_r = j_body
-        
-        ax_l, ax_r = axis
-        
-        left  = cylindrical(loc_l,ibody_l,jbody_l,ax_l)
-        right = cylindrical(loc_r,ibody_r,jbody_r,ax_r)
-        
-        return pd.Series([left,right],index=['l','r'])
-
 
 
 class translational(joint):
@@ -492,11 +425,8 @@ class translational(joint):
             
     
 
-    def equations(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def equations(self,qi,qj):
+                
         Ri=vector(qi[0:3]).a
         Rj=vector(qj[0:3]).a
         
@@ -521,11 +451,8 @@ class translational(joint):
         return np.array([c]).reshape((5,1))
     
     
-    def jacobian_i(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_i(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
         
@@ -555,11 +482,8 @@ class translational(joint):
         
         return jac
     
-    def jacobian_j(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_j(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
         
@@ -583,12 +507,7 @@ class translational(joint):
         return jac
     
     
-    def acc_rhs(self,q,qdot):
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
-        qi_dot=qdot[self.i_body.dic.index]
-        qj_dot=qdot[self.j_body.dic.index]
+    def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
         Ri=qi[0:3].values.reshape((3,1))
         Rj=qj[0:3].values.reshape((3,1))
@@ -639,20 +558,6 @@ class translational(joint):
         return np.concatenate([rhs1,rhs2,rhs3,rhs4,rhs5])
     
 
-    
-    def mir(location,i_body,j_body,axis):
-        
-        loc_l, loc_r = location
-        ibody_l, ibody_r = i_body
-        jbody_l, jbody_r = j_body
-        
-        ax_l, ax_r = axis
-        
-        left  = cylindrical(loc_l,ibody_l,jbody_l,ax_l)
-        right = cylindrical(loc_r,ibody_r,jbody_r,ax_r)
-        
-        return pd.Series([left,right],index=['l','r'])
-
 
 
 class revolute(joint):
@@ -663,11 +568,8 @@ class revolute(joint):
         self.nc=5
         
     
-    def equations(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def equations(self,qi,qj):
+                
         Ri=vector(qi[0:3]).a
         Rj=vector(qj[0:3]).a
         
@@ -689,11 +591,8 @@ class revolute(joint):
         c=[float(i) for i in (eq1,eq2,eq3,eq4,eq5)]
         return np.array([c]).reshape((5,1))
     
-    def jacobian_i(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_i(self,qi,qj):
+                
         pi=qi[3:].reshape((4,1))
         pj=qj[3:].reshape((4,1))
         
@@ -712,11 +611,8 @@ class revolute(joint):
                          [Z,v3.T.dot(Hiv2)]],format='csr')
         return jac
     
-    def jacobian_j(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_j(self,qi,qj):
+                
         pi=qi[3:].reshape((4,1))
         pj=qj[3:].reshape((4,1))
         
@@ -737,12 +633,7 @@ class revolute(joint):
         return jac
     
     
-    def acc_rhs(self,q,qdot):
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
-        qi_dot=qdot[self.i_body.dic.index]
-        qj_dot=qdot[self.j_body.dic.index]
+    def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
         pi=qi[3:].reshape((4,1))
         pj=qj[3:].reshape((4,1))
@@ -760,21 +651,8 @@ class revolute(joint):
         rhs4   = acc_dp1_rhs(v1,pi,pid,v3,pj,pjd)
         rhs5   = acc_dp1_rhs(v2,pi,pid,v3,pj,pjd)
         
-        return np.concatenate([-rhs123,rhs4,rhs5])
+        return np.array(np.concatenate([-rhs123,rhs4,rhs5]))
     
-    
-    def mir(location,i_body,j_body,axis):
-        
-        loc_l, loc_r = location
-        ibody_l, ibody_r = i_body
-        jbody_l, jbody_r = j_body
-        
-        ax_l, ax_r = axis
-        
-        left  = revolute(loc_l,ibody_l,jbody_l,ax_l)
-        right = revolute(loc_r,ibody_r,jbody_r,ax_r)
-        
-        return pd.Series([left,right],index=['l','r'])
 
 
 class universal(joint):
@@ -877,11 +755,8 @@ class universal(joint):
             self.h_j=vector(self.u_jrf[:,0]).a
     
     
-    def equations(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def equations(self,qi,qj):
+                
         Ri=vector(qi[0:3]).a
         Rj=vector(qj[0:3]).a
         
@@ -895,11 +770,8 @@ class universal(joint):
         return np.array([c]).reshape((4,1))
 
     
-    def jacobian_i(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_i(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
         
@@ -916,11 +788,8 @@ class universal(joint):
                          [Z,h2.T.dot(Hih1)]],format='csr')
         return jac
     
-    def jacobian_j(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_j(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
         
@@ -937,12 +806,7 @@ class universal(joint):
                          [Z,h1.T.dot(Hjh2)]],format='csr')
         return jac
     
-    def acc_rhs(self,q,qdot):
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
-        qi_dot=qdot[self.i_body.dic.index]
-        qj_dot=qdot[self.j_body.dic.index]
+    def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
         betai=qi[3:]
         betaj=qj[3:]
@@ -973,20 +837,6 @@ class universal(joint):
         
         return np.concatenate([rhs123,rhs4])
     
-    
-    def mir(location,i_body,j_body,i_rot,j_rot):
-        
-        loc_l, loc_r = location
-        ibody_l, ibody_r = i_body
-        jbody_l, jbody_r = j_body
-        
-        irot_l, irot_r = i_rot
-        jrot_l, jrot_r = j_rot
-        
-        left  = universal(loc_l,ibody_l,jbody_l,irot_l,jrot_l)
-        right = universal(loc_r,ibody_r,jbody_r,irot_r,jrot_r)
-        
-        return pd.Series([left,right],index=['l','r'])
     
 class bounce_roll(joint):
     def __init__(self,name,location,i_body,j_body,bounce_ax,roll_ax):
@@ -1265,11 +1115,8 @@ class translational_actuator(actuators):
         self.u_j = self._joint.u_j
         
     
-    def equations(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-                
+    def equations(self,qi,qj):
+                        
         Ai=ep2dcm(qi[3:])
         Aj=ep2dcm(qj[3:])
         
@@ -1283,11 +1130,8 @@ class translational_actuator(actuators):
         
         return eq
     
-    def jacobian_i(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
-        
+    def jacobian_i(self,qi,qj):
+                
         betai=qi[3:]
         betaj=qj[3:]
                 
@@ -1309,10 +1153,7 @@ class translational_actuator(actuators):
         
         return jac
     
-    def jacobian_j(self,q):
-        
-        qi=q[self.i_body.dic.index]
-        qj=q[self.j_body.dic.index]
+    def jacobian_j(self,qi,qj):
         
         betai=qi[3:]
         betaj=qj[3:]
@@ -1480,7 +1321,7 @@ class rotational_actuator(actuators):
         
         rhs=acc_dp1_rhs(v1,pi,pid,v2,pj,pjd)-(self.acc*np.sin(self.pos))-(np.cos(self.pos)*self.vel**2)
         
-        return rhs
+        return np.array([[float(rhs)]])
         
     
 class absolute_locating(actuators):
