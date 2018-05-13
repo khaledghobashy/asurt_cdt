@@ -229,7 +229,7 @@ class rigid(object):
         return m
     
     def acc_rhs(self,qdot):
-        e0,e1,e2,e3=qdot[self.dic.index[3:]]
+        e0,e1,e2,e3=qdot[3:]
         return np.array([[2*((e0**2)+(e1**2)+(e2**2)+(e3**2))]])
     
     

@@ -354,13 +354,13 @@ class cylindrical(joint):
 
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
-        Ri=qi[0:3].values.reshape((3,1))
-        Rj=qj[0:3].values.reshape((3,1))
+        Ri=qi[0:3].reshape((3,1))
+        Rj=qj[0:3].reshape((3,1))
         pi=qi[3:]
         pj=qj[3:]
         
-        Rid=qi_dot[0:3].values.reshape((3,1))
-        Rjd=qj_dot[0:3].values.reshape((3,1))
+        Rid=qi_dot[0:3].reshape((3,1))
+        Rjd=qj_dot[0:3].reshape((3,1))
         pid=qi_dot[3:]
         pjd=qj_dot[3:]
         
@@ -495,15 +495,15 @@ class translational(joint):
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
-        Ri=qi[0:3].values.reshape((3,1))
-        Rj=qj[0:3].values.reshape((3,1))
-        pi=qi[3:]
-        pj=qj[3:]
+        Ri=qi[0:3].reshape((3,1))
+        Rj=qj[0:3].reshape((3,1))
+        pi=qi[3:].reshape((4,1))
+        pj=qj[3:].reshape((4,1))
         
-        Rid=qi_dot[0:3].values.reshape((3,1))
-        Rjd=qj_dot[0:3].values.reshape((3,1))
-        pid=qi_dot[3:]
-        pjd=qj_dot[3:]
+        Rid=qi_dot[0:3].reshape((3,1))
+        Rjd=qj_dot[0:3].reshape((3,1))
+        pid=qi_dot[3:].reshape((4,1))
+        pjd=qj_dot[3:].reshape((4,1))
         
         Ai = ep2dcm(pi)
         Aj = ep2dcm(pj)
@@ -562,8 +562,8 @@ class revolute(joint):
         Ri=vector(qi[0:3]).a
         Rj=vector(qj[0:3]).a
         
-        Ai=ep2dcm(qi[3:].reshape((4,1)))
-        Aj=ep2dcm(qj[3:].reshape((4,1)))
+        Ai=ep2dcm(qi[3:])
+        Aj=ep2dcm(qj[3:])
         
         v1=Ai.dot(self.vii)
         v2=Ai.dot(self.vij)
@@ -952,20 +952,20 @@ class bounce_roll(joint):
         qi_dot=qdot[self.i_body.dic.index]
         qj_dot=qdot[self.j_body.dic.index]
         
-        Ri=qi[0:3].values.reshape((3,1))
-        Rj=qj[0:3].values.reshape((3,1))
+        Ri=qi[0:3].reshape((3,1))
+        Rj=qj[0:3].reshape((3,1))
         betai=qi[3:]
         betaj=qj[3:]
         Ai=ep2dcm(betai)
         Aj=ep2dcm(betaj)
 
-        Ri_dot=qi_dot[0:3].values.reshape((3,1))
-        Rj_dot=qj_dot[0:3].values.reshape((3,1))
+        Ri_dot=qi_dot[0:3].reshape((3,1))
+        Rj_dot=qj_dot[0:3].reshape((3,1))
         betai_dot=qi_dot[3:]
         betaj_dot=qj_dot[3:]
         
-        bid=betai_dot.values.reshape((4,1))
-        bjd=betaj_dot.values.reshape((4,1))
+        bid=betai_dot.reshape((4,1))
+        bjd=betaj_dot.reshape((4,1))
         
         v1=self.vii
         v2=self.vij
@@ -1001,18 +1001,6 @@ class bounce_roll(joint):
     
 
     
-    def mir(location,i_body,j_body,axis):
-        
-        loc_l, loc_r = location
-        ibody_l, ibody_r = i_body
-        jbody_l, jbody_r = j_body
-        
-        ax_l, ax_r = axis
-        
-        left  = cylindrical(loc_l,ibody_l,jbody_l,ax_l)
-        right = cylindrical(loc_r,ibody_r,jbody_r,ax_r)
-        
-        return pd.Series([left,right],index=['l','r'])
 
 class actuators(object):
     def __init__(self,name):
@@ -1117,8 +1105,8 @@ class translational_actuator(actuators):
         Aj=ep2dcm(qj[3:])
         
         v  = Ai.dot(self.v)
-        Ri = qi[0:3].values.reshape((3,1))
-        Rj = qj[0:3].values.reshape((3,1))
+        Ri = qi[0:3].reshape((3,1))
+        Rj = qj[0:3].reshape((3,1))
         
         rij = Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
         
@@ -1183,8 +1171,8 @@ class translational_actuator(actuators):
         betai_dot=qi_dot[3:]
         betaj_dot=qj_dot[3:]
         
-        bid=betai_dot.values.reshape((4,1))
-        bjd=betaj_dot.values.reshape((4,1))
+        bid=betai_dot.reshape((4,1))
+        bjd=betaj_dot.reshape((4,1))
         
         v  = self.v
         Ri = vector(qi[0:3]).a
@@ -1196,8 +1184,8 @@ class translational_actuator(actuators):
         Biv=B(betai,v)
         Hiv=B(betai_dot,v)
         
-        Ri_dot=qi_dot[0:3].values.reshape((3,1))
-        Rj_dot=qj_dot[0:3].values.reshape((3,1))
+        Ri_dot=qi_dot[0:3].reshape((3,1))
+        Rj_dot=qj_dot[0:3].reshape((3,1))
         
 
         
@@ -1289,7 +1277,7 @@ class rotational_actuator(actuators):
         return sparse.bmat([[Z,jac_pj]],format='csr')
     
     def vel_rhs(self):
-        return np.array([[self.vel]])
+        return np.array([[np.cos(self.pos)]])
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
@@ -1312,7 +1300,7 @@ class rotational_actuator(actuators):
         Bv2dj = B(pjd,self.v3)
         Bv2j  = B(pj,self.v3)
         
-        rhs = acc_dp1_rhs(v3,v2,pi,pid,pj,pjd,Bv2dj,Bv3di,Bv3i,Bv2j)+self.acc
+        rhs = acc_dp1_rhs(v3,v2,pi,pid,pj,pjd,Bv2dj,Bv3di,Bv3i,Bv2j)-np.sin(self.pos)
         
         return np.array([[float(rhs)]])
         

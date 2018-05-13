@@ -1807,7 +1807,7 @@ class model(object):
                         self.graph.add_edge(b2.name,act2.name,attr='body')
                 
                     act1.notes=act2.notes=notes_v.value
-                    act1.pos_f=act2.pos_f=eval('lambda t: '+actuation_fun_v.value)
+                    act1.pos_f=act2.pos_f=eval('lambda t: np.sin('+actuation_fun_v.value+')')
                     self.graph.add_edge('actuators',act1.name)
                     self.graph.add_edge('actuators',act2.name)
                     
