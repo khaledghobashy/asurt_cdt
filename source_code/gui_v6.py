@@ -1810,6 +1810,9 @@ class model(object):
                     act1.pos_f=act2.pos_f=eval('lambda t: '+actuation_fun_v.value)
                     self.graph.add_edge('actuators',act1.name)
                     self.graph.add_edge('actuators',act2.name)
+                    
+                    self.topology.add_edge(act1.i_body,act1.j_body,joint=act1)
+                    self.topology.add_edge(act2.i_body,act2.j_body,joint=act2)
 
                     
                 else:
@@ -1836,6 +1839,7 @@ class model(object):
                     act.notes=notes_v.value
                     act.pos_f=eval('lambda t: '+actuation_fun_v.value)
                     self.graph.add_edge('actuators',act.name)
+                    self.topology.add_edge(act.i_body,act.j_body,joint=act)
                 
                 name_v.value=''
                 notes_v.value=''
