@@ -779,7 +779,7 @@ def dcm2ep(dcm):
         e1=(dcm[0,2]+dcm[2,0])/(4*e3)
         e2=(dcm[2,1]+dcm[1,2])/(4*e3)
         
-    return e0,e1,e2,e3
+    return np.array([e0,e1,e2,e3])
     
 def dcm2ep1(dcm):
     ''' 
@@ -825,7 +825,7 @@ def E(p):
         E   : 3x4 ndarray
     ===========================================================================
     '''
-    e0,e1,e2,e3=p.flatten()
+    e0,e1,e2,e3=p
     m=np.array([[-e1, e0,-e3, e2],
                 [-e2, e3, e0,-e1],
                 [-e3,-e2, e1, e0]])
@@ -845,7 +845,7 @@ def G(p):
         G   : 3x4 ndarray
     ===========================================================================
     '''
-    e0,e1,e2,e3=p.flatten()
+    e0,e1,e2,e3=p
     m=np.array([[-e1, e0, e3,-e2],
                 [-e2,-e3, e0, e1],
                 [-e3, e2,-e1, e0]])
@@ -867,7 +867,7 @@ def B(p,a):
         B   : 3x4 ndarray representing the jacobian of A.dot(a)
     ===========================================================================
     '''
-    e0,e1,e2,e3=p.flatten()
+    e0,e1,e2,e3=p
     e=np.array([[e1],[e2],[e3]])
     a=np.array(a).reshape((3,1))
     a_s=vec2skew(a)

@@ -6,7 +6,6 @@ Created on Mon Oct 30 14:08:03 2017
 """
 
 import numpy as np
-import pandas as pd
 from base import vector, ep2dcm, B, orient_along_axis, vec2skew, E
 from scipy import sparse
 from scipy.misc import derivative
@@ -15,15 +14,20 @@ from scipy.misc import derivative
 I  = sparse.eye(3,format='csr')
 
     
-def acc_dp1_rhs(v1i,v2j,pi,pid,pj,pjd,Bv2jd,Bv1di,Bv1i,Bv2j):
+def acc_dp1_rhs(v1i,pid,Bv1i,Bv1di,v2j,pjd,Bv2j,Bv2jd):
+    
+    pid=pid.reshape((4,1))
+    pjd=pjd.reshape((4,1))
     
     eq = (v1i.T@Bv2jd@pjd) + (v2j.T@Bv1di@pid) + (2*(Bv1i@pid).T@(Bv2j@pjd))
         
     return eq
 
 
-def acc_dp2_rhs(v1,Bvi,Bui,Buj,Bvdi,Budi,Budj,pid,pjd,Rid,Rjd,dij):
+def acc_dp2_rhs(v1,pid,pjd,Rid,Rjd,dij,Bvi,Bvdi,Bui,Budi,Buj,Budj):
 
+    pid=pid.reshape((4,1))
+    pjd=pjd.reshape((4,1))
     
     rhs = (v1).T@(Budi@pid-Budj@pjd) + dij.T@Bvdi@pid + 2*((Bvi@pid).T@(Rid+Bui@pid - Rjd-Buj@pjd))
     
@@ -31,6 +35,9 @@ def acc_dp2_rhs(v1,Bvi,Bui,Buj,Bvdi,Budi,Budj,pid,pjd,Rid,Rjd,dij):
 
 
 def acc_sph_rhs(Budi,Budj,pid,pjd):    
+    
+    pid=pid.reshape((4,1))
+    pjd=pjd.reshape((4,1))
     
     eq=Budi.dot(pid)-Budj.dot(pjd)
     
@@ -251,10 +258,10 @@ class spherical(joint):
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
-        pi_d=qi_dot[3:].reshape((4,1))
-        pj_d=qj_dot[3:].reshape((4,1))
+        pi_d=qi_dot[3:]
+        pj_d=qj_dot[3:]
                 
-        eq=B(pi_d,self.u_i).dot(pi_d)-B(pj_d,self.u_j).dot(pj_d)
+        eq=B(pi_d,self.u_i).dot(pi_d.reshape((4,1)))-B(pj_d,self.u_j).dot(pj_d.reshape((4,1)))
         
         return eq
         
@@ -390,11 +397,11 @@ class cylindrical(joint):
         Buj  = B(pj,self.u_j)
         
         
-        rhs1 = acc_dp1_rhs(v1,v3,pi,pid,pj,pjd,Bv3dj,Bv1di,Bv1i,Bv3j)
-        rhs2 = acc_dp1_rhs(v2,v3,pi,pid,pj,pjd,Bv3dj,Bv2di,Bv2i,Bv3j)
-        
-        rhs3 = acc_dp2_rhs(v1,Bv1i,Bui,Buj,Bv1di,Budi,Budj,pid,pjd,Rid,Rjd,dij)
-        rhs4 = acc_dp2_rhs(v2,Bv2i,Bui,Buj,Bv2di,Budi,Budj,pid,pjd,Rid,Rjd,dij)
+        rhs1 = acc_dp1_rhs(v1,pid,Bv1i,Bv1di,v3,pjd,Bv3j,Bv3dj)
+        rhs2 = acc_dp1_rhs(v2,pid,Bv2i,Bv2di,v3,pjd,Bv3j,Bv3dj)
+    
+        rhs3 = acc_dp2_rhs(v1,pid,pjd,Rid,Rjd,dij,Bv1i,Bv1di,Bui,Budi,Buj,Budj)
+        rhs4 = acc_dp2_rhs(v2,pid,pjd,Rid,Rjd,dij,Bv2i,Bv2di,Bui,Budi,Buj,Budj)
 
         
         return np.concatenate([rhs1,rhs2,rhs3,rhs4])
@@ -497,13 +504,13 @@ class translational(joint):
         
         Ri=qi[0:3].reshape((3,1))
         Rj=qj[0:3].reshape((3,1))
-        pi=qi[3:].reshape((4,1))
-        pj=qj[3:].reshape((4,1))
+        pi=qi[3:]
+        pj=qj[3:]
         
         Rid=qi_dot[0:3].reshape((3,1))
         Rjd=qj_dot[0:3].reshape((3,1))
-        pid=qi_dot[3:].reshape((4,1))
-        pjd=qj_dot[3:].reshape((4,1))
+        pid=qi_dot[3:]
+        pjd=qj_dot[3:]
         
         Ai = ep2dcm(pi)
         Aj = ep2dcm(pj)
@@ -535,13 +542,13 @@ class translational(joint):
         Buj  = B(pj,self.u_j)
         
         
-        rhs1 = acc_dp1_rhs(v1,v3,pi,pid,pj,pjd,Bv3dj,Bv1di,Bv1i,Bv3j)
-        rhs2 = acc_dp1_rhs(v2,v3,pi,pid,pj,pjd,Bv3dj,Bv2di,Bv2i,Bv3j)
+        rhs1 = acc_dp1_rhs(v1,v3,pid,pjd,Bv3dj,Bv1di,Bv1i,Bv3j)
+        rhs2 = acc_dp1_rhs(v2,v3,pid,pjd,Bv3dj,Bv2di,Bv2i,Bv3j)
         
         rhs3 = acc_dp2_rhs(v1,Bv1i,Bui,Buj,Bv1di,Budi,Budj,pid,pjd,Rid,Rjd,dij)
         rhs4 = acc_dp2_rhs(v2,Bv2i,Bui,Buj,Bv2di,Budi,Budj,pid,pjd,Rid,Rjd,dij)
         
-        rhs5 = acc_dp1_rhs(v1,v4,pi,pid,pj,pjd,Bv4dj,Bv1di,Bv1i,Bv4j)
+        rhs5 = acc_dp1_rhs(v1,v4,pid,pjd,Bv4dj,Bv1di,Bv1i,Bv4j)
 
         
         return np.concatenate([rhs1,rhs2,rhs3,rhs4,rhs5])
@@ -582,8 +589,8 @@ class revolute(joint):
     
     def jacobian_i(self,qi,qj):
                 
-        pi=qi[3:].reshape((4,1))
-        pj=qj[3:].reshape((4,1))
+        pi=qi[3:]
+        pj=qj[3:]
         
         Aj=ep2dcm(pj)
         
@@ -602,8 +609,8 @@ class revolute(joint):
     
     def jacobian_j(self,qi,qj):
                 
-        pi=qi[3:].reshape((4,1))
-        pj=qj[3:].reshape((4,1))
+        pi=qi[3:]
+        pj=qj[3:]
         
         Ai=ep2dcm(pi)
         
@@ -612,7 +619,6 @@ class revolute(joint):
         
         I    = sparse.eye(3,format='csr')
         Hjup = B(pj,self.u_j)
-        Hjv3 = B(pj,self.vjk)
         Hjv3 = B(pj,self.vjk)
         Z    = sparse.csr_matrix([[0,0,0]])
         
@@ -624,11 +630,11 @@ class revolute(joint):
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
-        pi=qi[3:].reshape((4,1))
-        pj=qj[3:].reshape((4,1))
+        pi=qi[3:]
+        pj=qj[3:]
 
-        pid=qi_dot[3:].reshape((4,1))
-        pjd=qj_dot[3:].reshape((4,1))
+        pid=qi_dot[3:]
+        pjd=qj_dot[3:]
         
         Ai = ep2dcm(pi)
         Aj = ep2dcm(pj)
@@ -647,9 +653,9 @@ class revolute(joint):
         Bv3j  = B(pj,self.vjk)
         
                 
-        rhs123 = B(pid,self.u_i).dot(pid)-B(pjd,self.u_j).dot(pjd)
-        rhs4 = acc_dp1_rhs(v1,v3,pi,pid,pj,pjd,Bv3dj,Bv1di,Bv1i,Bv3j)
-        rhs5 = acc_dp1_rhs(v2,v3,pi,pid,pj,pjd,Bv3dj,Bv2di,Bv2i,Bv3j)
+        rhs123 = B(pid,self.u_i).dot(pid.reshape((4,1)))-B(pjd,self.u_j).dot(pjd.reshape((4,1)))
+        rhs4 = acc_dp1_rhs(v1,pid,Bv1i,Bv1di,v3,pjd,Bv3j,Bv3dj)
+        rhs5 = acc_dp1_rhs(v2,pid,Bv2i,Bv2di,v3,pjd,Bv3j,Bv3dj)
 
         
         return np.array(np.concatenate([rhs123,rhs4,rhs5]))
@@ -809,11 +815,11 @@ class universal(joint):
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
-        pi=qi[3:].reshape((4,1))
-        pj=qj[3:].reshape((4,1))
+        pi=qi[3:]
+        pj=qj[3:]
 
-        pid=qi_dot[3:].reshape((4,1))
-        pjd=qj_dot[3:].reshape((4,1))
+        pid=qi_dot[3:]
+        pjd=qj_dot[3:]
         
         Ai = ep2dcm(pi)
         Aj = ep2dcm(pj)
@@ -828,7 +834,7 @@ class universal(joint):
         Bh2j  = B(pj,self.h_j)
 
                 
-        rhs123 = B(pid,self.u_i).dot(pid)-B(pjd,self.u_j).dot(pjd)
+        rhs123 = B(pid,self.u_i).dot(pid.reshape((4,1)))-B(pjd,self.u_j).dot(pjd.reshape((4,1)))
         rhs4   = acc_dp1_rhs(h1,h2,pi,pid,pj,pjd,Bh2dj,Bh1di,Bh1i,Bh2j)
         
         return np.concatenate([rhs123,rhs4])
@@ -959,13 +965,13 @@ class bounce_roll(joint):
         Ai=ep2dcm(betai)
         Aj=ep2dcm(betaj)
 
-        Ri_dot=qi_dot[0:3].reshape((3,1))
-        Rj_dot=qj_dot[0:3].reshape((3,1))
+        Ri_dot=qi_dot[0:3]
+        Rj_dot=qj_dot[0:3]
         betai_dot=qi_dot[3:]
         betaj_dot=qj_dot[3:]
         
-        bid=betai_dot.reshape((4,1))
-        bjd=betaj_dot.reshape((4,1))
+        bid=betai_dot
+        bjd=betaj_dot
         
         v1=self.vii
         v2=self.vij
@@ -1214,9 +1220,9 @@ class rotational_actuator(actuators):
 
 
         self._joint=actuated_joint
-        self.v1=self._joint.vii
-        self.v2=self._joint.vji
-        self.v3=self._joint.vij
+        self.vi_i=self._joint.vij
+        self.vj_j=self._joint.vji
+        self.vj_i=self._joint.vij
         self.i_body=self._joint.i_body
         self.j_body=self._joint.j_body
         
@@ -1227,9 +1233,9 @@ class rotational_actuator(actuators):
     @joint.setter
     def joint(self,value):
         self._joint=value
-        self.v1=self._joint.vii
-        self.v2=self._joint.vji
-        self.v3=self._joint.vij
+        self.vi_i=self._joint.vii
+        self.vj_j=self._joint.vjj
+        self.vj_i=self._joint.vij
         self.i_body=self._joint.i_body
         self.j_body=self._joint.j_body
     
@@ -1240,11 +1246,11 @@ class rotational_actuator(actuators):
         Ai=ep2dcm(qi[3:])
         Aj=ep2dcm(qj[3:])
         
-        v3=Ai.dot(self.v3)
-        v2=Aj.dot(self.v2)
+        vii=Ai.dot(self.vi_i)
+        vjj=Aj.dot(self.vj_j)
         
         
-        return v3.T.dot(v2)-np.sin(self.pos)
+        return vii.T.dot(vjj)-np.sin(self.pos)
     
     def jacobian_i(self,qi,qj):
         
@@ -1254,11 +1260,11 @@ class rotational_actuator(actuators):
         
         Aj=ep2dcm(betaj)
         
-        v2=Aj.dot(self.v2)
+        vjj=Aj.dot(self.vj_j)
         
         Z    = sparse.csr_matrix([[0,0,0]])
         
-        jac_pi = v2.T.dot(B(betai,self.v3))
+        jac_pi = vjj.T.dot(B(betai,self.vi_i))
         return sparse.bmat([[Z,jac_pi]],format='csr')
     
     def jacobian_j(self,qi,qj):
@@ -1269,38 +1275,39 @@ class rotational_actuator(actuators):
         
         Ai=ep2dcm(betai)
         
-        v3=Ai.dot(self.v3)
+        vii=Ai.dot(self.vi_i)
         
         Z    = sparse.csr_matrix([[0,0,0]])
         
-        jac_pj = v3.T.dot(B(betaj,self.v2))
+        jac_pj = vii.T.dot(B(betaj,self.vj_j))
         return sparse.bmat([[Z,jac_pj]],format='csr')
     
     def vel_rhs(self):
-        return np.array([[np.cos(self.pos)]])
+        return np.array([[-np.cos(self.pos)]])
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
-        pi=qi[3:].reshape((4,1))
-        pj=qj[3:].reshape((4,1))
+        
+        pi=qi[3:]
+        pj=qj[3:]
         
 
-        pid=qi_dot[3:].reshape((4,1))
-        pjd=qj_dot[3:].reshape((4,1))
+        pid=qi_dot[3:]
+        pjd=qj_dot[3:]
         
         Ai = ep2dcm(pi)
         Aj = ep2dcm(pj)
         
-        v2 = Ai.dot(self.v2)
-        v3 = Aj.dot(self.v3)
+        vii = Ai.dot(self.vi_i)
+        vjj = Aj.dot(self.vj_j)
         
-        Bv3di = B(pid,self.v3)
-        Bv3i  = B(pi,self.v3)
+        Bvidi = B(pid,self.vi_i)
+        Bvii  = B(pi,self.vi_i)
         
-        Bv2dj = B(pjd,self.v3)
-        Bv2j  = B(pj,self.v3)
+        Bvjdj = B(pjd,self.vj_j)
+        Bvjj  = B(pj,self.vj_j)
         
-        rhs = acc_dp1_rhs(v3,v2,pi,pid,pj,pjd,Bv2dj,Bv3di,Bv3i,Bv2j)-np.sin(self.pos)
+        rhs = acc_dp1_rhs(vii,pid,Bvii,Bvidi,vjj,pjd,Bvjj,Bvjdj)+np.sin(self.pos)
         
         return np.array([[float(rhs)]])
         
