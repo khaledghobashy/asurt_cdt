@@ -292,7 +292,7 @@ class cylindrical(joint):
         v1=self.vii
         v2=self.vij
         v3=self.vjk
-        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
 
         
         eq1=np.linalg.multi_dot([v1.T,Ai.T,Aj,v3])
@@ -319,7 +319,7 @@ class cylindrical(joint):
         v1=Ai.dot(self.vii)
         v2=Ai.dot(self.vij)
         v3=Aj.dot(self.vjk)
-        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
         
         Hiv1=B(betai,self.vii)
         Hiv2=B(betai,self.vij)
@@ -459,7 +459,7 @@ class translational(joint):
         v2=Ai.dot(self.vij)
         v3=Aj.dot(self.vjk)
         v4=Aj.dot(self.vjj)
-        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)+10*v3
+        rij=Ri+Ai.dot(self.u_i)-Rj-Aj.dot(self.u_j)
         
         Hiv1=B(betai,self.vii)
         Hiv2=B(betai,self.vij)
@@ -542,13 +542,13 @@ class translational(joint):
         Buj  = B(pj,self.u_j)
         
         
-        rhs1 = acc_dp1_rhs(v1,v3,pid,pjd,Bv3dj,Bv1di,Bv1i,Bv3j)
-        rhs2 = acc_dp1_rhs(v2,v3,pid,pjd,Bv3dj,Bv2di,Bv2i,Bv3j)
+        rhs1 = acc_dp1_rhs(v1,pid,Bv1i,Bv1di,v3,pjd,Bv3j,Bv3dj)
+        rhs2 = acc_dp1_rhs(v2,pid,Bv2i,Bv2di,v3,pjd,Bv3j,Bv3dj)
         
-        rhs3 = acc_dp2_rhs(v1,Bv1i,Bui,Buj,Bv1di,Budi,Budj,pid,pjd,Rid,Rjd,dij)
-        rhs4 = acc_dp2_rhs(v2,Bv2i,Bui,Buj,Bv2di,Budi,Budj,pid,pjd,Rid,Rjd,dij)
+        rhs3 = acc_dp2_rhs(v1,pid,pjd,Rid,Rjd,dij,Bv1i,Bv1di,Bui,Budi,Buj,Budj)
+        rhs4 = acc_dp2_rhs(v2,pid,pjd,Rid,Rjd,dij,Bv2i,Bv2di,Bui,Budi,Buj,Budj)
         
-        rhs5 = acc_dp1_rhs(v1,v4,pid,pjd,Bv4dj,Bv1di,Bv1i,Bv4j)
+        rhs5 = acc_dp1_rhs(v1,pid,Bv1i,Bv1di,v4,pjd,Bv4j,Bv4dj)
 
         
         return np.concatenate([rhs1,rhs2,rhs3,rhs4,rhs5])
@@ -835,7 +835,7 @@ class universal(joint):
 
                 
         rhs123 = B(pid,self.u_i).dot(pid.reshape((4,1)))-B(pjd,self.u_j).dot(pjd.reshape((4,1)))
-        rhs4   = acc_dp1_rhs(h1,h2,pi,pid,pj,pjd,Bh2dj,Bh1di,Bh1i,Bh2j)
+        rhs4   = acc_dp1_rhs(h1,pid,Bh1i,Bh1di,h2,pjd,Bh2j,Bh2dj)
         
         return np.concatenate([rhs123,rhs4])
     
