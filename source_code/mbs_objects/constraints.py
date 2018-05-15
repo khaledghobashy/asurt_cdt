@@ -11,7 +11,7 @@ from scipy import sparse
 from scipy.misc import derivative
 
 
-I  = sparse.eye(3,format='csr')
+I  = sparse.eye(3)
 
     
 def acc_dp1_rhs(v1i,pid,Bv1i,Bv1di,v2j,pjd,Bv2j,Bv2jd):
@@ -242,18 +242,18 @@ class spherical(joint):
                 
         betai=qi[3:]
         Hp = B(betai,self.u_i)
-        I  = sparse.eye(3,format='csr')
+        I  = sparse.eye(3)
         
-        jac = sparse.bmat([[I,Hp]],format='csr')
+        jac = sparse.bmat([[I,Hp]])
         return jac
     
     def jacobian_j(self,qi,qj):
                 
         betaj=qj[3:]
         Hp = B(betaj,self.u_j)
-        I  = sparse.eye(3,format='csr')
+        I  = sparse.eye(3)
         
-        jac = sparse.bmat([[-I,-Hp]],format='csr')
+        jac = sparse.bmat([[-I,-Hp]])
         return jac
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
@@ -330,7 +330,7 @@ class cylindrical(joint):
         jac=sparse.bmat([[Z,v3.T.dot(Hiv1)],
                          [Z,v3.T.dot(Hiv2)],
                          [v1.T,rij.T.dot(Hiv1)+v1.T.dot(Hiup)],
-                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)]],format='csr')
+                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)]])
         
         return jac
     
@@ -352,7 +352,7 @@ class cylindrical(joint):
         jac=sparse.bmat([[  Z,   v1.T.dot(Hjv3)],
                          [  Z,   v2.T.dot(Hjv3)],
                          [-v1.T, -v1.T.dot(Hjup)],
-                         [-v2.T, -v2.T.dot(Hjup)]],format='csr')
+                         [-v2.T, -v2.T.dot(Hjup)]])
         
         return jac
     
@@ -471,7 +471,7 @@ class translational(joint):
                          [Z,v3.T.dot(Hiv2)],
                          [v1.T,rij.T.dot(Hiv1)+v1.T.dot(Hiup)],
                          [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)],
-                         [Z,v4.T.dot(Hiv1)]],format='csr')
+                         [Z,v4.T.dot(Hiv1)]])
         
         return jac
     
@@ -495,7 +495,7 @@ class translational(joint):
                          [  Z,   v2.T.dot(Hjv3)],
                          [-v1.T, -v1.T.dot(Hjup)],
                          [-v2.T, -v2.T.dot(Hjup)],
-                         [  Z,   v1.T.dot(Hjv4)]],format='csr')
+                         [  Z,   v1.T.dot(Hjv4)]])
         
         return jac
     
@@ -596,7 +596,7 @@ class revolute(joint):
         
         v3=Aj.dot(self.vjk)
         
-        I    = sparse.eye(3,format='csr')
+        I    = sparse.eye(3)
         Hiup = B(pi,self.u_i)
         Hiv1 = B(pi,self.vii)
         Hiv2 = B(pi,self.vij)
@@ -604,7 +604,7 @@ class revolute(joint):
         
         jac=sparse.bmat([[I,Hiup],
                          [Z,v3.T.dot(Hiv1)],
-                         [Z,v3.T.dot(Hiv2)]],format='csr')
+                         [Z,v3.T.dot(Hiv2)]])
         return jac
     
     def jacobian_j(self,qi,qj):
@@ -617,14 +617,14 @@ class revolute(joint):
         v1=Ai.dot(self.vii)
         v2=Ai.dot(self.vij)
         
-        I    = sparse.eye(3,format='csr')
+        I    = sparse.eye(3)
         Hjup = B(pj,self.u_j)
         Hjv3 = B(pj,self.vjk)
         Z    = sparse.csr_matrix([[0,0,0]])
         
         jac=sparse.bmat([[-I,-Hjup],
                          [Z,v1.T.dot(Hjv3)],
-                         [Z,v2.T.dot(Hjv3)]],format='csr')
+                         [Z,v2.T.dot(Hjv3)]])
         return jac
     
     
@@ -786,13 +786,13 @@ class universal(joint):
         
         h2=Aj.dot(self.h_j)
         
-        I    = sparse.eye(3,format='csr')
+        I    = sparse.eye(3)
         Hiup = B(betai,self.u_i)
         Hih1 = B(betai,self.h_i)
         Z    = sparse.csr_matrix([[0,0,0]])
         
         jac=sparse.bmat([[I,Hiup],
-                         [Z,h2.T.dot(Hih1)]],format='csr')
+                         [Z,h2.T.dot(Hih1)]])
         return jac
     
     def jacobian_j(self,qi,qj):
@@ -804,13 +804,13 @@ class universal(joint):
         
         h1=Ai.dot(self.h_i)
         
-        I    = sparse.eye(3,format='csr')
+        I    = sparse.eye(3)
         Hjup = B(betaj,self.u_j)
         Hjh2 = B(betaj,self.h_j)
         Z    = sparse.csr_matrix([[0,0,0]])
         
         jac=sparse.bmat([[-I,-Hjup],
-                         [Z,h1.T.dot(Hjh2)]],format='csr')
+                         [Z,h1.T.dot(Hjh2)]])
         return jac
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
@@ -920,7 +920,7 @@ class bounce_roll(joint):
         jac=sparse.bmat([[Z,v3.T.dot(Hiv1)],
                          [Z,v4.T.dot(Hiv1)],
                          [v1.T,rij.T.dot(Hiv1)+v1.T.dot(Hiup)],
-                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)]],format='csr')
+                         [v2.T,rij.T.dot(Hiv2)+v2.T.dot(Hiup)]])
         
         return jac
     
@@ -946,7 +946,7 @@ class bounce_roll(joint):
         jac=sparse.bmat([[  Z,   v1.T.dot(Hjv3)],
                          [  Z,   v1.T.dot(Hjv4)],
                          [-v1.T, -v1.T.dot(Hjup)],
-                         [-v2.T, -v2.T.dot(Hjup)]],format='csr')
+                         [-v2.T, -v2.T.dot(Hjup)]])
         
         return jac
     
@@ -1139,7 +1139,7 @@ class translational_actuator(actuators):
         
         
         
-        jac=sparse.bmat([[v.flatten(),(rij.T.dot(Hiv)+v.T.dot(Hiup)).flatten()]],format='csr')
+        jac=sparse.bmat([[v.flatten(),(rij.T.dot(Hiv)+v.T.dot(Hiup)).flatten()]])
         
         return jac
     
@@ -1156,11 +1156,11 @@ class translational_actuator(actuators):
         
         Z=sparse.csr_matrix([[0,0,0]])
         
-        jac=sparse.bmat([[ Z , -v.T.dot(Hjup)]],format='csr')
+        jac=sparse.bmat([[ Z , -v.T.dot(Hjup)]])
         return jac
     
     def vel_rhs(self):
-        return np.array([[self.vel]])
+        return np.array([[-self.vel]])
      
     def acc_rhs(self,q,qdot):
         qi=q[self.i_body.dic.index]
@@ -1204,7 +1204,7 @@ class translational_actuator(actuators):
         
         rij_dot=Ri_dot+Bip.dot(bid)-Rj_dot-Bjp.dot(bjd)
         
-        rhs=acc_dp2_rhs(v,Ai,Biv,Hiv,bid,rij,Hip,Hjp,bjd,rij_dot)+self.acc
+        rhs=acc_dp2_rhs(v,Ai,Biv,Hiv,bid,rij,Hip,Hjp,bjd,rij_dot)-self.acc
         
         return rhs
 
@@ -1265,7 +1265,7 @@ class rotational_actuator(actuators):
         Z    = sparse.csr_matrix([[0,0,0]])
         
         jac_pi = vjj.T.dot(B(betai,self.vi_i))
-        return sparse.bmat([[Z,jac_pi]],format='csr')
+        return sparse.bmat([[Z,jac_pi]])
     
     def jacobian_j(self,qi,qj):
         
@@ -1280,10 +1280,10 @@ class rotational_actuator(actuators):
         Z    = sparse.csr_matrix([[0,0,0]])
         
         jac_pj = vii.T.dot(B(betaj,self.vj_j))
-        return sparse.bmat([[Z,jac_pj]],format='csr')
+        return sparse.bmat([[Z,jac_pj]])
     
     def vel_rhs(self):
-        return np.array([[-np.cos(self.pos)]])
+        return np.array([[-self.vel*np.cos(self.pos)]])
     
     def acc_rhs(self,qi,qj,qi_dot,qj_dot):
         
@@ -1307,7 +1307,8 @@ class rotational_actuator(actuators):
         Bvjdj = B(pjd,self.vj_j)
         Bvjj  = B(pj,self.vj_j)
         
-        rhs = acc_dp1_rhs(vii,pid,Bvii,Bvidi,vjj,pjd,Bvjj,Bvjdj)+np.sin(self.pos)
+        rhs = acc_dp1_rhs(vii,pid,Bvii,Bvidi,vjj,pjd,Bvjj,Bvjdj)+\
+        (self.vel**2*np.sin(self.pos) - self.acc*np.cos(self.pos))
         
         return np.array([[float(rhs)]])
         
