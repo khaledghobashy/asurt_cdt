@@ -20,7 +20,7 @@ from base import point, vector
 from bodies_inertia import rigid,mount
 from inertia_properties import circular_cylinder
 from force_elements import air_strut
-from solvers import kds, reactions
+from solvers import kds, equations_assembler
 from pre_processor import topology_writer
 import numpy as np
 from constraints import cylindrical, spherical, revolute, translational,\
@@ -161,6 +161,7 @@ class model(object):
                 if f=='':
                     return
                 self.name=f.split("/")[-1]
+                name_l = widgets.HTML('<b>'+self.name.split('/')[-1])
                 
                 self.model['graph']    = self.graph
                 self.model['topology'] = self.topology
@@ -169,21 +170,39 @@ class model(object):
                     dill.dump(self.model,d)
                 d.close()
                 
-                fields = widgets.Accordion()
-                fields.children=[self.add_point(),
-                                 self.add_vectors(),
-                                 self.add_bodies(),
-                                 self.add_joints(),
-                                 self.add_forces()]
+                modeling = widgets.Accordion()
+                modeling.children=[self.add_point(),
+                                   self.add_vectors(),
+                                   self.add_bodies(),
+                                   self.add_joints(),
+                                   self.add_actuators(),
+                                   self.add_forces()]
                 
-                fields.set_title(0,'SYSTEM POINTS')
-                fields.set_title(1,'SYSTEM MARKERS')
-                fields.set_title(2,'SYSTEM BODIES')
-                fields.set_title(3,'SYSTEM JOINTS')
-                fields.set_title(4,'SYSTEM FORCES')
-                print('New Model "%s" Created at %s'%(self.name,time.strftime('%I:%M:%S %p')))
-                return ipy.display.display(fields)
+                modeling.set_title(0,'SYSTEM POINTS')
+                modeling.set_title(1,'SYSTEM MARKERS')
+                modeling.set_title(2,'SYSTEM BODIES')
+                modeling.set_title(3,'SYSTEM JOINTS')
+                modeling.set_title(4,'SYSTEM ACTUATORS')
+                modeling.set_title(5,'SYSTEM FORCES')
                 
+                simulation = widgets.Accordion(children=[self.kds_sim()])
+                simulation.set_title(0,'Kinematically Driven Systems Simulation')
+                
+                
+                
+                post_processing = self.data_processing()
+                
+                
+                major_fields = widgets.Accordion(children=[modeling,simulation,post_processing])
+                major_fields.set_title(0,'MODELING')
+                major_fields.set_title(1,'SIMULATION')
+                major_fields.set_title(2,'POST PROCESSING')
+                
+                
+                print('Model "%s" Loaded at %s'%(f.split("/")[-1],time.strftime('%I:%M:%S %p')))
+                return ipy.display.display(widgets.VBox([name_l,major_fields]))
+            
+        
         new_button.on_click(new_click)
         
         return widgets.VBox([new_button])
@@ -1381,8 +1400,8 @@ class model(object):
                     self.graph.add_edge('joints',j1.name)
                     self.graph.add_edge('joints',j2.name)
                     
-                    self.topology.add_edge(bodyi_1,bodyj_1,joint=j1)
-                    self.topology.add_edge(bodyi_2,bodyj_2,joint=j2)
+                    self.topology.add_edge(bodyi_1,bodyj_1,obj=j1)
+                    self.topology.add_edge(bodyi_2,bodyj_2,obj=j2)
                     
                     
                 
@@ -1430,7 +1449,7 @@ class model(object):
                     
                     j.notes=notes
                     self.graph.add_edge('joints',j.name)
-                    self.topology.add_edge(bodyi,bodyj,joint=j)
+                    self.topology.add_edge(bodyi,bodyj,obj=j)
 
 
                 
@@ -1446,6 +1465,16 @@ class model(object):
     
     
     def add_forces(self):
+        
+        main_out = widgets.Output()
+        
+        refresh_button = widgets.Button(description=' Refresh',icon='undo')
+        refresh_button.layout=layout100px
+        def refresh_click(dummy):
+            with main_out:
+                body_i_v.options=body_j_v.options=dict(self.bodies)
+                pi_v.options=pj_v.options=dict(self.points)
+        refresh_button.on_click(refresh_click)
         
         #######################################################################
         # Creating the gui for defining force elements.
@@ -1703,13 +1732,23 @@ class model(object):
                                           add_force_element_button,force_elements_out])
                             
         
-        return widgets.VBox([common_data_block,separator100,strut_data_tab])
+        return widgets.VBox([refresh_button,separator100,common_data_block,separator100,strut_data_tab])
         
     
     
     
     def add_actuators(self):
+        
         main_out = widgets.Output()
+        
+        refresh_button = widgets.Button(description=' Refresh',icon='undo')
+        refresh_button.layout=layout100px
+        def refresh_click(dummy):
+            with main_out:
+                joints_v.options=dict(self.joints)
+                bodies_v.options=dict(self.bodies)
+        refresh_button.on_click(refresh_click)
+
         sub1_out = widgets.Output()
         
         name_l = widgets.HTML('<b>Actuator Name',layout=layout120px)
@@ -1811,8 +1850,8 @@ class model(object):
                     self.graph.add_edge('actuators',act1.name)
                     self.graph.add_edge('actuators',act2.name)
                     
-                    self.topology.add_edge(act1.i_body,act1.j_body,joint=act1)
-                    self.topology.add_edge(act2.i_body,act2.j_body,joint=act2)
+                    self.topology.add_edge(act1.i_body,act1.j_body,obj=act1)
+                    self.topology.add_edge(act2.i_body,act2.j_body,obj=act2)
 
                     
                 else:
@@ -1839,7 +1878,7 @@ class model(object):
                     act.notes=notes_v.value
                     act.pos_f=eval('lambda t: '+actuation_fun_v.value)
                     self.graph.add_edge('actuators',act.name)
-                    self.topology.add_edge(act.i_body,act.j_body,joint=act)
+                    self.topology.add_edge(act.i_body,act.j_body,obj=act)
                 
                 name_v.value=''
                 notes_v.value=''
@@ -1850,7 +1889,7 @@ class model(object):
         common_data = widgets.VBox([name_b,alignment_b,notes_b,separator100])
         detail_data = widgets.VBox([actuation_b,sub1_out,actuation_fun_b,add_act_button,separator100])
         
-        output = widgets.VBox([common_data,detail_data,main_out])
+        output = widgets.VBox([refresh_button,separator100,common_data,detail_data,main_out])
         
         return output
     
@@ -1932,8 +1971,7 @@ class model(object):
                 t = sim_time_v.value
                 steps = sim_step_v.value
                 time_array = np.linspace(0,t,steps)
-                topology_writer(self.bodies,self.joints,self.actuators,self.forces,'_datafile')
-                self.simulations[name]=kds(self.bodies,self.joints,self.actuators,'_datafile',time_array)
+                self.simulations[name]=kds(self.topology,self.actuators,time_array)
                 print('\nDone!')
         run_button.on_click(run_click)
         
@@ -2013,6 +2051,15 @@ class model(object):
     
     def data_processing(self):
         
+        main_out = widgets.Output()
+        
+        refresh_button = widgets.Button(description=' Refresh',icon='undo')
+        refresh_button.layout=layout100px
+        def refresh_click(dummy):
+            with main_out:
+                sim_results_v.options=dict(self.simulations)
+        refresh_button.on_click(refresh_click)
+        
         plots_out = widgets.Output()
         
         sim_results_l = widgets.HTML('<b>Simulations')
@@ -2025,7 +2072,7 @@ class model(object):
         data_type_b = widgets.VBox([data_type_l,data_type_v])
         
         in_object_selector_l = widgets.HTML('<b> Select Object',layout=layout120px)
-        in_object_selector_v = widgets.Select(options=self.bodies.index,layout=layout200px)
+        in_object_selector_v = widgets.Select(options=['Time',*self.bodies.index],layout=layout200px)
         in_object_selector_b = widgets.VBox([in_object_selector_l,in_object_selector_v])
         
         in_attribute_selector_l = widgets.HTML('<b> Select Attribute',layout=layout120px)
@@ -2043,15 +2090,20 @@ class model(object):
         de_attribute_selector_v = widgets.Select(options={'x':'.x','y':'.y','z':'.z'},layout=layout120px)
         de_attribute_selector_b = widgets.VBox([de_attribute_selector_l,de_attribute_selector_v])
         
-        
+                
         show_button = widgets.Button(description='Show',icon='image',tooltip='Show Plot',layout=layout100px)
         def show_click(dummy):
             plots_out.clear_output()
             with plots_out:
                 results = self.simulations[sim_results_v.label]
-                index_ind = in_object_selector_v.value+in_attribute_selector_v.value
+                
+                if in_object_selector_v.label=='Time':
+                    indpendent_data  = results[3]
+                else:
+                    index_ind = in_object_selector_v.value+in_attribute_selector_v.value
+                    indpendent_data  = results[data_type_v.value][index_ind]
+                
                 index_dep = de_object_selector_v.value+de_attribute_selector_v.value
-                indpendent_data  = results[data_type_v.value][index_ind]
                 dependent_data   = results[data_type_v.value][index_dep]
                 
                 xaxis  = dict(nticks=10,mirror='all',showline=True,linewidth=2,linecolor='#cdc0b0')
@@ -2075,7 +2127,7 @@ class model(object):
                                   show_button])
         
         
-        return widgets.VBox([sim_results_b,separator100,selectors,plots_out])
+        return widgets.VBox([refresh_button,separator50,sim_results_b,separator100,selectors,plots_out])
         
     
     
@@ -2120,12 +2172,21 @@ class model(object):
     
     
     def remove_node(self,node):
-        g=self.graph
+        g  = self.graph
+        tg = self.topology
         if g.node[node]['obj'].alignment in 'RL':
             g.remove_node(g.node[node]['obj'].m_name)
             g.remove_node(node)
+        
+            if node in tg.nodes:
+                tg.remove_node(tg.node[node]['obj'].m_name)
+                tg.remove_node(node)
+            
         else:
             g.remove_node(node)
+            if node in tg.nodes:
+                tg.remove_node(node)
+                    
     
     
     def draw_topology(self):

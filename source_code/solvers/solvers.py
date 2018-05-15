@@ -10,9 +10,8 @@ import pandas as pd
 import numpy as np
 import scipy as sc
 from scipy.integrate import ode
-from newton_raphson import nr_kds, nr_dds
+from newton_raphson import nr_dds
 import sys
-import simulations_subroutines as ss
 
     
 def progress_bar(steps,i):
@@ -81,59 +80,224 @@ def state_space_creator(indeces):
     return ssm
    
 
-def kds(bodies,joints,actuators,topology_file,time_array):
+###############################################################################
+###############################################################################
+def equations_assembler(topology):
     
-    # importing the system equatiions from the given .py file
-    eq_file=importlib.import_module(topology_file)
-    cq=eq_file.cq
-    eq=eq_file.eq
-    vel=eq_file.vel_rhs
-    acc=eq_file.acc_rhs
+    edgelist = topology.edges(data='obj')
+    nodelist = topology.nodes
+    
+    n_nodes = len(nodelist)
+    n_edges = len(edgelist)
+            
+    jacobian = np.zeros((n_edges+n_nodes,n_nodes),dtype=np.object)
+    jacobian.fill(None)
+    
+    equations = np.zeros((n_edges+n_nodes,1),dtype=np.object)
+    
+    vel_rhs = np.zeros((n_edges+n_nodes,1),dtype=np.object)
+    acc_rhs = np.zeros((n_edges+n_nodes,1),dtype=np.object)
+    
+    node_index = dict( (node,i) for i,node in enumerate(nodelist) )
+    
+    n7 = np.arange(7)
+    for ei,e in enumerate(edgelist):
+        (u,v) = e[:2]
+        eo    = e[2]
+        
+        ui = node_index[u]
+        vi = node_index[v]
+        
+        ui7 = (ui*7)+n7
+        vi7 = (vi*7)+n7
+        
+        if jacobian[ui+n_edges,ui]==None: jacobian[ui+n_edges,ui] = (u.jac,ui7)
+        if jacobian[vi+n_edges,vi]==None: jacobian[vi+n_edges,vi] = (v.jac,vi7)
+                
+        jacobian[ei,ui] = (eo.jacobian_i,ui7,vi7)
+        jacobian[ei,vi] = (eo.jacobian_j,ui7,vi7)
+        
+        equations[ei,0] = (eo.equations,ui7,vi7)
+        if equations[ui+n_edges,0]==0: equations[ui+n_edges,0]=(u.equations,ui7)
+        if equations[vi+n_edges,0]==0: equations[vi+n_edges,0]=(v.equations,vi7)
+        
+        
+        vel_rhs[ei,0] = ((eo.vel_rhs) if eo.nc==1 else np.zeros((eo.nc,1)))
+        vel_rhs[ui+n_edges,0] = (np.array([[0]]) if u.nc==1 else np.zeros((7,1)))
+        vel_rhs[vi+n_edges,0] = (np.array([[0]]) if v.nc==1 else np.zeros((7,1)))
+        
+        acc_rhs[ei,0] = (eo.acc_rhs,ui7,vi7)
+        if acc_rhs[ui+n_edges,0]==0: acc_rhs[ui+n_edges,0]=(u.acc_rhs,ui7)
+        if acc_rhs[vi+n_edges,0]==0: acc_rhs[vi+n_edges,0]=(v.acc_rhs,vi7)
+        
+      
+    def j_mapper(i,q):
+        if len(i)==3:
+            fun,bi,bj = i
+            return fun(q[bi],q[bj])
+        else:
+            fun,bi = i
+            return fun(q[bi])
+        
+    j_vectorized = np.vectorize(j_mapper,otypes=[np.object],excluded='q')
     
     
-    # checking the system jacobian for singularities and small pivots
-    
-    assm_config=pd.concat([i.dic for i in bodies])
-    
-    position_df=pd.DataFrame(columns=assm_config.index)
-    position_df.loc[0]=assm_config
-    
-    velocity_df=pd.DataFrame(columns=assm_config.index)
-    jac=cq(assm_config,bodies,joints,actuators)
-    velocity_df.loc[0]=sc.sparse.linalg.spsolve(jac,vel(actuators))
-    
-#    acceleration_df=pd.DataFrame(columns=assm_config.index)
-#    acceleration_df.loc[0]=sc.sparse.linalg.spsolve(jac,acc(assm_config,velocity_df.loc[0],bodies,joints,actuators))
+    def v_mapper(i):
+        if isinstance(i,(int,np.ndarray)):
+            return i
+        else:
+            return i()
 
+    v_vectorized = np.vectorize(v_mapper,otypes=[np.object])
     
-    convergence_df=pd.DataFrame(columns=['iteration'])
+    def a_mapper(i,q,qd):
+        if len(i)==3:
+            fun,bi,bj = i
+            return fun(q[bi],q[bj],qd[bi],qd[bj])
+        else:
+            fun,bi = i
+            return fun(qd[bi])
+
+    a_vectorized = np.vectorize(a_mapper,otypes=[np.object],excluded=('q','qd'))
+    
+    return jacobian, equations, vel_rhs, acc_rhs, jacobian.nonzero(), j_vectorized, v_vectorized, a_vectorized
+
+
+###############################################################################
+###############################################################################
+
+def jacobian_evaluator(jac_blocks,nzi,mapper,q):
+    A = jac_blocks.copy()
+    A[nzi]=mapper(A[nzi],q=q)
+    return sc.sparse.bmat(A,format='csc')
+
+###############################################################################
+###############################################################################
+
+def nr_kds(jac_blocks,equations_blocks,nzi,j_vectorized,guess):
+    
+    A = jacobian_evaluator(jac_blocks,nzi,j_vectorized,guess)
+    
+    b = equations_blocks.copy()
+    bn = np.concatenate(j_vectorized(b[b.nonzero()],q=guess))
+    delta_q = sc.sparse.linalg.spsolve(A,-bn)
+    
+    itr=0
+    while np.linalg.norm(delta_q)>1e-5:
+        
+        guess=guess+delta_q
+        
+        if itr!=0 and itr%5==0:
+            print('Recalculating Jacobian')
+            A = jacobian_evaluator(jac_blocks,nzi,j_vectorized,guess)
+        bn = np.concatenate(j_vectorized(b[b.nonzero()],q=guess))
+        delta_q = sc.sparse.linalg.spsolve(A,-bn)
+        
+        itr+=1
+        
+        if itr>200:
+            print("Iterations exceded \n")
+            break    
+    
+    return guess,jacobian_evaluator(jac_blocks,nzi,j_vectorized,guess)
+###############################################################################
+###############################################################################
+
+def kds(topology,actuators,time_array):
+    q0 = pd.concat([i.q0 for i in topology.nodes])
+    dt = time_array[1]-time_array[0]
+    
+    j,e,v,a,nzi,j_m, v_m, a_m = equations_assembler(topology)
+    
+    position_df=pd.DataFrame(columns=q0.index)
+    position_df.loc[0]=q0
+    
+    A = jacobian_evaluator(j,nzi,j_m,q0.values)
+     
+    velocity_df=pd.DataFrame(columns=q0.index)
+    velocity_df.loc[0] = v0 = sc.sparse.linalg.spsolve(A,-1*np.concatenate(v_m(v)[:,0]))
+        
+    acceleration_df=pd.DataFrame(columns=q0.index)
+    acceleration_df.loc[0]=sc.sparse.linalg.spsolve(A,-1*np.concatenate(a_m(a,q=q0.values,qd=v0)[:,0]))
+    
     
     print('\nRunning System Kinematic Analysis:')
     for i,step in enumerate(time_array):
-        progress_bar(len(time_array),i)
         
         for ac in actuators:
             ac.t=step
         
-        if i==0:
-            g=position_df.loc[i]
-        else:
-            dt=time_array[i]-time_array[i-1]
-#            g=position_df.loc[i]+velocity_df.loc[i]*dt+acceleration_df.loc[i]*(0.5*dt**2)
-        g=position_df.loc[i]  
-        position_df.loc[i+1],jac,itr=nr_kds(eq,cq,g,bodies,joints,actuators)
-        velocity_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,vel(actuators))
+        g=position_df.loc[i]+velocity_df.loc[i]*dt + 0.5*acceleration_df.loc[i]*dt**2
+         
+        position_df.loc[i+1],A = nr_kds(j,e,nzi,j_m,g.values)
+        qi=position_df.loc[i+1].values
         
-        convergence_df.loc[i]=itr
+        velocity_df.loc[i+1] = vi = sc.sparse.linalg.spsolve(A,-1*np.concatenate(v_m(v)[:,0]))
         
-        q=position_df.loc[i+1]
-        qdot=velocity_df.loc[i+1]
-#        acceleration_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,acc(q,qdot,bodies,joints,actuators))
-        
+        acceleration_df.loc[i+1]=sc.sparse.linalg.spsolve(A,-1*np.concatenate(a_m(a,q=qi,qd=vi)[:,0]))
+          
         i+=1
         
-    return position_df,velocity_df, convergence_df
-    
+    return pd.Series([position_df, velocity_df, acceleration_df,time_array],index=['Pos','Vel','Acc','T'])
+
+###############################################################################
+###############################################################################
+
+# =============================================================================
+# def kds(bodies,joints,actuators,topology_file,time_array):
+#     
+#     # importing the system equatiions from the given .py file
+#     eq_file=importlib.import_module(topology_file)
+#     cq=eq_file.cq
+#     eq=eq_file.eq
+#     vel=eq_file.vel_rhs
+#     acc=eq_file.acc_rhs
+#     
+#     
+#     # checking the system jacobian for singularities and small pivots
+#     
+#     assm_config=pd.concat([i.dic for i in bodies])
+#     
+#     position_df=pd.DataFrame(columns=assm_config.index)
+#     position_df.loc[0]=assm_config
+#     
+#     velocity_df=pd.DataFrame(columns=assm_config.index)
+#     jac=cq(assm_config,bodies,joints,actuators)
+#     velocity_df.loc[0]=sc.sparse.linalg.spsolve(jac,vel(actuators))
+#     
+# #    acceleration_df=pd.DataFrame(columns=assm_config.index)
+# #    acceleration_df.loc[0]=sc.sparse.linalg.spsolve(jac,acc(assm_config,velocity_df.loc[0],bodies,joints,actuators))
+# 
+#     
+#     convergence_df=pd.DataFrame(columns=['iteration'])
+#     
+#     print('\nRunning System Kinematic Analysis:')
+#     for i,step in enumerate(time_array):
+#         progress_bar(len(time_array),i)
+#         
+#         for ac in actuators:
+#             ac.t=step
+#         
+#         if i==0:
+#             g=position_df.loc[i]
+#         else:
+#             dt=time_array[i]-time_array[i-1]
+# #            g=position_df.loc[i]+velocity_df.loc[i]*dt+acceleration_df.loc[i]*(0.5*dt**2)
+#         g=position_df.loc[i]  
+#         position_df.loc[i+1],jac,itr=nr_kds(eq,cq,g,bodies,joints,actuators)
+#         velocity_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,vel(actuators))
+#         
+#         convergence_df.loc[i]=itr
+#         
+#         q=position_df.loc[i+1]
+#         qdot=velocity_df.loc[i+1]
+# #        acceleration_df.loc[i+1]=sc.sparse.linalg.spsolve(jac,acc(q,qdot,bodies,joints,actuators))
+#         
+#         i+=1
+#         
+#     return position_df,velocity_df, convergence_df
+#     
+# =============================================================================
 
 def reactions(pos,vel,acc,bodies,joints,actuators,forces,file):
     
