@@ -223,6 +223,7 @@ def kds(topology,actuators,time_array):
     
     print('\nRunning System Kinematic Analysis:')
     for i,step in enumerate(time_array):
+        progress_bar(len(time_array),i)
         
         for ac in actuators:
             ac.t=step
