@@ -171,7 +171,7 @@ class joint(object):
         Ai=ep2dcm(betai)
         ui=vector(Ai.dot(self.u_i))
         
-        jac  = self.jacobian_i(qi,qj)
+        jac  = self.jacobian_i(qi,qj).A
         jacR = jac[:,:3]
         jacP = jac[:,3:]
         

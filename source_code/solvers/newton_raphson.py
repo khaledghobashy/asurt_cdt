@@ -68,9 +68,6 @@ def nr_dds(eq,jac,guess,bodies,joints,actuators,Ids,debug=False):
     '''
     q=guess.copy()
     
-    n=7*len(bodies)
-    Id=np.zeros((1,n))
-    Id[0,9]=1
     nqind=Ids.shape[1]
     Ieq=np.zeros((nqind,))
     
