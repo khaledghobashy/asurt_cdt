@@ -157,8 +157,7 @@ class joint(object):
         loc=self.location
         return {name+'x':loc.x,name+'y':loc.y,name+'z':loc.z}
         
-    def joint_pos(self,q):
-        qi=q[self.i_body.dic.index]
+    def joint_pos(self,qi):
         Ri=vector(qi[0:3]).a
         Ai=ep2dcm(qi[3:])
         ui=self.u_i
@@ -166,13 +165,13 @@ class joint(object):
         return r_p
     
     
-    def reactions(self,q,lamda):
-        l=lamda[self.index].values.reshape((self.nc,1))
-        betai=q[self.i_body.dic.index][3:]
+    def reactions(self,qi,qj,lamda):
+        l=lamda.reshape((self.nc,1))
+        betai=qi[3:]
         Ai=ep2dcm(betai)
         ui=vector(Ai.dot(self.u_i))
         
-        jac  = self.jacobian_i(q)
+        jac  = self.jacobian_i(qi,qj)
         jacR = jac[:,:3]
         jacP = jac[:,3:]
         

@@ -1400,8 +1400,8 @@ class model(object):
                     self.graph.add_edge('joints',j1.name)
                     self.graph.add_edge('joints',j2.name)
                     
-                    self.topology.add_edge(bodyi_1,bodyj_1,obj=j1)
-                    self.topology.add_edge(bodyi_2,bodyj_2,obj=j2)
+                    self.topology.add_edge(bodyi_1,bodyj_1,key=j1.name,obj=j1)
+                    self.topology.add_edge(bodyi_2,bodyj_2,key=j2.name,obj=j2)
                     
                     
                 
@@ -1449,7 +1449,7 @@ class model(object):
                     
                     j.notes=notes
                     self.graph.add_edge('joints',j.name)
-                    self.topology.add_edge(bodyi,bodyj,obj=j)
+                    self.topology.add_edge(bodyi,bodyj,key=j.name,obj=j)
 
 
                 
@@ -1850,8 +1850,8 @@ class model(object):
                     self.graph.add_edge('actuators',act1.name)
                     self.graph.add_edge('actuators',act2.name)
                     
-                    self.topology.add_edge(act1.i_body,act1.j_body,obj=act1)
-                    self.topology.add_edge(act2.i_body,act2.j_body,obj=act2)
+                    self.topology.add_edge(act1.i_body,act1.j_body,key=act1.name,obj=act1)
+                    self.topology.add_edge(act2.i_body,act2.j_body,key=act2.name,obj=act2)
 
                     
                 else:
@@ -1878,7 +1878,7 @@ class model(object):
                     act.notes=notes_v.value
                     act.pos_f=eval('lambda t: '+actuation_fun_v.value)
                     self.graph.add_edge('actuators',act.name)
-                    self.topology.add_edge(act.i_body,act.j_body,obj=act)
+                    self.topology.add_edge(act.i_body,act.j_body,key=act.name,obj=act)
                 
                 name_v.value=''
                 notes_v.value=''
@@ -2057,13 +2057,13 @@ class model(object):
         refresh_button.layout=layout100px
         def refresh_click(dummy):
             with main_out:
-                sim_results_v.options=dict(self.simulations)
+                sim_results_v.options=self.simulations.index
         refresh_button.on_click(refresh_click)
         
         plots_out = widgets.Output()
         
         sim_results_l = widgets.HTML('<b>Simulations')
-        sim_results_v = widgets.Dropdown(options=dict(self.simulations),layout=layout120px)
+        sim_results_v = widgets.Dropdown(options=self.simulations.index,layout=layout120px)
         sim_results_b = widgets.VBox([sim_results_l,sim_results_v])
 
         
@@ -2095,7 +2095,7 @@ class model(object):
         def show_click(dummy):
             plots_out.clear_output()
             with plots_out:
-                results = self.simulations[sim_results_v.label]
+                results = self.simulations[sim_results_v.value]
                 
                 if in_object_selector_v.label=='Time':
                     indpendent_data  = results[3]
@@ -2173,20 +2173,13 @@ class model(object):
     
     def remove_node(self,node):
         g  = self.graph
-        tg = self.topology
         if g.node[node]['obj'].alignment in 'RL':
             g.remove_node(g.node[node]['obj'].m_name)
             g.remove_node(node)
-        
-            if node in tg.nodes:
-                tg.remove_node(tg.node[node]['obj'].m_name)
-                tg.remove_node(node)
             
         else:
             g.remove_node(node)
-            if node in tg.nodes:
-                tg.remove_node(node)
-                    
+                        
     
     
     def draw_topology(self):

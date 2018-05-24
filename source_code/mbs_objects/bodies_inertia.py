@@ -173,15 +173,6 @@ class rigid(object):
             vel=pd.Series(values,index=indices)
         return vel
     
-    def qdd0(self,values=0):
-        n  = self.name+'.'
-        indices=[n+'x',n+'y',n+'z',n+'e0',n+'e1',n+'e2',n+'e3']
-        if values==0:
-            acc=pd.Series(np.zeros((7,)),index=indices)
-            acc[n+'z']=-9.81*1e3*0
-        else:
-            acc=pd.Series(values,index=indices)
-        return acc
         
         
     
@@ -191,26 +182,26 @@ class rigid(object):
         indices=[name+'_eq%s'%i for i in range(self.nc)]
         return indices
         
-    def mass_matrix(self,q):
-        P=q[self.dic.index][3:]
-        m=self.mass*sc.sparse.eye(3,format='csc')
+    def mass_matrix(self,qi):
+        P=qi[3:]
+        m=self.mass*sc.sparse.eye(3)
         Gp=G(P)
         Jp=4*Gp.T.dot(self.J).dot(Gp)
         
-        M=sc.sparse.bmat([[m,None],[None,Jp]],format='csc')
+        M=sc.sparse.bmat([[m,None],[None,Jp]])
         return M
     
-    def centrifugal(self,q,qdot):
-        Pdot=qdot[self.dic.index][3:]
-        P=q[self.dic.index][3:].values.reshape((4,1))
+    def centrifugal(self,qi,qidot):
+        Pdot=qidot[3:]
+        P=qi[3:].reshape((4,1))
         Gdot=G(Pdot)
         Qv=np.zeros((7,1))
         Qv[3:]=8*np.linalg.multi_dot([Gdot.T,self.J,Gdot,P])
         return -Qv
     
-    def inertia_force(self,q,qdd):
-        m=self.mass_matrix(q)
-        acc=qdd[self.dic.index]
+    def inertia_force(self,qi,qidd):
+        m=self.mass_matrix(qi)
+        acc=qidd
         return m.dot(acc)
     
     def gravity(self):
