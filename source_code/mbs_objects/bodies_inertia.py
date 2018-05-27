@@ -197,7 +197,7 @@ class rigid(object):
         Gdot=G(Pdot)
         Qv=np.zeros((7,1))
         Qv[3:]=8*np.linalg.multi_dot([Gdot.T,self.J,Gdot,P])
-        return -Qv
+        return Qv
     
     def inertia_force(self,qi,qidd):
         m=self.mass_matrix(qi)
@@ -253,4 +253,8 @@ class mount(rigid):
     
     def acc_rhs(self,*dummy):
         return np.zeros((7,1))
+    
+    
+    
+    
 
