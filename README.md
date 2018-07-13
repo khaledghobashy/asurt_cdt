@@ -50,6 +50,7 @@ This module defines the newton-raphson algorithm making use of sparse linear sol
 This module provides the solver functions for kinematically and dynamically driven system and helper functions that analyze the jacobian for selecting the proper independent coordinates.
 
 The modeling process can be done either by coding or using a simple **_gui_** that makes use of **Jupyter Lab**. The project makes use of [**_netwokx_**](https://networkx.github.io/documentation/stable/) in modeling the data structure and dependencies to track and migrate changes over the model components. Also, for a given model, the model topology is modeled as a multigraph, which serves a very good mean to store the topological information of a given model.
+
 **_Further illustrations in progress with a simple tutorial._**
 
 ## Current capabilities and my wish-list
