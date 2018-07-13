@@ -29,7 +29,7 @@ The tool makes use of the **_euler parameters_** -a 4D unit quaternion- to defin
 - **Newton-Euler Augmented Formulation of the EOM:**
 The equations of motion of the system is assembled in the augmented matrix form of Newton-Euler equations and the second time derivative of the constraint equations in terms of the euler parameters directly resulting in a system of DAEs -differential algebraic equations-. Due to the use of euler parameters, the mass matrix -inertia tensor elements- is not constant.
 - **Coordinate Partitioning and Integration:**
-Instead of using the implicit BDF integration method to solve the DAEs system directly, the system is partitioned to dependent and independent coordinates numerically based on the jacobian structure of the system constraints then the independent coordinates are re-represented in a state-space structure of first order and then integrated using the explicit runge-kutta method of order 8(5,3). The independent coordinates are then used to evaluate the dependent ones using newton-raphson algorithm.
+Instead of using the implicit BDF integration method to solve the DAEs system directly, the system is partitioned to dependent and independent coordinates numerically based on the jacobian structure of the system constraints then the independent coordinates are re-represented in an **SSODE** -state-space ordinary differential equations- and then integrated using an explicit runge-kutta method of order 8(5,3) implemented in [**_scipy_**](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html#scipy.integrate.ode). The independent coordinates are then used to evaluate the dependent ones using newton-raphson algorithm.
 
 ## Code structure
 _**Note:** The code is under rapid changes and frequent modifications. This is an initial structure._
@@ -49,8 +49,11 @@ This module defines the newton-raphson algorithm making use of sparse linear sol
 - **solvers.py**
 This module provides the solver functions for kinematically and dynamically driven system and helper functions that analyze the jacobian for selecting the proper independent coordinates.
 
+The modeling process can be done either by coding or using a simple **_gui_** that makes use of **Jupyter Lab**. The project makes use of [**_netwokx_**](https://networkx.github.io/documentation/stable/) in modeling the data structure and dependencies to track and migrate changes over the model components. Also, for a given model, the model topology is modeled as a multigraph, which serves a very good mean to store the topological information of a given model.
+**_Further illustrations in progress with a simple tutorial._**
+
 ## Current capabilities and my wish-list
-The tool is capable of _kinematic, inverse dynamic, dynamic_ and _equilibrium_ analysis of a well posed non-singular system. The tool is tested on the **ASURT-FS17** front suspension system. The main outputs are:
+The tool is capable of _kinematic, inverse dynamic, dynamic_ and _equilibrium_ analysis of a well posed non-singular system. The main outputs are:
 - System configuration / Position level.
 - System velocities.
 - System accelerations.
@@ -73,9 +76,9 @@ The data are stored in pandas' DataFrame object that can be easily plotted and e
 - Numpy
 - Pandas
 - Matplotlib
+- _... To be updated_
 
 ## How to use?
-_The following instructions assume basic knowledge of python_
-A separate tutorial will be dedicated for the theories used and how to use the tutorial. Meanwhile, you can download or clone the repository on your machine -of course assuming you have python on your machine, if not I suggest installing Anaconda-, then run the **_base.py_** to include the folder path to the system path. Now you can run **_asurt17_Inertia_v1.py_** which contains a pre-defined model of the ASURT-FS17 front suspension model. _This is only for a quick preview of some plots from the output of equilibrium analysis_.
+_To be updated._.
 
 If interested in participating in the development of the tool or have any inquiries, I can be reached via _khaled.ghobashy@live.com_.
